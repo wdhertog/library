@@ -20,12 +20,16 @@ import nl.wdhertog.library.LibraryApp
 import nl.wdhertog.library.ui.bookdetail.BookDetailScreen
 import nl.wdhertog.library.ui.bookedit.BookEditScreen
 import nl.wdhertog.library.ui.library.LibraryScreen
+import nl.wdhertog.library.ui.scan.ScanScreen
 
 @Serializable
 object LibraryRoute
 
 @Serializable
 data class BookDetailRoute(val bookId: Long)
+
+@Serializable
+object ScanRoute
 
 /** bookId 0 = nieuw boek. */
 @Serializable
@@ -60,6 +64,14 @@ fun AppNavHost() {
             LibraryScreen(
                 onBookClick = { navController.navigate(BookDetailRoute(it)) },
                 onAddBook = { navController.navigate(BookEditRoute()) },
+                onScan = { navController.navigate(ScanRoute) },
+            )
+        }
+        composable<ScanRoute> { entry ->
+            ScanScreen(
+                onClose = { navController.popFrom(entry) },
+                onOpenBook = { navController.navigate(BookDetailRoute(it)) },
+                onManualEntry = { navController.navigate(BookEditRoute()) },
             )
         }
         composable<BookDetailRoute> { entry ->

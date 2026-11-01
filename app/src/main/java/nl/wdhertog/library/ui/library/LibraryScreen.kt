@@ -21,13 +21,22 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import nl.wdhertog.library.data.repository.displayTitle
+import nl.wdhertog.library.data.repository.isAwaitingLookup
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,23 +66,35 @@ import nl.wdhertog.library.util.Languages
 fun LibraryScreen(
     onBookClick: (Long) -> Unit,
     onAddBook: () -> Unit,
-    viewModel: LibraryViewModel = appViewModel { container, _ -> LibraryViewModel(container.bookRepository) },
+    onScan: () -> Unit,
+    viewModel: LibraryViewModel = appViewModel { container, _ ->
+        LibraryViewModel(container.bookRepository, container.enrichScheduler)
+    },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.queryText.collectAsStateWithLifecycle()
+    val awaitingLookup by viewModel.awaitingLookup.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Bibliotheek") },
-                actions = { SortMenu(state.sort, viewModel::setSort) },
+                actions = {
+                    SortMenu(state.sort, viewModel::setSort)
+                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary)
+                },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddBook) {
-                Icon(Icons.Default.Add, contentDescription = "Boek toevoegen")
-            }
+            ExtendedFloatingActionButton(
+                onClick = onScan,
+                icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
+                text = { Text("Scannen") },
+            )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             OutlinedTextField(
@@ -104,11 +125,22 @@ fun LibraryScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            if (awaitingLookup > 0) {
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Gegevens ophalen voor $awaitingLookup ${if (awaitingLookup == 1) "boek" else "boeken"}…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             when {
                 state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-                state.totalCount == 0 -> EmptyMessage("Nog geen boeken.\nTik op + om een boek toe te voegen.")
+                state.totalCount == 0 -> EmptyMessage("Nog geen boeken.\nTik op Scannen om te beginnen.")
                 state.items.isEmpty() -> EmptyMessage("Geen boeken gevonden.")
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 88.dp)) {
                     items(state.items, key = { it.book.id }) { item ->
@@ -140,7 +172,7 @@ private fun BookRow(item: BookListItem, onClick: () -> Unit) {
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                item.book.title,
+                item.book.displayTitle,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -168,6 +200,34 @@ private fun BookRow(item: BookListItem, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+        if (item.book.isAwaitingLookup) {
+            Icon(
+                Icons.Default.HourglassEmpty,
+                contentDescription = "Gegevens worden opgehaald",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Meer") }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text("Handmatig toevoegen") },
+                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                onClick = { open = false; onAddBook() },
+            )
+            DropdownMenuItem(
+                text = { Text("Bibliotheek bijwerken") },
+                leadingIcon = { Icon(Icons.Default.Sync, contentDescription = null) },
+                onClick = { open = false; onUpdateLibrary() },
+            )
         }
     }
 }
