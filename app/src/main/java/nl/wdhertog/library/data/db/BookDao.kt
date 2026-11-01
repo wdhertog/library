@@ -34,6 +34,28 @@ interface BookDao {
     @Query("SELECT id FROM book WHERE isbn13 = :isbn13 AND id != :excludeId LIMIT 1")
     suspend fun findBookIdByIsbn(isbn13: String, excludeId: Long): Long?
 
+    @Query("SELECT * FROM book WHERE isbn13 = :isbn13 LIMIT 1")
+    suspend fun findBookByIsbn(isbn13: String): Book?
+
+    @Query(
+        """
+        SELECT id FROM book
+        WHERE isbn13 IS NOT NULL AND enrichStatus IN ('NEW', 'QUICK')
+        ORDER BY addedAt LIMIT :limit
+        """
+    )
+    suspend fun booksAwaitingEnrichment(limit: Int): List<Long>
+
+    @Query("SELECT COUNT(*) FROM book WHERE isbn13 IS NOT NULL AND enrichStatus IN ('NEW', 'QUICK')")
+    fun observeAwaitingEnrichmentCount(): Flow<Int>
+
+    /** Zet mislukte boeken terug in de wachtrij; geeft het aantal terug. */
+    @Query("UPDATE book SET enrichStatus = 'NEW' WHERE enrichStatus = 'FAILED' AND isbn13 IS NOT NULL")
+    suspend fun requeueFailed(): Int
+
+    @Query("UPDATE book SET enrichStatus = :status, updatedAt = :now WHERE id = :id")
+    suspend fun setEnrichStatus(id: Long, status: EnrichStatus, now: java.time.Instant)
+
     @Insert
     suspend fun insertBook(book: Book): Long
 
@@ -146,6 +168,18 @@ interface BookDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertBookWork(bookWork: BookWork)
+
+    @Query("DELETE FROM book_work WHERE bookId = :bookId AND workId = :workId")
+    suspend fun deleteBookWork(bookId: Long, workId: Long)
+
+    @Query("SELECT COUNT(*) FROM book_work WHERE workId = :workId")
+    suspend fun countBooksForWork(workId: Long): Int
+
+    @Query("SELECT * FROM work WHERE wikidataId = :wikidataId AND id != :excludeId LIMIT 1")
+    suspend fun findWorkByWikidataId(wikidataId: String, excludeId: Long): Work?
+
+    @Query("SELECT * FROM work WHERE openLibraryWorkId = :olId AND id != :excludeId LIMIT 1")
+    suspend fun findWorkByOpenLibraryId(olId: String, excludeId: Long): Work?
 
     @Query("DELETE FROM work WHERE id NOT IN (SELECT workId FROM book_work)")
     suspend fun deleteOrphanWorks()

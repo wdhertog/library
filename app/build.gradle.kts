@@ -64,6 +64,14 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.okhttp)
+    implementation(libs.androidx.work.runtime)
+
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.mlkit)
+    implementation(libs.mlkit.barcode)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
