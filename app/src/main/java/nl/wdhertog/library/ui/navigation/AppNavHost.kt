@@ -8,6 +8,9 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -41,6 +44,14 @@ inline fun <reified VM : ViewModel> appViewModel(
     },
 )
 
+/**
+ * Alleen terug als dit scherm nog actief is. Zonder deze controle haalt een dubbele
+ * terug-actie (knop + gebaar) ook het startscherm weg en blijft er een leeg venster over.
+ */
+private fun NavController.popFrom(entry: NavBackStackEntry) {
+    if (entry.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) popBackStack()
+}
+
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
@@ -51,23 +62,23 @@ fun AppNavHost() {
                 onAddBook = { navController.navigate(BookEditRoute()) },
             )
         }
-        composable<BookDetailRoute> {
+        composable<BookDetailRoute> { entry ->
             BookDetailScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popFrom(entry) },
                 onEdit = { navController.navigate(BookEditRoute(it)) },
                 onOpenBook = { navController.navigate(BookDetailRoute(it)) },
             )
         }
-        composable<BookEditRoute> {
+        composable<BookEditRoute> { entry ->
             BookEditScreen(
-                onClose = { navController.popBackStack() },
+                onClose = { navController.popFrom(entry) },
                 onSaved = { bookId, isNew ->
                     if (isNew) {
                         navController.navigate(BookDetailRoute(bookId)) {
                             popUpTo<BookEditRoute> { inclusive = true }
                         }
                     } else {
-                        navController.popBackStack()
+                        navController.popFrom(entry)
                     }
                 },
             )
