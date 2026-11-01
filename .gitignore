@@ -1,0 +1,19 @@
+# Persoonlijke voorbeeldbestanden (exports, collectie) — niet naar GitHub
+samples/
+
+# Gradle / Android
+.gradle/
+.kotlin/
+build/
+local.properties
+*.apk
+*.aab
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
