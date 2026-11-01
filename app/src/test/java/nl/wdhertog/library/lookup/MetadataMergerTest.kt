@@ -48,6 +48,13 @@ class MetadataMergerTest {
     }
 
     @Test
+    fun `jaar van eerste uitgave uit Wikidata gaat voor Open Library`() {
+        val merged = BookMetadata(source = "Open Library", firstPublishedYear = 1972)
+        val result = MetadataMerger.withWikidata(merged, WikidataWork("Q208002", "The Lord of the Rings", "1", "Q15228", 1954))
+        assertEquals(1954, result.firstPublishedYear)
+    }
+
+    @Test
     fun `niets gevonden`() {
         assertNull(MetadataMerger.merge(emptyList()))
     }
