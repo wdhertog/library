@@ -11,9 +11,17 @@ import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.db.Series
 import nl.wdhertog.library.data.db.Work
 import nl.wdhertog.library.data.db.WorkAuthor
+import nl.wdhertog.library.lookup.BookMetadata
 import nl.wdhertog.library.scan.Isbn
 import nl.wdhertog.library.util.TextNormalizer
 import java.time.Instant
+
+sealed interface ScanAddResult {
+    val bookId: Long
+
+    data class Added(override val bookId: Long) : ScanAddResult
+    data class AlreadyPresent(override val bookId: Long) : ScanAddResult
+}
 
 class BookRepository(private val db: LibraryDatabase) {
 
@@ -47,6 +55,16 @@ class BookRepository(private val db: LibraryDatabase) {
 
     fun observeSeriesNames(): Flow<List<String>> = dao.observeSeriesNames()
 
+    fun observeAwaitingEnrichmentCount(): Flow<Int> = dao.observeAwaitingEnrichmentCount()
+
+    suspend fun isbnFor(bookId: Long): String? = dao.getBook(bookId)?.isbn13
+
+    suspend fun booksAwaitingEnrichment(limit: Int): List<Long> = dao.booksAwaitingEnrichment(limit)
+
+    suspend fun requeueFailed(): Int = dao.requeueFailed()
+
+    suspend fun markEnrichFailed(bookId: Long) = dao.setEnrichStatus(bookId, EnrichStatus.FAILED, Instant.now())
+
     suspend fun loadDraft(bookId: Long): BookDraft? {
         val book = dao.getBook(bookId) ?: return null
         val work = dao.getPrimaryWork(bookId)
@@ -78,6 +96,17 @@ class BookRepository(private val db: LibraryDatabase) {
         return dao.findBookIdByIsbn(isbn13, excludeBookId)
     }
 
+    /** Legt een gescand ISBN direct vast; gegevens worden daarna los opgezocht. */
+    suspend fun addScannedIsbn(isbn13: String): ScanAddResult = db.withTransaction {
+        dao.findBookByIsbn(isbn13)?.let { return@withTransaction ScanAddResult.AlreadyPresent(it.id) }
+        val bookId = dao.insertBook(
+            Book(isbn13 = isbn13, isbn10 = Isbn.toIsbn10(isbn13), title = "", searchText = isbn13),
+        )
+        val workId = dao.insertWork(Work(title = ""))
+        dao.insertBookWork(BookWork(bookId, workId, position = 0))
+        ScanAddResult.Added(bookId)
+    }
+
     /** Slaat een handmatig ingevoerd of bewerkt boek op en geeft het id terug. bookId 0 = nieuw. */
     suspend fun save(bookId: Long, draft: BookDraft): Long = db.withTransaction {
         val now = Instant.now()
@@ -86,11 +115,7 @@ class BookRepository(private val db: LibraryDatabase) {
         val locked = existing?.lockedFields.toFieldSet() + draft.changedFields(previousDraft)
 
         val isbn13 = Isbn.toIsbn13(draft.isbn)
-        val authors = draft.cleanAuthors
-        val seriesName = draft.seriesName.trim()
-        val series = seriesName.takeIf(String::isNotEmpty)?.let { name ->
-            dao.findSeries(name) ?: Series(name = name).let { it.copy(id = dao.insertSeries(it)) }
-        }
+        val series = findOrCreateSeries(draft.seriesName)
 
         val bookFields = Book(
             isbn13 = isbn13,
@@ -107,9 +132,6 @@ class BookRepository(private val db: LibraryDatabase) {
             notes = draft.notes.trim().ifEmpty { null },
             wantToRead = draft.wantToRead,
             lockedFields = locked.sorted().joinToString(",").ifEmpty { null },
-            searchText = TextNormalizer.searchKey(
-                listOf(draft.title, draft.subtitle, draft.originalTitle, seriesName, isbn13, draft.publisher, draft.tags) + authors,
-            ),
             updatedAt = now,
         )
 
@@ -153,7 +175,7 @@ class BookRepository(private val db: LibraryDatabase) {
         } else {
             dao.updateWork(
                 work.copy(
-                    title = originalTitle ?: work.title,
+                    title = originalTitle ?: work.title.ifBlank { bookFields.title },
                     originalTitle = originalTitle,
                     seriesId = series?.id,
                     seriesIndex = draft.seriesIndex.trim().ifEmpty { null },
@@ -163,26 +185,134 @@ class BookRepository(private val db: LibraryDatabase) {
             work.id
         }
 
-        dao.clearWorkAuthors(workId)
-        dao.insertWorkAuthors(
-            authors.mapIndexed { index, name ->
-                val authorId = dao.findAuthor(name)?.id ?: dao.insertAuthor(Author(name = name))
-                WorkAuthor(workId, authorId, index)
-            },
-        )
-        dao.deleteOrphanAuthors()
-        dao.deleteOrphanSeries()
+        setWorkAuthors(workId, draft.cleanAuthors)
+        refreshSearchText(savedBookId)
+        deleteOrphans()
         savedBookId
+    }
+
+    /**
+     * Schrijft opgezochte gegevens naar boek en werk. Vergrendelde (zelf ingevulde) velden blijven
+     * altijd staan; andere velden alleen als ze leeg zijn, of ook gevuld bij [refresh].
+     */
+    suspend fun applyMetadata(bookId: Long, metadata: BookMetadata, refresh: Boolean, status: EnrichStatus) =
+        db.withTransaction {
+            val book = dao.getBook(bookId) ?: return@withTransaction
+            val locked = book.lockedFields.toFieldSet()
+            fun <T> pick(field: String, current: T?, found: T?): T? = when {
+                field in locked || found == null -> current
+                refresh || current == null || (current is String && current.isBlank()) -> found
+                else -> current
+            }
+
+            dao.updateBook(
+                book.copy(
+                    title = pick("title", book.title, metadata.title) ?: book.title,
+                    subtitle = pick("subtitle", book.subtitle, metadata.subtitle),
+                    language = pick("language", book.language, metadata.language),
+                    translators = pick("translators", book.translators, metadata.translators.joinToString(", ").ifEmpty { null }),
+                    publisher = pick("publisher", book.publisher, metadata.publisher),
+                    publishedYear = pick("publishedYear", book.publishedYear, metadata.publishedYear),
+                    pages = pick("pages", book.pages, metadata.pages),
+                    format = pick("format", book.format, metadata.format),
+                    description = pick("description", book.description, metadata.description),
+                    coverUrl = pick("cover", book.coverUrl, metadata.coverUrl),
+                    openLibraryEditionId = metadata.openLibraryEditionId ?: book.openLibraryEditionId,
+                    enrichStatus = if (book.enrichStatus == EnrichStatus.ENRICHED && status == EnrichStatus.QUICK) book.enrichStatus else status,
+                    enrichedSources = (book.enrichedSources.toFieldSet(", ") + metadata.source.split(", ").filter(String::isNotBlank))
+                        .joinToString(", ").ifEmpty { null },
+                    updatedAt = Instant.now(),
+                ),
+            )
+
+            var work = dao.getPrimaryWork(bookId)
+            if (work == null) {
+                work = Work(title = "").let { it.copy(id = dao.insertWork(it)) }
+                dao.insertBookWork(BookWork(bookId, work.id, position = 0))
+            }
+            val currentAuthors = dao.getAuthorNames(work.id)
+            if ("authors" !in locked && metadata.authors.isNotEmpty() && (refresh || currentAuthors.isEmpty())) {
+                setWorkAuthors(work.id, metadata.authors)
+            }
+            val seriesLocked = "series" in locked
+            val takeSeries = !seriesLocked && metadata.seriesName != null && (refresh || work.seriesId == null)
+            val series = if (takeSeries) findOrCreateSeries(metadata.seriesName!!) else null
+            val originalTitle = pick("originalTitle", work.originalTitle, metadata.originalTitle)
+            dao.updateWork(
+                work.copy(
+                    title = originalTitle ?: work.title.ifBlank { metadata.title.orEmpty() },
+                    originalTitle = originalTitle,
+                    originalLanguage = pick("originalLanguage", work.originalLanguage, metadata.originalLanguage),
+                    firstPublishedYear = pick("firstPublishedYear", work.firstPublishedYear, metadata.firstPublishedYear),
+                    seriesId = series?.id ?: work.seriesId,
+                    seriesIndex = if (takeSeries) metadata.seriesIndex else work.seriesIndex,
+                    openLibraryWorkId = metadata.openLibraryWorkId ?: work.openLibraryWorkId,
+                    wikidataId = metadata.workWikidataId ?: work.wikidataId,
+                    updatedAt = Instant.now(),
+                ),
+            )
+            linkToExistingWork(bookId, work.id, metadata)
+            refreshSearchText(bookId)
+            deleteOrphans()
+        }
+
+    /**
+     * Als een ander boek al een werk heeft met hetzelfde Wikidata- of Open Library-id,
+     * is dit een andere editie of vertaling ervan: koppel het boek aan dat werk.
+     */
+    private suspend fun linkToExistingWork(bookId: Long, workId: Long, metadata: BookMetadata) {
+        val existing = metadata.workWikidataId?.let { dao.findWorkByWikidataId(it, workId) }
+            ?: metadata.openLibraryWorkId?.let { dao.findWorkByOpenLibraryId(it, workId) }
+            ?: return
+        if (dao.countBooksForWork(workId) != 1) return // Werk wordt gedeeld; niet automatisch samenvoegen.
+        val own = dao.getPrimaryWork(bookId) ?: return
+        dao.deleteBookWork(bookId, workId)
+        dao.insertBookWork(BookWork(bookId, existing.id, position = 0))
+        if (existing.seriesId == null && own.seriesId != null) {
+            dao.updateWork(existing.copy(seriesId = own.seriesId, seriesIndex = own.seriesIndex, updatedAt = Instant.now()))
+        }
+        if (dao.getAuthorNames(existing.id).isEmpty()) setWorkAuthors(existing.id, dao.getAuthorNames(workId))
     }
 
     suspend fun delete(bookId: Long) = db.withTransaction {
         val book = dao.getBook(bookId) ?: return@withTransaction
         dao.deleteBook(book)
+        deleteOrphans()
+    }
+
+    private suspend fun findOrCreateSeries(name: String): Series? {
+        val trimmed = name.trim().ifEmpty { return null }
+        return dao.findSeries(trimmed) ?: Series(name = trimmed).let { it.copy(id = dao.insertSeries(it)) }
+    }
+
+    private suspend fun setWorkAuthors(workId: Long, names: List<String>) {
+        dao.clearWorkAuthors(workId)
+        dao.insertWorkAuthors(
+            names.map(String::trim).filter(String::isNotEmpty).distinctBy(String::lowercase).mapIndexed { index, name ->
+                val authorId = dao.findAuthor(name)?.id ?: dao.insertAuthor(Author(name = name))
+                WorkAuthor(workId, authorId, index)
+            },
+        )
+    }
+
+    /** Zoektekst opnieuw opbouwen uit boek, werk, auteurs en serie. */
+    private suspend fun refreshSearchText(bookId: Long) {
+        val book = dao.getBook(bookId) ?: return
+        val work = dao.getPrimaryWork(bookId)
+        val authors = work?.let { dao.getAuthorNames(it.id) }.orEmpty()
+        val series = work?.seriesId?.let { dao.getSeries(it)?.name }
+        val text = TextNormalizer.searchKey(
+            listOf(book.title, book.subtitle, work?.originalTitle, series, book.isbn13, book.publisher, book.tags, book.translators) + authors,
+        )
+        if (text != book.searchText) dao.updateBook(book.copy(searchText = text))
+    }
+
+    private suspend fun deleteOrphans() {
         dao.deleteOrphanWorks()
         dao.deleteOrphanAuthors()
         dao.deleteOrphanSeries()
     }
 
-    private fun String?.toFieldSet(): Set<String> =
-        this?.split(',')?.filter(String::isNotEmpty)?.toSet().orEmpty()
+    private fun String?.toFieldSet(separator: String = ","): Set<String> =
+        this?.split(separator)?.map(String::trim)?.filter(String::isNotEmpty)?.toSet().orEmpty()
 }

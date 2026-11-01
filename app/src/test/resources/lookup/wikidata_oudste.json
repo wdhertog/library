@@ -1,0 +1,448 @@
+{
+  "head" : {
+    "vars" : [ "work", "series", "ord", "seriesLabel", "seriesLang" ]
+  },
+  "results" : {
+    "bindings" : [ {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "de",
+        "type" : "literal",
+        "value" : "Eragon-Tetralogie"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "de"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "fr",
+        "type" : "literal",
+        "value" : "L'Héritage"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "fr"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "nl",
+        "type" : "literal",
+        "value" : "Het Erfgoed"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "nl"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "nl",
+        "type" : "literal",
+        "value" : "Het Erfgoed"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "nl"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "nl",
+        "type" : "literal",
+        "value" : "Het Erfgoed"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "nl"
+      }
+    }, {
+      "work" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q308982"
+      },
+      "series" : {
+        "type" : "uri",
+        "value" : "http://www.wikidata.org/entity/Q2699024"
+      },
+      "seriesLabel" : {
+        "xml:lang" : "nl",
+        "type" : "literal",
+        "value" : "Het Erfgoed"
+      },
+      "ord" : {
+        "type" : "literal",
+        "value" : "2"
+      },
+      "seriesLang" : {
+        "type" : "literal",
+        "value" : "nl"
+      }
+    } ]
+  }
+}

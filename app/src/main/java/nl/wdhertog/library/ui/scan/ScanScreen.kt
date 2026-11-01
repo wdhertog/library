@@ -1,0 +1,240 @@
+package nl.wdhertog.library.ui.scan
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FlashlightOff
+import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import nl.wdhertog.library.data.db.EnrichStatus
+import nl.wdhertog.library.data.repository.displayTitle
+import nl.wdhertog.library.ui.components.CoverImage
+import nl.wdhertog.library.ui.navigation.appViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ScanScreen(
+    onClose: () -> Unit,
+    onOpenBook: (Long) -> Unit,
+    onManualEntry: () -> Unit,
+    viewModel: ScanViewModel = appViewModel { container, _ ->
+        ScanViewModel(container.bookRepository, container.enrichmentService, container.enrichScheduler, container.appScope)
+    },
+) {
+    val context = LocalContext.current
+    var hasPermission by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+    }
+    var askedOnce by remember { mutableStateOf(false) }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasPermission = granted
+        askedOnce = true
+    }
+    LaunchedEffect(Unit) { if (!hasPermission) permissionLauncher.launch(Manifest.permission.CAMERA) }
+
+    val feedback = remember { ScanFeedback(context) }
+    DisposableEffect(Unit) { onDispose { feedback.release() } }
+    LaunchedEffect(viewModel) { viewModel.signals.collect(feedback::play) }
+
+    val session by viewModel.session.collectAsStateWithLifecycle()
+    val torchOn by viewModel.torchOn.collectAsStateWithLifecycle()
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Scannen") },
+                navigationIcon = {
+                    IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "Sluiten") }
+                },
+                actions = {
+                    IconButton(onClick = onManualEntry) { Icon(Icons.Default.Edit, contentDescription = "Handmatig invoeren") }
+                    if (hasPermission) {
+                        IconButton(onClick = viewModel::toggleTorch) {
+                            Icon(
+                                if (torchOn) Icons.Default.FlashlightOff else Icons.Default.FlashlightOn,
+                                contentDescription = if (torchOn) "Lamp uit" else "Lamp aan",
+                            )
+                        }
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        val camera: @Composable (Modifier) -> Unit = { modifier ->
+            Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
+                if (hasPermission) {
+                    BarcodeCamera(onBarcode = viewModel::onBarcode, torchOn = torchOn, modifier = Modifier.fillMaxSize())
+                    ScanWindow()
+                } else {
+                    PermissionMessage(
+                        permanentlyDenied = askedOnce,
+                        onRequest = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                        onOpenSettings = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+                            )
+                        },
+                    )
+                }
+            }
+        }
+        val list: @Composable (Modifier) -> Unit = { modifier -> SessionList(session, onOpenBook, modifier) }
+
+        if (landscape) {
+            Row(Modifier.padding(padding).fillMaxSize()) {
+                camera(Modifier.weight(1f).fillMaxHeight())
+                list(Modifier.weight(1f).fillMaxHeight())
+            }
+        } else {
+            Column(Modifier.padding(padding).fillMaxSize()) {
+                camera(Modifier.fillMaxWidth().weight(0.45f))
+                list(Modifier.fillMaxWidth().weight(0.55f))
+            }
+        }
+    }
+}
+
+/** Kader als richtpunt; de herkenning werkt op het hele beeld. */
+@Composable
+private fun ScanWindow() {
+    Canvas(Modifier.fillMaxSize()) {
+        val w = size.width * 0.75f
+        val h = (w * 0.45f).coerceAtMost(size.height * 0.6f)
+        drawRoundRect(
+            color = Color.White.copy(alpha = 0.85f),
+            topLeft = Offset((size.width - w) / 2, (size.height - h) / 2),
+            size = Size(w, h),
+            cornerRadius = CornerRadius(16.dp.toPx()),
+            style = Stroke(width = 3.dp.toPx()),
+        )
+    }
+}
+
+@Composable
+private fun PermissionMessage(permanentlyDenied: Boolean, onRequest: () -> Unit, onOpenSettings: () -> Unit) {
+    Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            "Voor het scannen van barcodes is toegang tot de camera nodig.",
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(12.dp))
+        if (permanentlyDenied) {
+            Button(onClick = onOpenSettings) { Text("Open instellingen") }
+        } else {
+            Button(onClick = onRequest) { Text("Camera toestaan") }
+        }
+    }
+}
+
+@Composable
+private fun SessionList(rows: List<SessionRow>, onOpenBook: (Long) -> Unit, modifier: Modifier) {
+    Column(modifier) {
+        Text(
+            if (rows.isEmpty()) "Richt de camera op de barcode achterop het boek." else "Deze sessie (${rows.size})",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        LazyColumn {
+            items(rows, key = { it.entry.isbn13 }) { row ->
+                SessionRowItem(row, onClick = { onOpenBook(row.entry.bookId) })
+                HorizontalDivider(Modifier.padding(start = 68.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionRowItem(row: SessionRow, onClick: () -> Unit) {
+    val book = row.item?.book
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CoverImage(book?.title.orEmpty(), book?.coverUrl, Modifier.size(width = 36.dp, height = 52.dp), showTitle = false)
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                book?.displayTitle ?: "ISBN ${row.entry.isbn13}",
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val status = when {
+                row.entry.alreadyPresent -> "Staat al in je collectie"
+                book == null -> ""
+                book.enrichStatus == EnrichStatus.NEW -> "Zoeken…"
+                book.enrichStatus == EnrichStatus.FAILED -> "Niet gevonden — later aanvullen"
+                else -> row.item?.authorLine.orEmpty()
+            }
+            if (status.isNotEmpty()) {
+                Text(
+                    status,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (row.entry.alreadyPresent) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (book?.enrichStatus == EnrichStatus.NEW && !row.entry.alreadyPresent) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+        }
+    }
+}

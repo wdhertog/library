@@ -3,6 +3,10 @@ package nl.wdhertog.library.ui.library
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
+import nl.wdhertog.library.lookup.EnrichScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,11 +39,35 @@ private data class Filters(val query: String, val sort: SortOrder, val language:
 
 /** Lijstitem met vooraf berekende sorteersleutels, zodat sorteren en filteren snel blijven. */
 private class Indexed(val item: BookListItem) {
+    /** Leeg voor net gescande boeken zonder titel; die komen onderaan. */
     val titleKey = TextNormalizer.titleSortKey(item.book.title)
     val authorKey = item.authors.firstOrNull()?.let(TextNormalizer::authorSortKey) ?: "￿"
 }
 
-class LibraryViewModel(repository: BookRepository) : ViewModel() {
+class LibraryViewModel(
+    private val repository: BookRepository,
+    private val scheduler: EnrichScheduler,
+) : ViewModel() {
+
+    /** Aantal boeken waarvan de gegevens nog op de achtergrond worden opgehaald. */
+    val awaitingLookup: StateFlow<Int> = repository.observeAwaitingEnrichmentCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    private val _messages = Channel<String>(Channel.BUFFERED)
+    val messages = _messages.receiveAsFlow()
+
+    /** "Bibliotheek bijwerken": niet gevonden boeken opnieuw proberen en de wachtrij starten. */
+    fun updateLibrary() {
+        viewModelScope.launch {
+            val requeued = repository.requeueFailed()
+            scheduler.schedule()
+            val pending = awaitingLookup.value + requeued
+            _messages.send(
+                if (pending == 0) "Alle boeken zijn al bijgewerkt"
+                else "Gegevens ophalen voor $pending ${if (pending == 1) "boek" else "boeken"}",
+            )
+        }
+    }
 
     private val query = MutableStateFlow("")
 
@@ -87,7 +115,7 @@ class LibraryViewModel(repository: BookRepository) : ViewModel() {
     }
 
     private fun comparatorFor(order: SortOrder): Comparator<Indexed> = when (order) {
-        SortOrder.TITLE -> compareBy { it.titleKey }
+        SortOrder.TITLE -> compareBy<Indexed> { it.titleKey.isEmpty() }.thenBy { it.titleKey }
         SortOrder.AUTHOR -> compareBy<Indexed> { it.authorKey }
             .thenBy { it.item.series?.seriesName }
             .thenBy { it.item.series?.seriesIndex?.toDoubleOrNull() }
