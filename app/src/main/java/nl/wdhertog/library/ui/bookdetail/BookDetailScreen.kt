@@ -46,6 +46,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.db.Book
 import nl.wdhertog.library.data.repository.BookDetail
+import nl.wdhertog.library.data.repository.displayTitle
+import nl.wdhertog.library.data.repository.label
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
 import nl.wdhertog.library.ui.components.CoverImage
 import nl.wdhertog.library.ui.navigation.appViewModel
 import nl.wdhertog.library.util.Languages
@@ -57,14 +63,18 @@ fun BookDetailScreen(
     onEdit: (Long) -> Unit,
     onOpenBook: (Long) -> Unit,
     viewModel: BookDetailViewModel = appViewModel { container, handle ->
-        BookDetailViewModel(handle, container.bookRepository)
+        BookDetailViewModel(handle, container.bookRepository, container.enrichmentService)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {},
@@ -102,7 +112,7 @@ fun BookDetailScreen(
             when (val s = state) {
                 BookDetailUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 BookDetailUiState.NotFound -> Text("Dit boek bestaat niet meer.", Modifier.align(Alignment.Center))
-                is BookDetailUiState.Loaded -> DetailContent(s.detail, onOpenBook)
+                is BookDetailUiState.Loaded -> DetailContent(s.detail, onOpenBook, refreshing, viewModel::refresh)
             }
         }
     }
@@ -125,7 +135,7 @@ fun BookDetailScreen(
 }
 
 @Composable
-private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit) {
+private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit, refreshing: Boolean, onRefresh: () -> Unit) {
     val book = detail.book
     Column(
         Modifier
@@ -137,7 +147,7 @@ private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit) {
             CoverImage(book.title, book.coverUrl, Modifier.size(width = 104.dp, height = 156.dp))
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(book.title, style = MaterialTheme.typography.headlineSmall)
+                Text(book.displayTitle, style = MaterialTheme.typography.headlineSmall)
                 book.subtitle?.let {
                     Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -178,10 +188,33 @@ private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit) {
 
         Section("Details") {
             DetailRow("ISBN", book.isbn13 ?: book.isbn10)
+            DetailRow("Vertaling", book.translators)
+            DetailRow("Origineel", detail.works.firstOrNull()?.originalLanguage?.let(Languages::displayName))
             DetailRow("Tags", book.tags)
-            DetailRow("Bronnen", book.enrichedSources)
         }
         book.notes?.let { Section("Notities") { Text(it, style = MaterialTheme.typography.bodyMedium) } }
+
+        if (book.isbn13 != null) {
+            Section("Gegevens") {
+                Text(book.enrichStatus.label, style = MaterialTheme.typography.bodyMedium)
+                book.enrichedSources?.let {
+                    Text("Bronnen: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = onRefresh, enabled = !refreshing) {
+                    if (refreshing) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text("Gegevens opnieuw ophalen")
+                }
+                Text(
+                    "Wat je zelf hebt ingevuld, blijft staan.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Spacer(Modifier.height(32.dp))
     }
 }

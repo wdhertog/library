@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nl.wdhertog.library.data.repository.BookDraft
 import nl.wdhertog.library.data.repository.BookRepository
+import nl.wdhertog.library.lookup.EnrichScheduler
 import nl.wdhertog.library.scan.Isbn
 import nl.wdhertog.library.ui.navigation.BookEditRoute
 import java.time.Year
@@ -53,6 +54,7 @@ data class BookEditUiState(
 class BookEditViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: BookRepository,
+    private val scheduler: EnrichScheduler,
 ) : ViewModel() {
 
     val bookId = savedStateHandle.toRoute<BookEditRoute>().bookId
@@ -98,6 +100,8 @@ class BookEditViewModel(
         _state.update { it.copy(saving = true) }
         viewModelScope.launch {
             val id = repository.save(bookId, current.draft)
+            // Een nieuw boek met ISBN kan op de achtergrond worden aangevuld (cover, serie, …).
+            if (current.draft.isbn.isNotBlank()) scheduler.schedule()
             _state.update { it.copy(saving = false, savedBookId = id) }
         }
     }

@@ -432,7 +432,7 @@ Tests: unittests voor ISBN-logica, bron-parsers (met opgeslagen voorbeeldantwoor
 |------|--------|-----------|
 | 1 | Projectopzet, database, bibliotheeklijst, detail, handmatig toevoegen/bewerken | Bruikbare catalogus zonder scanner |
 | 2 | Barcodescanner (doorlopend), snelle lookup, achtergrond-verrijking, "Bibliotheek bijwerken", bronnen OL/DNB/BnF/Wikidata | Snel boeken scannen |
-| 3 | Locaties + plank-modus, uitleen in beide richtingen + herinneringen | Weten waar elk boek is |
+| 3 | Locaties + plank-modus, uitleen in beide richtingen + herinneringen, cover fotograferen (direct na scan en vanuit boekdetail) | Weten waar elk boek is; covers voor Nederlandse boeken (geen open bron heeft die) |
 | 4 | Import CSV/Excel — *zodra jouw voorbeeldbestand er is* | Bestaande collectie erin |
 | 5 | Lezen (sessies, statistiek), series-schermen | Have I Read That-functies |
 | 6 | Cover-herkenning, export/back-up, afwerking | Compleet |
