@@ -11,6 +11,8 @@ data class WikidataWork(
     val seriesName: String?,
     val seriesIndex: String?,
     val seriesId: String?,
+    /** Jaar van eerste publicatie van het werk (P577). */
+    val firstPublishedYear: Int? = null,
 )
 
 /**
@@ -57,11 +59,12 @@ class WikidataSource(private val http: LookupHttp) {
                 PREFIX ps: <http://www.wikidata.org/prop/statement/>
                 PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
                 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                SELECT DISTINCT ?work ?series ?ord ?seriesLabel (LANG(?seriesLabel) AS ?seriesLang) WHERE {
+                SELECT DISTINCT ?work ?series ?ord ?seriesLabel (LANG(?seriesLabel) AS ?seriesLang) ?published WHERE {
                   $authorClause
                   VALUES ?t { ${titleValues.joinToString(" ") { literal(it) }} }
                   ?work wdt:P50 ?a ; rdfs:label ?l .
                   FILTER(LCASE(STR(?l)) = ?t)
+                  OPTIONAL { ?work wdt:P577 ?published }
                   OPTIONAL {
                     ?work p:P179 ?st . ?st ps:P179 ?series .
                     OPTIONAL { ?st pq:P1545 ?ord }
@@ -90,6 +93,8 @@ class WikidataSource(private val http: LookupHttp) {
                 seriesName = label?.get("seriesLabel"),
                 seriesIndex = seriesRows.firstNotNullOfOrNull { it["ord"] },
                 seriesId = seriesRows.firstOrNull()?.get("series")?.substringAfterLast('/'),
+                // Soms staan er meerdere data (bijv. per land); de vroegste is de eerste uitgave.
+                firstPublishedYear = workRows.mapNotNull { yearIn(it["published"]) }.minOrNull(),
             )
         }
     }

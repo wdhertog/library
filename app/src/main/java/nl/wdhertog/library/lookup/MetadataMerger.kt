@@ -38,13 +38,19 @@ object MetadataMerger {
         )
     }
 
-    /** Wikidata kent volgnummers en geeft dezelfde serienaam voor alle edities; die gaat voor. */
+    /**
+     * Wikidata kent volgnummers, geeft dezelfde serienaam voor alle edities en heeft een
+     * betrouwbaarder jaar van eerste uitgave dan Open Library; die gaan voor.
+     */
     fun withWikidata(metadata: BookMetadata, work: WikidataWork?): BookMetadata {
         if (work == null) return metadata
-        if (work.seriesName == null) return metadata.copy(workWikidataId = work.workId)
-        return metadata.copy(
-            source = metadata.source + ", Wikidata",
+        val withWork = metadata.copy(
             workWikidataId = work.workId,
+            firstPublishedYear = work.firstPublishedYear ?: metadata.firstPublishedYear,
+        )
+        if (work.seriesName == null) return withWork
+        return withWork.copy(
+            source = metadata.source + ", Wikidata",
             seriesName = work.seriesName,
             seriesIndex = work.seriesIndex ?: metadata.seriesIndex,
         )

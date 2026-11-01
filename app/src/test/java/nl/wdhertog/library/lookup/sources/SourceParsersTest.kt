@@ -123,6 +123,16 @@ class SourceParsersTest {
     }
 
     @Test
+    fun `Wikidata - vroegste publicatiedatum is de eerste uitgave`() {
+        fun row(date: String) =
+            """{"work":{"type":"uri","value":"http://www.wikidata.org/entity/Q74287"},"published":{"type":"literal","value":"$date"}}"""
+        val json = """{"head":{"vars":[]},"results":{"bindings":[${row("1938-03-01T00:00:00Z")},${row("1937-09-21T00:00:00Z")}]}}"""
+        val work = WikidataSource.parse(json, preferredLanguage = "en")!!
+        assertEquals(1937, work.firstPublishedYear)
+        assertNull(work.seriesName)
+    }
+
+    @Test
     fun `Wikidata - query met auteur-id of naam, escapet aanhalingstekens`() {
         val byId = WikidataSource.buildQuery(listOf("Oudste", "Eldest"), listOf("Q93620"), emptyList())!!
         assert("wd:Q93620" in byId)
