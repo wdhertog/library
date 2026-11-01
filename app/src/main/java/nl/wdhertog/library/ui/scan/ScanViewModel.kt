@@ -32,6 +32,7 @@ class ScanViewModel(
 ) : ViewModel() {
 
     private val entries = MutableStateFlow<List<ScannedEntry>>(emptyList())
+    private val candidates = mutableMapOf<String, Long>()
     private val lastSeen = mutableMapOf<String, Long>()
     private val inFlight = mutableSetOf<String>()
 
@@ -50,9 +51,16 @@ class ScanViewModel(
     /** Wordt per cameraframe aangeroepen met elke herkende EAN-13. */
     fun onBarcode(raw: String) {
         val now = System.currentTimeMillis()
+        // Een losse misread kan toevallig een geldig controlecijfer hebben; een echte barcode
+        // staat vele frames in beeld. Pas bij de tweede waarneming kort na elkaar telt hij.
+        val candidate = candidates[raw]
+        if (candidate == null || now - candidate > CONFIRM_WINDOW_MS) {
+            candidates[raw] = now
+            return
+        }
         val previous = lastSeen[raw]
         lastSeen[raw] = now
-        // Dezelfde code staat meerdere frames in beeld; alleen de eerste keer telt.
+        // Dezelfde code blijft in beeld; alleen de eerste bevestigde waarneming telt.
         if (previous != null && now - previous < REPEAT_WINDOW_MS) return
 
         val isbn13 = Isbn.toIsbn13(raw)?.takeIf { it.startsWith("978") || it.startsWith("979") }
@@ -84,5 +92,6 @@ class ScanViewModel(
 
     private companion object {
         const val REPEAT_WINDOW_MS = 3_000L
+        const val CONFIRM_WINDOW_MS = 1_000L
     }
 }

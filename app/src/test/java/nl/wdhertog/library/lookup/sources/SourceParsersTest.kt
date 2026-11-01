@@ -44,6 +44,20 @@ class SourceParsersTest {
     }
 
     @Test
+    fun `KB - naam zoals op het boek, zonder titel en co-auteur`() {
+        val book = KbSource.parse(resource("kb_9789400510555.json"))!!
+        assertEquals("De keuze", book.title)
+        assertEquals(listOf("Edith Eva Eger"), book.authors) // KB: "Edita Eva Elefánt Eger"; label: "Dr. Edith Eva Eger met …"
+        assertEquals(listOf("Elisabeth van Borselen"), book.translators)
+    }
+
+    @Test
+    fun `KB - oorspronkelijke titel zonder ondertitel`() {
+        val book = KbSource.parse(resource("kb_9789051945539.json"))!!
+        assertEquals("Liturgy of the ordinary", book.originalTitle)
+    }
+
+    @Test
     fun `KB - onbekend ISBN`() {
         assertNull(KbSource.parse("""{"head":{"vars":[]},"results":{"bindings":[]}}"""))
     }

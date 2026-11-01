@@ -113,7 +113,7 @@ class KbSource(private val http: LookupHttp) : BookSource {
                 translators = translators.map { it.name },
                 language = LanguageCodes.toIso1(literal("${SCHEMA}inLanguage")),
                 originalTitle = original?.firstNotNullOfOrNull { it.extra["label"] }
-                    ?.substringBefore(". - ")?.trim()?.trimEnd('.'),
+                    ?.substringBefore(". - ")?.substringBefore(" : ")?.trim()?.trimEnd('.'),
                 originalLanguage = LanguageCodes.toIso1(original?.firstNotNullOfOrNull { it.extra["lang"] }),
                 publisher = publication?.let(::publisherFrom),
                 publishedYear = yearIn(literal(ISSUED)),
@@ -128,11 +128,15 @@ class KbSource(private val http: LookupHttp) : BookSource {
          */
         private fun displayName(party: Party, responsibility: String): String {
             val family = party.family ?: return party.name
-            return responsibility.split(Regex(",| & | en | and "))
-                .map(String::trim)
+            return responsibility.split(nameSeparators)
+                .map { it.trim().replace(honorifics, "") }
                 .firstOrNull { it.contains(family, ignoreCase = true) && it.length < 60 }
                 ?: party.name
         }
+
+        /** "Dr. Edith Eva Eger met Esmé Schwall Weigand" → twee namen. */
+        private val nameSeparators = Regex(",|;| & | en | and | met | with | und | et ")
+        private val honorifics = Regex("^(?i)(dr|prof|drs|ir|mr|ds)\\.\\s+")
 
         /** "Amsterdam : Cargo. 2015" → "Cargo". */
         private fun publisherFrom(label: String): String? =
