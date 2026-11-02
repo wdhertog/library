@@ -108,6 +108,9 @@ interface LoanDao {
     @Query("SELECT COUNT(*) FROM loan WHERE bookId = :bookId AND returnedAt IS NULL")
     suspend fun activeLoanCount(bookId: Long): Int
 
+    @Query("SELECT COUNT(*) FROM loan WHERE bookId = :bookId")
+    suspend fun loanCount(bookId: Long): Int
+
     @Insert
     suspend fun insertLoan(loan: Loan): Long
 

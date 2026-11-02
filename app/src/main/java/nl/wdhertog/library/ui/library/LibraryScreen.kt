@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -65,6 +66,7 @@ fun LibraryScreen(
     onBookClick: (Long) -> Unit,
     onAddBook: () -> Unit,
     onScan: () -> Unit,
+    onImport: () -> Unit,
     viewModel: LibraryViewModel = appViewModel { container, _ ->
         LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler)
     },
@@ -82,7 +84,7 @@ fun LibraryScreen(
                 title = { Text("Bibliotheek") },
                 actions = {
                     SortMenu(state.sort, viewModel::setSort)
-                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary)
+                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport)
                 },
             )
         },
@@ -196,7 +198,7 @@ private fun countLabel(state: LibraryUiState): String {
 }
 
 @Composable
-private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit) {
+private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onImport: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Meer") }
@@ -210,6 +212,11 @@ private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit) {
                 text = { Text("Bibliotheek bijwerken") },
                 leadingIcon = { Icon(Icons.Default.Sync, contentDescription = null) },
                 onClick = { open = false; onUpdateLibrary() },
+            )
+            DropdownMenuItem(
+                text = { Text("Importeren…") },
+                leadingIcon = { Icon(Icons.Default.FileOpen, contentDescription = null) },
+                onClick = { open = false; onImport() },
             )
         }
     }

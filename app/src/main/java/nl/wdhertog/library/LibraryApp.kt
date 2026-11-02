@@ -9,6 +9,7 @@ import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.repository.BookRepository
 import nl.wdhertog.library.data.repository.LoanRepository
 import nl.wdhertog.library.data.repository.LocationRepository
+import nl.wdhertog.library.importer.ImportService
 import nl.wdhertog.library.lookup.EnrichScheduler
 import nl.wdhertog.library.lookup.EnrichmentService
 import nl.wdhertog.library.lookup.LookupHttp
@@ -27,6 +28,7 @@ class AppContainer(app: Application) {
     val coverStore by lazy { CoverStore(app) }
     val locationRepository by lazy { LocationRepository(database) }
     val loanRepository by lazy { LoanRepository(database, bookRepository) }
+    val importService by lazy { ImportService(database, bookRepository) }
 
     /** Voor werk dat een scherm moet overleven, zoals de snelle lookup na een scan. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

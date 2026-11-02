@@ -49,6 +49,7 @@ import nl.wdhertog.library.LibraryApp
 import nl.wdhertog.library.ui.bookdetail.BookDetailScreen
 import nl.wdhertog.library.ui.bookedit.BookEditScreen
 import nl.wdhertog.library.ui.cover.CoverScreen
+import nl.wdhertog.library.ui.importer.ImportScreen
 import nl.wdhertog.library.ui.library.LibraryScreen
 import nl.wdhertog.library.ui.locations.LocationDetailScreen
 import nl.wdhertog.library.ui.locations.LocationsScreen
@@ -80,6 +81,9 @@ data class BookEditRoute(val bookId: Long = 0)
 
 @Serializable
 data class CoverRoute(val bookId: Long)
+
+@Serializable
+object ImportRoute
 
 private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector)
 
@@ -174,6 +178,7 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onBookClick = { navController.navigate(BookDetailRoute(it)) },
                     onAddBook = { navController.navigate(BookEditRoute()) },
                     onScan = { navController.navigate(ScanRoute()) },
+                    onImport = { navController.navigate(ImportRoute) },
                 )
             }
             composable<LocationsRoute> {
@@ -206,6 +211,9 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onOpenLocation = { navController.navigate(LocationDetailRoute(it)) },
                     onPhotoCover = { navController.navigate(CoverRoute(it)) },
                 )
+            }
+            composable<ImportRoute> { entry ->
+                ImportScreen(onBack = { navController.popFrom(entry) })
             }
             composable<CoverRoute> { entry ->
                 CoverScreen(onClose = { navController.popFrom(entry) })

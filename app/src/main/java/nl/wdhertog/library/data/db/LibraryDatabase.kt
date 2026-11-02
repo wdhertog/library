@@ -1,6 +1,7 @@
 package nl.wdhertog.library.data.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -19,8 +20,10 @@ import androidx.room.TypeConverters
         Loan::class,
         ReadingSession::class,
         ReadingGoal::class,
+        ImportRun::class,
     ],
-    version = 1,
+    version = 2,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -30,6 +33,8 @@ abstract class LibraryDatabase : RoomDatabase() {
     abstract fun locationDao(): LocationDao
 
     abstract fun loanDao(): LoanDao
+
+    abstract fun importDao(): ImportDao
 
     companion object {
         fun create(context: Context): LibraryDatabase =
