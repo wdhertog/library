@@ -35,12 +35,16 @@ class EnrichWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     }
 }
 
-class EnrichScheduler(private val context: Context) {
+class EnrichScheduler(private val context: Context, private val wifiOnly: () -> Boolean = { false }) {
 
     /** Start (of verlengt) de achtergrondronde. Aanroepen na elke scan of import is goedkoop. */
     fun schedule() {
         val request = OneTimeWorkRequestBuilder<EnrichWorker>()
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(if (wifiOnly()) NetworkType.UNMETERED else NetworkType.CONNECTED)
+                    .build(),
+            )
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         // APPEND: een boek dat binnenkomt terwijl de vorige ronde net klaar is, wordt toch opgepakt.

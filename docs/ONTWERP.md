@@ -449,7 +449,7 @@ Tests: unittests voor ISBN-logica, bron-parsers (met opgeslagen voorbeeldantwoor
 | 3 | Locaties + plank-modus, uitleen in beide richtingen + herinneringen, cover fotograferen (direct na scan en vanuit boekdetail) | Weten waar elk boek is; covers voor Nederlandse boeken (geen open bron heeft die) |
 | 4 | Import Have I Read That (JSON) en CSV/Excel met kolomtoewijzing, controle per boek en ongedaan maken. Erbij: favoriet, eigenaar (gedeelde collectie), weggedaan (hoe, aan wie, wanneer), leesvoortgang | Bestaande collectie erin |
 | 5 | Lezen (sessies, statistiek), series-schermen. Gebouwd: tab Lezen (nu bezig met voortgang, leeslijst, leesdoel, per jaar: maandgrafiek, pagina's, gemiddelde, talen); leessectie op de boekpagina (beginnen, voortgang, uitgelezen/gestopt, halve sterren, recensie, herlezen, sessies van andere edities); series-lijst en -detail (delen op volgorde, edities per deel, ontbrekende nummers tot 100, naam wijzigen/samenvoegen, aantal delen, deelnummer) | Have I Read That-functies |
-| 6 | Cover-herkenning, export/back-up, afwerking | Compleet |
+| 6 | Cover-herkenning, export/back-up, afwerking. Gebouwd: back-up (ZIP) en terugzetten, automatische wekelijkse back-up naar een gekozen map, CSV-export, cover-herkenning bij het scannen (ML Kit-tekst → KB + Open Library), instellingen (alleen wifi, geluid/trillen, herinneringen), filters op eigenaar/gelezen/favorieten, app-icoon | Compleet (v1.0) |
 | 7 | Volledige Have I Read That-import: ook boeken die niet (meer) in bezit zijn en e-books/luisterboeken, als "niet in bezit" (niet als "geleend", want dat betekent: moet terug). Bibliotheek standaard alleen boeken in bezit tonen, met filter voor de rest. Details vragen bij de start | Volledige leesgeschiedenis |
 
 ## 9. Open vragen

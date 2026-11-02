@@ -1,12 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Drie boeken op een plank, binnen de veilige zone (66dp) van het adaptieve icoon. -->
+<!-- Vier boekruggen op een plank, de laatste leunt; binnen de veilige zone (66dp) van het adaptieve icoon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#F3E9D2" android:pathData="M34,36h9v34h-9z" />
-    <path android:fillColor="#E0B860" android:pathData="M45,32h10v38h-10z" />
-    <path android:fillColor="#F3E9D2" android:pathData="M58.2,37.6l8.7,-2.3l8.8,32.8l-8.7,2.3z" />
-    <path android:fillColor="#F3E9D2" android:pathData="M30,71h48v4h-48z" />
+    <!-- Crème rug met twee banden -->
+    <path android:fillColor="#F3E9D2" android:pathData="M31,39h9v33h-9z" />
+    <path android:fillColor="#D6C6A6" android:pathData="M31,44h9v2h-9zM31,65h9v2h-9z" />
+    <!-- Oker rug, de hoogste, met etiket -->
+    <path android:fillColor="#E0B860" android:pathData="M41.5,31h10v41h-10z" />
+    <path android:fillColor="#F3E9D2" android:pathData="M43.5,38h6v8h-6z" />
+    <path android:fillColor="#B8892F" android:pathData="M41.5,64h10v2.5h-10z" />
+    <!-- Groene rug -->
+    <path android:fillColor="#A8CDBB" android:pathData="M53,41h7.5v31h-7.5z" />
+    <path android:fillColor="#7FA894" android:pathData="M53,47h7.5v2h-7.5zM53,51h7.5v1h-7.5z" />
+    <!-- Terracotta rug die tegen de rest leunt -->
+    <path android:fillColor="#D27D5C" android:pathData="M62,72L70.2,72L78.6,41.3L70.7,39.2Z" />
+    <path android:fillColor="#A85A3E" android:pathData="M64.3,63.6L72.2,65.7L72.8,63.5L64.9,61.4Z" />
+    <!-- Plank -->
+    <path android:fillColor="#F3E9D2" android:pathData="M27,72h54v4.5h-54z" />
 </vector>

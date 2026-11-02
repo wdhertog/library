@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
@@ -26,6 +27,11 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.AssistChip
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.SnackbarHost
@@ -71,8 +77,9 @@ fun LibraryScreen(
     onImport: () -> Unit,
     onSeries: () -> Unit,
     onBackup: () -> Unit,
+    onSettings: () -> Unit,
     viewModel: LibraryViewModel = appViewModel { container, _ ->
-        LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler)
+        LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler, container.readingRepository)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -88,7 +95,7 @@ fun LibraryScreen(
                 title = { Text("Bibliotheek") },
                 actions = {
                     SortMenu(state.sort, viewModel::setSort)
-                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport, onSeries = onSeries, onBackup = onBackup)
+                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport, onSeries = onSeries, onBackup = onBackup, onSettings = onSettings)
                 },
             )
         },
@@ -118,10 +125,17 @@ fun LibraryScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             )
             Row(
-                Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (state.anyFilter) {
+                    AssistChip(
+                        onClick = viewModel::clearFilters,
+                        label = { Text("Wissen") },
+                        leadingIcon = { Icon(Icons.Default.Clear, contentDescription = null, Modifier.size(18.dp)) },
+                    )
+                }
                 LanguageFilter(state.language, state.availableLanguages, viewModel::setLanguage)
                 if (state.locationTree.isNotEmpty()) {
                     FilterChip(
@@ -138,13 +152,43 @@ fun LibraryScreen(
                         trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
                     )
                 }
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = countLabel(state),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                if (state.availableOwners.isNotEmpty()) {
+                    ChoiceChip(
+                        label = state.owner ?: "Eigenaar",
+                        selected = state.owner != null,
+                        options = listOf<String?>(null) + state.availableOwners,
+                        optionLabel = { it ?: "Iedereen" },
+                        current = state.owner,
+                        onSelect = viewModel::setOwner,
+                    )
+                }
+                ChoiceChip(
+                    label = state.read.label,
+                    selected = state.read != ReadFilter.ALL,
+                    options = ReadFilter.entries,
+                    optionLabel = { if (it == ReadFilter.ALL) "Alles" else it.label },
+                    current = state.read,
+                    onSelect = viewModel::setRead,
+                )
+                FilterChip(
+                    selected = state.favoritesOnly,
+                    onClick = { viewModel.setFavoritesOnly(!state.favoritesOnly) },
+                    label = { Text("Favorieten") },
+                    leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, Modifier.size(18.dp)) },
                 )
             }
+            // Andere filters of sortering: begin weer bovenaan de lijst.
+            val listState = rememberLazyListState()
+            LaunchedEffect(state.language, state.location, state.owner, state.favoritesOnly, state.read, state.sort, state.query) {
+                listState.scrollToItem(0)
+            }
+            // Eigen regel: in de schuifbare rij met filters zou het aantal buiten beeld kunnen vallen.
+            Text(
+                text = countLabel(state),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+            )
             if (awaitingLookup > 0) {
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
@@ -162,7 +206,7 @@ fun LibraryScreen(
                 }
                 state.totalCount == 0 -> EmptyMessage("Nog geen boeken.\nTik op Scannen om te beginnen.")
                 state.items.isEmpty() -> EmptyMessage("Geen boeken gevonden.")
-                else -> LazyColumn(contentPadding = PaddingValues(bottom = 88.dp)) {
+                else -> LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 88.dp)) {
                     items(state.items, key = { it.book.id }) { item ->
                         BookRow(
                             item,
@@ -202,7 +246,7 @@ private fun countLabel(state: LibraryUiState): String {
 }
 
 @Composable
-private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onImport: () -> Unit, onSeries: () -> Unit, onBackup: () -> Unit) {
+private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onImport: () -> Unit, onSeries: () -> Unit, onBackup: () -> Unit, onSettings: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Meer") }
@@ -232,6 +276,11 @@ private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onI
                 leadingIcon = { Icon(Icons.Default.Backup, contentDescription = null) },
                 onClick = { open = false; onBackup() },
             )
+            DropdownMenuItem(
+                text = { Text("Instellingen") },
+                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                onClick = { open = false; onSettings() },
+            )
         }
     }
 }
@@ -252,6 +301,36 @@ private fun SortMenu(current: SortOrder, onSelect: (SortOrder) -> Unit) {
                         onSelect(order)
                         open = false
                     },
+                )
+            }
+        }
+    }
+}
+
+/** Filterchip met een keuzemenu. */
+@Composable
+private fun <T> ChoiceChip(
+    label: String,
+    selected: Boolean,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    current: T,
+    onSelect: (T) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = selected,
+            onClick = { open = true },
+            label = { Text(label, maxLines = 1) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(optionLabel(option)) },
+                    leadingIcon = { if (option == current) Icon(Icons.Default.Check, contentDescription = null) },
+                    onClick = { onSelect(option); open = false },
                 )
             }
         }

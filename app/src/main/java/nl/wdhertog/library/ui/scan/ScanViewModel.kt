@@ -81,6 +81,8 @@ class ScanViewModel(
     private val appScope: CoroutineScope,
     private val coverStore: CoverStore,
     private val bookSearch: BookSearch,
+    /** Alleen-wifi: op mobiele data wacht het opzoeken tot de achtergrondronde. */
+    private val mayLookUpNow: () -> Boolean = { true },
 ) : ViewModel() {
 
     val mode = MutableStateFlow(ScanMode.BARCODE)
@@ -156,7 +158,7 @@ class ScanViewModel(
                 shelf?.let { locations.moveBook(result.bookId, it) }
                 appScope.launch {
                     try {
-                        enrichment.quickLookup(result.bookId)
+                        if (mayLookUpNow()) enrichment.quickLookup(result.bookId)
                     } finally {
                         scheduler.schedule()
                     }

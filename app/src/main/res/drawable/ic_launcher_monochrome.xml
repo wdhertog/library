@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Thema-icoon (Android 13+): dezelfde vormen in één kleur; het systeem kleurt ze in. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M31,39h9v33h-9z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M41.5,31h10v41h-10z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M53,41h7.5v31h-7.5z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M62,72L70.2,72L78.6,41.3L70.7,39.2Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M27,73.5h54v3h-54z" />
+</vector>

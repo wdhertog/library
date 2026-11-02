@@ -55,6 +55,7 @@ import nl.wdhertog.library.ui.importer.ImportScreen
 import nl.wdhertog.library.ui.reading.ReadingScreen
 import nl.wdhertog.library.ui.series.SeriesDetailScreen
 import nl.wdhertog.library.ui.series.SeriesListScreen
+import nl.wdhertog.library.ui.settings.SettingsScreen
 import nl.wdhertog.library.ui.library.LibraryScreen
 import nl.wdhertog.library.ui.locations.LocationDetailScreen
 import nl.wdhertog.library.ui.locations.LocationsScreen
@@ -95,6 +96,9 @@ object ReadingRoute
 
 @Serializable
 object BackupRoute
+
+@Serializable
+object SettingsRoute
 
 @Serializable
 object SeriesListRoute
@@ -199,7 +203,11 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onImport = { navController.navigate(ImportRoute) },
                     onSeries = { navController.navigate(SeriesListRoute) },
                     onBackup = { navController.navigate(BackupRoute) },
+                    onSettings = { navController.navigate(SettingsRoute) },
                 )
+            }
+            composable<SettingsRoute> { entry ->
+                SettingsScreen(onBack = { navController.popFrom(entry) }, onBackup = { navController.navigate(BackupRoute) })
             }
             composable<BackupRoute> { entry ->
                 BackupScreen(onBack = { navController.popFrom(entry) })

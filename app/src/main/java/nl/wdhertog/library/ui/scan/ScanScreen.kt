@@ -90,6 +90,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.window.DialogProperties
 import nl.wdhertog.library.ui.navigation.appViewModel
+import nl.wdhertog.library.LibraryApp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +110,7 @@ fun ScanScreen(
             container.appScope,
             container.coverStore,
             container.bookSearch,
+            mayLookUpNow = container.settings::mayLookUpNow,
         )
     },
 ) {
@@ -123,7 +125,8 @@ fun ScanScreen(
     }
     LaunchedEffect(Unit) { if (!hasPermission) permissionLauncher.launch(Manifest.permission.CAMERA) }
 
-    val feedback = remember { ScanFeedback(context) }
+    val settings = (context.applicationContext as LibraryApp).container.settings
+    val feedback = remember { ScanFeedback(context, sound = { settings.scanSound.value }, vibrate = { settings.scanVibrate.value }) }
     DisposableEffect(Unit) { onDispose { feedback.release() } }
     LaunchedEffect(viewModel) { viewModel.signals.collect(feedback::play) }
 

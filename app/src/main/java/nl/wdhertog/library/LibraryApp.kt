@@ -27,6 +27,7 @@ import nl.wdhertog.library.lookup.sources.KbSource
 import nl.wdhertog.library.lookup.sources.OpenLibrarySource
 import nl.wdhertog.library.lookup.sources.WikidataSource
 import nl.wdhertog.library.reminders.LoanReminderWorker
+import nl.wdhertog.library.util.AppSettings
 
 /** Handmatige dependency injection: één container voor de hele app. */
 class AppContainer(val app: Application) {
@@ -55,7 +56,8 @@ class AppContainer(val app: Application) {
             wikidata = WikidataSource(http),
         )
     }
-    val enrichScheduler = EnrichScheduler(app)
+    val settings = AppSettings(app)
+    val enrichScheduler = EnrichScheduler(app, wifiOnly = { settings.wifiOnly.value })
     val bookSearch by lazy { BookSearch(http) }
 }
 
@@ -68,7 +70,7 @@ class LibraryApp : Application() {
         container = AppContainer(this)
         // Pak eventueel onderbroken werk weer op; doet niets als de wachtrij leeg is.
         container.enrichScheduler.schedule()
-        LoanReminderWorker.schedule(this)
+        if (container.settings.loanReminders.value) LoanReminderWorker.schedule(this)
         if (AutoBackupSettings(this).folder != null) AutoBackupWorker.schedule(this)
     }
 }
