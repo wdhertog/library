@@ -48,12 +48,14 @@ import kotlinx.serialization.Serializable
 import nl.wdhertog.library.AppContainer
 import nl.wdhertog.library.LibraryApp
 import nl.wdhertog.library.ui.bookdetail.BookDetailScreen
+import nl.wdhertog.library.ui.backup.BackupScreen
 import nl.wdhertog.library.ui.bookedit.BookEditScreen
 import nl.wdhertog.library.ui.cover.CoverScreen
 import nl.wdhertog.library.ui.importer.ImportScreen
 import nl.wdhertog.library.ui.reading.ReadingScreen
 import nl.wdhertog.library.ui.series.SeriesDetailScreen
 import nl.wdhertog.library.ui.series.SeriesListScreen
+import nl.wdhertog.library.ui.settings.SettingsScreen
 import nl.wdhertog.library.ui.library.LibraryScreen
 import nl.wdhertog.library.ui.locations.LocationDetailScreen
 import nl.wdhertog.library.ui.locations.LocationsScreen
@@ -79,9 +81,9 @@ data class BookDetailRoute(val bookId: Long)
 @Serializable
 data class ScanRoute(val locationId: Long = 0)
 
-/** bookId 0 = nieuw boek. */
+/** bookId 0 = nieuw boek; titel en auteur kunnen alvast ingevuld worden (bijv. na cover-herkenning). */
 @Serializable
-data class BookEditRoute(val bookId: Long = 0)
+data class BookEditRoute(val bookId: Long = 0, val title: String = "", val author: String = "", val coverFile: String = "")
 
 @Serializable
 data class CoverRoute(val bookId: Long)
@@ -91,6 +93,12 @@ object ImportRoute
 
 @Serializable
 object ReadingRoute
+
+@Serializable
+object BackupRoute
+
+@Serializable
+object SettingsRoute
 
 @Serializable
 object SeriesListRoute
@@ -194,7 +202,15 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onScan = { navController.navigate(ScanRoute()) },
                     onImport = { navController.navigate(ImportRoute) },
                     onSeries = { navController.navigate(SeriesListRoute) },
+                    onBackup = { navController.navigate(BackupRoute) },
+                    onSettings = { navController.navigate(SettingsRoute) },
                 )
+            }
+            composable<SettingsRoute> { entry ->
+                SettingsScreen(onBack = { navController.popFrom(entry) }, onBackup = { navController.navigate(BackupRoute) })
+            }
+            composable<BackupRoute> { entry ->
+                BackupScreen(onBack = { navController.popFrom(entry) })
             }
             composable<ReadingRoute> {
                 ReadingScreen(onOpenBook = { navController.navigate(BookDetailRoute(it)) })
@@ -231,6 +247,9 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onOpenBook = { navController.navigate(BookDetailRoute(it)) },
                     onManualEntry = { navController.navigate(BookEditRoute()) },
                     onPhotoCover = { navController.navigate(CoverRoute(it)) },
+                    onManualFromCover = { title, author, coverFile ->
+                        navController.navigate(BookEditRoute(title = title, author = author, coverFile = coverFile.orEmpty()))
+                    },
                 )
             }
             composable<BookDetailRoute> { entry ->

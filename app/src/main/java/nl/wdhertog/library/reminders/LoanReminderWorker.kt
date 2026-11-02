@@ -112,6 +112,10 @@ class LoanReminderWorker(context: Context, params: WorkerParameters) : Coroutine
         }
 
         /** Eens per dag, rond 9 uur 's ochtends. Bestaand schema blijft staan. */
+        fun cancel(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+        }
+
         fun schedule(context: Context) {
             val now = LocalDateTime.now()
             var next = now.toLocalDate().atTime(LocalTime.of(9, 0))

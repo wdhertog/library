@@ -38,6 +38,17 @@ interface ReadingDao {
     )
     fun observeSessionsForWork(bookId: Long): Flow<List<SessionRow>>
 
+    /** Boeken met een sessie met [status], ook als die sessie bij een andere editie van hetzelfde werk hoort. */
+    @Query(
+        """
+        SELECT DISTINCT other.bookId FROM reading_session s
+        JOIN book_work mine ON mine.bookId = s.bookId
+        JOIN book_work other ON other.workId = mine.workId
+        WHERE s.status = :status
+        """
+    )
+    fun observeBookIdsWithStatus(status: ReadingStatus): Flow<List<Long>>
+
     @Insert
     suspend fun insert(session: ReadingSession): Long
 

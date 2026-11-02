@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
@@ -71,6 +72,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import nl.wdhertog.library.covers.Box
 import nl.wdhertog.library.covers.CoverCrop
 import nl.wdhertog.library.ui.navigation.appViewModel
 
@@ -145,12 +147,14 @@ fun CoverScreen(
     }
 }
 
+/** Camerabeeld met boekkader en sluiterknop; ook gebruikt voor cover-herkenning bij het scannen. */
 @Composable
-private fun CoverCamera(
+fun CoverCamera(
     torchOn: Boolean,
-    onCaptured: (ImageProxy, Float, Float) -> Unit,
+    onCaptured: (image: ImageProxy, frame: Box, viewWidth: Float, viewHeight: Float) -> Unit,
     onFailed: () -> Unit,
-    onPick: () -> Unit,
+    onPick: (() -> Unit)?,
+    hint: String = "Zet de voorkant binnen het kader",
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -166,6 +170,10 @@ private fun CoverCamera(
     }
     LaunchedEffect(torchOn) { controller.enableTorch(torchOn) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
+    val density = LocalDensity.current
+    // Ruimte voor de uitleg bovenaan en de sluiterknop onderaan, zodat die het kader niet bedekken.
+    val topInset = with(density) { 44.dp.toPx() }
+    val bottomInset = with(density) { 128.dp.toPx() }
 
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
@@ -179,10 +187,10 @@ private fun CoverCamera(
                 },
                 modifier = Modifier.fillMaxSize().clipToBounds(),
             )
-            CoverFrame()
+            CoverFrame(topInset, bottomInset)
         }
         Text(
-            "Zet de voorkant binnen het kader",
+            hint,
             color = Color.White,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
         )
@@ -191,16 +199,21 @@ private fun CoverCamera(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onPick) {
-                Icon(Icons.Default.PhotoLibrary, contentDescription = "Afbeelding kiezen", tint = Color.White)
+            if (onPick != null) {
+                IconButton(onClick = onPick) {
+                    Icon(Icons.Default.PhotoLibrary, contentDescription = "Afbeelding kiezen", tint = Color.White)
+                }
+            } else {
+                Spacer(Modifier.size(48.dp))
             }
             LargeFloatingActionButton(onClick = {
                 val width = viewSize.width.toFloat()
                 val height = viewSize.height.toFloat()
+                val frame = CoverCrop.frame(width, height, topInset, bottomInset)
                 controller.takePicture(
                     ContextCompat.getMainExecutor(context),
                     object : ImageCapture.OnImageCapturedCallback() {
-                        override fun onCaptureSuccess(image: ImageProxy) = onCaptured(image, width, height)
+                        override fun onCaptureSuccess(image: ImageProxy) = onCaptured(image, frame, width, height)
                         override fun onError(exception: ImageCaptureException) = onFailed()
                     },
                 )
@@ -215,9 +228,9 @@ private fun CoverCamera(
 
 /** Alles buiten het kader wat donkerder, zodat duidelijk is wat er bewaard wordt. */
 @Composable
-private fun CoverFrame() {
+private fun CoverFrame(topInset: Float, bottomInset: Float) {
     Canvas(Modifier.fillMaxSize()) {
-        val frame = CoverCrop.frame(size.width, size.height)
+        val frame = CoverCrop.frame(size.width, size.height, topInset, bottomInset)
         val corner = CornerRadius(8.dp.toPx())
         val hole = Path().apply {
             addRoundRect(RoundRect(frame.left, frame.top, frame.right, frame.bottom, corner))

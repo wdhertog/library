@@ -14,8 +14,8 @@ android {
         applicationId = "nl.wdhertog.library"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.8"
+        versionCode = 10
+        versionName = "1.0"
     }
 
     // Releasesleutel staat buiten de repo; zet de gegevens in ~/.gradle/gradle.properties.
@@ -95,6 +95,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.camera.mlkit)
     implementation(libs.mlkit.barcode)
+    implementation(libs.mlkit.text)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

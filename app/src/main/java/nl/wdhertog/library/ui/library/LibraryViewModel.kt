@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import nl.wdhertog.library.data.repository.ReadingRepository
 import kotlinx.coroutines.launch
 import nl.wdhertog.library.data.db.LocationType
 import nl.wdhertog.library.data.repository.BookListItem
@@ -30,6 +32,13 @@ enum class SortOrder(val label: String) {
     LOCATION("Locatie (plankvolgorde)"),
 }
 
+enum class ReadFilter(val label: String) {
+    ALL("Lezen"),
+    READ("Gelezen"),
+    UNREAD("Ongelezen"),
+    READING("Bezig"),
+}
+
 data class LibraryUiState(
     val loading: Boolean = true,
     val items: List<BookListItem> = emptyList(),
@@ -43,9 +52,26 @@ data class LibraryUiState(
     val locationTree: List<LocationNode> = emptyList(),
     /** Pad per locatie-id, voor de 📍-regel in de lijst. */
     val locationLabels: Map<Long, String> = emptyMap(),
+    val owner: String? = null,
+    val availableOwners: List<String> = emptyList(),
+    val favoritesOnly: Boolean = false,
+    val read: ReadFilter = ReadFilter.ALL,
+) {
+    val anyFilter: Boolean get() = language != null || location != null || owner != null || favoritesOnly || read != ReadFilter.ALL
+}
+
+private data class Filters(
+    val query: String = "",
+    val sort: SortOrder = SortOrder.TITLE,
+    val language: String? = null,
+    val locationId: Long? = null,
+    val owner: String? = null,
+    val favoritesOnly: Boolean = false,
+    val read: ReadFilter = ReadFilter.ALL,
 )
 
-private data class Filters(val query: String, val sort: SortOrder, val language: String?, val locationId: Long?)
+/** Welke boeken (gezien per werk) gelezen zijn en welke je nu leest. */
+private data class ReadState(val read: Set<Long>, val reading: Set<Long>)
 
 /** Lijstitem met vooraf berekende sorteersleutels, zodat sorteren en filteren snel blijven. */
 private class Indexed(val item: BookListItem) {
@@ -58,6 +84,7 @@ class LibraryViewModel(
     private val repository: BookRepository,
     private val locations: LocationRepository,
     private val scheduler: EnrichScheduler,
+    reading: ReadingRepository,
 ) : ViewModel() {
 
     /** Aantal boeken waarvan de gegevens nog op de achtergrond worden opgehaald. */
@@ -80,23 +107,22 @@ class LibraryViewModel(
         }
     }
 
-    private val query = MutableStateFlow("")
+    private val filters = MutableStateFlow(Filters())
 
     /** Los van [state], zodat het zoekveld direct reageert terwijl er gefilterd wordt. */
-    val queryText: StateFlow<String> = query
+    val queryText: StateFlow<String> = filters.map { it.query }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
-    private val sort = MutableStateFlow(SortOrder.TITLE)
-    private val language = MutableStateFlow<String?>(null)
-    private val locationId = MutableStateFlow<Long?>(null)
+    private val readState = combine(reading.observeReadBookIds(), reading.observeReadingBookIds()) { read, current ->
+        ReadState(read.toSet(), current.toSet())
+    }
 
     private val indexed = repository.observeLibrary()
         .map { items -> items.map(::Indexed) }
         .flowOn(Dispatchers.Default)
 
-    private val filters = combine(query, sort, language, locationId, ::Filters)
-
     val state: StateFlow<LibraryUiState> =
-        combine(indexed, locations.observeTree(), filters) { all, tree, filters ->
+        combine(indexed, locations.observeTree(), filters, readState) { all, tree, filters, readState ->
             val flat = LocationTree.flatten(tree)
             val byId = flat.associateBy { it.id }
             val selected = filters.locationId?.let(byId::get)
@@ -106,6 +132,16 @@ class LibraryViewModel(
             val visible = all
                 .filter { filters.language == null || it.item.book.language == filters.language }
                 .filter { inSelected == null || it.item.book.locationId in inSelected }
+                .filter { filters.owner == null || it.item.book.owner == filters.owner }
+                .filter { !filters.favoritesOnly || it.item.book.favorite }
+                .filter {
+                    when (filters.read) {
+                        ReadFilter.ALL -> true
+                        ReadFilter.READ -> it.item.book.id in readState.read
+                        ReadFilter.UNREAD -> it.item.book.id !in readState.read && it.item.book.id !in readState.reading
+                        ReadFilter.READING -> it.item.book.id in readState.reading
+                    }
+                }
                 .filter { entry -> words.all { entry.item.book.searchText.contains(it) } }
                 .sortedWith(comparatorFor(filters.sort, treeOrder))
                 .map { it.item }
@@ -120,26 +156,31 @@ class LibraryViewModel(
                 location = selected,
                 locationTree = tree,
                 locationLabels = flat.associate { it.id to it.pathLabel },
+                owner = filters.owner,
+                availableOwners = all.mapNotNull { it.item.book.owner }.distinct().sortedBy { it.lowercase() },
+                favoritesOnly = filters.favoritesOnly,
+                read = filters.read,
             )
         }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
-    fun setQuery(value: String) {
-        query.value = value
-    }
+    fun setQuery(value: String) = filters.update { it.copy(query = value) }
 
-    fun setSort(value: SortOrder) {
-        sort.value = value
-    }
+    fun setSort(value: SortOrder) = filters.update { it.copy(sort = value) }
 
-    fun setLanguage(value: String?) {
-        language.value = value
-    }
+    fun setLanguage(value: String?) = filters.update { it.copy(language = value) }
 
-    fun setLocation(value: Long?) {
-        locationId.value = value
-    }
+    fun setLocation(value: Long?) = filters.update { it.copy(locationId = value) }
+
+    fun setOwner(value: String?) = filters.update { it.copy(owner = value) }
+
+    fun setFavoritesOnly(value: Boolean) = filters.update { it.copy(favoritesOnly = value) }
+
+    fun setRead(value: ReadFilter) = filters.update { it.copy(read = value) }
+
+    /** Alle filters uit (zoektekst en sortering blijven). */
+    fun clearFilters() = filters.update { Filters(query = it.query, sort = it.sort) }
 
     suspend fun createLocation(name: String, type: LocationType, parentId: Long?): Long = locations.add(name, type, parentId)
 

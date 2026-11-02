@@ -1,0 +1,11 @@
+{ "head": { "vars": ["name","isbn","author","date"] }, "results": {"bindings": [
+{"name":{"type":"literal","value":"Aartsvijand"},"isbn":{"type":"literal","value":"9789400518896"},"author":{"type":"literal","value":"Gregg Andrew Hurwitz"}},
+{"name":{"type":"literal","value":"Aartsvijand"},"isbn":{"type":"literal","value":"9789044938463"},"author":{"type":"literal","value":"Gregg Hurwitz"}},
+{"name":{"type":"literal","value":"Man tegen man : Geordie Sharp maakt zich op voor de ultieme confrontatie met zijn aartsvijand: IRA-terrorist Declan Farrell"},"isbn":{"type":"literal","value":"9789402312744"},"author":{"type":"literal","value":"Chris Ryan"}},
+{"name":{"type":"literal","value":"Tussen rode ster en davidster : waarom communisme en zionisme aartsvijanden werden"},"isbn":{"type":"literal","value":"9002209630"},"author":{"type":"literal","value":"Kris Borms"}},
+{"name":{"type":"literal","value":"Man tegen man : Geordie Sharp maakt zich op voor de ultieme confrontatie met zijn aartsvijand: IRA-terrorist Declan Farrell"},"isbn":{"type":"literal","value":"9789022586433"},"author":{"type":"literal","value":"Chris Ryan"}},
+{"name":{"type":"literal","value":"Aartsvijand"},"isbn":{"type":"literal","value":"9789401619318"},"author":{"type":"literal","value":"Wilbur Addison Smith"}},
+{"name":{"type":"literal","value":"De aartsvijand"},"isbn":{"type":"literal","value":"9789021048734"},"author":{"type":"literal","value":"John le Carré"}},
+{"name":{"type":"literal","value":"De aartsvijand : een John Le Carré thriller"},"isbn":{"type":"literal","value":"9789021048727"},"author":{"type":"literal","value":"Nick Harkaway"}},
+{"name":{"type":"literal","value":"Aartsvijand"},"isbn":{"type":"literal","value":"9789401619301"},"author":{"type":"literal","value":"Wilbur Addison Smith"}}
+]}}

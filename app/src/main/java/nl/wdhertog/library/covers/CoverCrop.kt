@@ -15,12 +15,16 @@ object CoverCrop {
     const val ASPECT = 1.5f
     private const val FILL = 0.82f
 
-    /** Het kader op het scherm: zo groot mogelijk, gecentreerd, met wat ruimte eromheen. */
-    fun frame(viewWidth: Float, viewHeight: Float): Box {
-        val width = min(viewWidth * FILL, viewHeight * FILL / ASPECT)
+    /**
+     * Het kader op het scherm: zo groot mogelijk en gecentreerd, met wat ruimte eromheen.
+     * [topInset] en [bottomInset] houden ruimte vrij voor de uitleg en de sluiterknop.
+     */
+    fun frame(viewWidth: Float, viewHeight: Float, topInset: Float = 0f, bottomInset: Float = 0f): Box {
+        val areaHeight = (viewHeight - topInset - bottomInset).coerceAtLeast(viewHeight * 0.3f)
+        val width = min(viewWidth * FILL, areaHeight * FILL / ASPECT)
         val height = width * ASPECT
         val left = (viewWidth - width) / 2
-        val top = (viewHeight - height) / 2
+        val top = topInset + (areaHeight - height) / 2
         return Box(left, top, left + width, top + height)
     }
 

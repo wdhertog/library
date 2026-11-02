@@ -46,6 +46,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +73,24 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import nl.wdhertog.library.ui.components.CoverImage
+import nl.wdhertog.library.ui.cover.CoverCamera
+import nl.wdhertog.library.lookup.search.SearchCandidate
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.window.DialogProperties
 import nl.wdhertog.library.ui.navigation.appViewModel
+import nl.wdhertog.library.LibraryApp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +99,7 @@ fun ScanScreen(
     onOpenBook: (Long) -> Unit,
     onManualEntry: () -> Unit,
     onPhotoCover: (Long) -> Unit,
+    onManualFromCover: (title: String, author: String, coverFile: String?) -> Unit,
     viewModel: ScanViewModel = appViewModel { container, handle ->
         ScanViewModel(
             handle,
@@ -88,6 +108,9 @@ fun ScanScreen(
             container.enrichmentService,
             container.enrichScheduler,
             container.appScope,
+            container.coverStore,
+            container.bookSearch,
+            mayLookUpNow = container.settings::mayLookUpNow,
         )
     },
 ) {
@@ -102,7 +125,8 @@ fun ScanScreen(
     }
     LaunchedEffect(Unit) { if (!hasPermission) permissionLauncher.launch(Manifest.permission.CAMERA) }
 
-    val feedback = remember { ScanFeedback(context) }
+    val settings = (context.applicationContext as LibraryApp).container.settings
+    val feedback = remember { ScanFeedback(context, sound = { settings.scanSound.value }, vibrate = { settings.scanVibrate.value }) }
     DisposableEffect(Unit) { onDispose { feedback.release() } }
     LaunchedEffect(viewModel) { viewModel.signals.collect(feedback::play) }
 
@@ -112,6 +136,9 @@ fun ScanScreen(
     val tree by viewModel.locationTree.collectAsStateWithLifecycle()
     val shelfLabel = shelfId?.let { LocationTree.index(tree)[it]?.pathLabel }
     var pickingShelf by remember { mutableStateOf(false) }
+    val mode by viewModel.mode.collectAsStateWithLifecycle()
+    val coverSearch by viewModel.coverSearch.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
@@ -137,7 +164,15 @@ fun ScanScreen(
     ) { padding ->
         val camera: @Composable (Modifier) -> Unit = { modifier ->
             Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
-                if (hasPermission) {
+                if (hasPermission && mode == ScanMode.COVER) {
+                    CoverCamera(
+                        torchOn = torchOn,
+                        onCaptured = viewModel::onCoverCaptured,
+                        onFailed = {},
+                        onPick = null,
+                        hint = "Fotografeer de voorkant: titel en auteur worden gelezen",
+                    )
+                } else if (hasPermission) {
                     BarcodeCamera(onBarcode = viewModel::onBarcode, torchOn = torchOn, modifier = Modifier.fillMaxSize())
                     ScanWindow()
                 } else {
@@ -155,8 +190,17 @@ fun ScanScreen(
         }
         val list: @Composable (Modifier) -> Unit = { modifier ->
             Column(modifier) {
+                ModeSwitch(mode, onSelect = { viewModel.mode.value = it })
                 ShelfBar(shelfLabel, onClick = { pickingShelf = true }, onClear = { viewModel.setShelf(null) })
-                SessionList(session, onOpenBook, viewModel::undoMove, onPhotoCover, Modifier.weight(1f))
+                SessionList(
+                    session,
+                    onOpenBook,
+                    viewModel::undoMove,
+                    onPhotoCover,
+                    emptyHint = if (mode == ScanMode.COVER) "Fotografeer de voorkant van een boek zonder (leesbare) barcode."
+                    else "Richt de camera op de barcode achterop het boek.",
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
 
@@ -166,11 +210,29 @@ fun ScanScreen(
                 list(Modifier.weight(1f).fillMaxHeight())
             }
         } else {
+            // Voor een cover is een groter beeld nodig dan voor een barcode.
+            val cameraWeight = if (mode == ScanMode.COVER) 0.62f else 0.45f
             Column(Modifier.padding(padding).fillMaxSize()) {
-                camera(Modifier.fillMaxWidth().weight(0.45f))
-                list(Modifier.fillMaxWidth().weight(0.55f))
+                camera(Modifier.fillMaxWidth().weight(cameraWeight))
+                list(Modifier.fillMaxWidth().weight(1f - cameraWeight))
             }
         }
+    }
+
+    coverSearch?.let { search ->
+        CoverSearchDialog(
+            state = search,
+            onSearch = viewModel::searchAgain,
+            onPick = viewModel::pick,
+            onManual = {
+                scope.launch {
+                    val (title, author, coverFile) = viewModel.manualGuess()
+                    viewModel.closeCoverSearch()
+                    onManualFromCover(title, author, coverFile)
+                }
+            },
+            onDismiss = viewModel::closeCoverSearch,
+        )
     }
 
     if (pickingShelf) {
@@ -187,6 +249,111 @@ fun ScanScreen(
             onDismiss = { pickingShelf = false },
         )
     }
+}
+
+/** Barcode (doorlopend) of cover (foto, tekst lezen, zoeken). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModeSwitch(mode: ScanMode, onSelect: (ScanMode) -> Unit) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        listOf(ScanMode.BARCODE to "Barcode", ScanMode.COVER to "Cover").forEachIndexed { index, (option, label) ->
+            SegmentedButton(
+                selected = mode == option,
+                onClick = { onSelect(option) },
+                shape = SegmentedButtonDefaults.itemShape(index, 2),
+            ) { Text(label) }
+        }
+    }
+}
+
+/** Welk boek is het? Herkende tekst (aan te passen) en de gevonden kandidaten (ontwerp §6.4). */
+@Composable
+private fun CoverSearchDialog(
+    state: CoverSearchState,
+    onSearch: (String) -> Unit,
+    onPick: (SearchCandidate) -> Unit,
+    onManual: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var query by remember(state is CoverSearchState.Results) { mutableStateOf((state as? CoverSearchState.Results)?.query.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(decorFitsSystemWindows = false),
+        modifier = Modifier.imePadding(),
+        title = { Text("Welk boek is het?") },
+        text = {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        bitmap = remember(state.photo) { state.photo.asImageBitmap() },
+                        contentDescription = "Foto van de cover",
+                        modifier = Modifier.size(width = 48.dp, height = 72.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    when (state) {
+                        is CoverSearchState.Working -> Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(12.dp))
+                            Text(state.message, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        is CoverSearchState.Results -> OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            label = { Text("Herkende tekst") },
+                            singleLine = true,
+                            trailingIcon = {
+                                IconButton(onClick = { onSearch(query) }, enabled = query.isNotBlank()) {
+                                    Icon(Icons.Default.Search, contentDescription = "Zoeken")
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { if (query.isNotBlank()) onSearch(query) }),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+                if (state is CoverSearchState.Results) {
+                    Spacer(Modifier.height(8.dp))
+                    if (state.candidates.isEmpty()) {
+                        Text(
+                            if (state.query.isBlank()) "Geen tekst gevonden op de foto. Typ titel of auteur en zoek opnieuw."
+                            else "Niets gevonden. Pas de tekst aan, of voer het boek zelf in.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    LazyColumn(Modifier.heightIn(max = 380.dp)) {
+                        items(state.candidates, key = { it.source + (it.isbn13 ?: it.title) }) { candidate ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable { onPick(candidate) }.padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CoverImage(candidate.title, candidate.coverUrl, Modifier.size(width = 36.dp, height = 54.dp), showTitle = false)
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        candidate.title + (candidate.subtitle?.let { ": $it" } ?: ""),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        listOfNotNull(candidate.authors.joinToString(", ").ifEmpty { null }, candidate.year?.toString(), candidate.source)
+                                            .joinToString(" · "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onManual) { Text("Zelf invoeren") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
+    )
 }
 
 /** Kader als richtpunt; de herkenning werkt op het hele beeld. */
@@ -228,11 +395,12 @@ private fun SessionList(
     onOpenBook: (Long) -> Unit,
     onUndo: (String) -> Unit,
     onPhotoCover: (Long) -> Unit,
+    emptyHint: String,
     modifier: Modifier,
 ) {
     Column(modifier) {
         Text(
-            if (rows.isEmpty()) "Richt de camera op de barcode achterop het boek." else "Deze sessie (${rows.size})",
+            if (rows.isEmpty()) emptyHint else "Deze sessie (${rows.size})",
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),

@@ -11,7 +11,7 @@ import android.os.VibratorManager
 enum class ScanSignal { ADDED, ALREADY_PRESENT, NOT_AN_ISBN }
 
 /** Geluid en trilling bij het scannen, zodat je niet naar het scherm hoeft te kijken. */
-class ScanFeedback(context: Context) {
+class ScanFeedback(context: Context, private val sound: () -> Boolean = { true }, private val vibrate: () -> Boolean = { true }) {
 
     private val tones = runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 70) }.getOrNull()
 
@@ -26,11 +26,11 @@ class ScanFeedback(context: Context) {
     fun play(signal: ScanSignal) {
         when (signal) {
             ScanSignal.ADDED -> {
-                tones?.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
+                if (sound()) tones?.startTone(ToneGenerator.TONE_PROP_BEEP, 120)
                 vibrate(longArrayOf(0, 40))
             }
             ScanSignal.ALREADY_PRESENT -> {
-                tones?.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
+                if (sound()) tones?.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
                 vibrate(longArrayOf(0, 60, 80, 60))
             }
             ScanSignal.NOT_AN_ISBN -> vibrate(longArrayOf(0, 20))
@@ -38,7 +38,7 @@ class ScanFeedback(context: Context) {
     }
 
     private fun vibrate(pattern: LongArray) {
-        vibrator?.vibrate(VibrationEffect.createWaveform(pattern, -1))
+        if (vibrate()) vibrator?.vibrate(VibrationEffect.createWaveform(pattern, -1))
     }
 
     fun release() {

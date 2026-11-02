@@ -68,6 +68,9 @@ interface BookDao {
     @Query("SELECT DISTINCT owner FROM book WHERE owner IS NOT NULL ORDER BY owner COLLATE NOCASE")
     fun observeOwnerNames(): Flow<List<String>>
 
+    @Query("SELECT COUNT(*) FROM book")
+    suspend fun countBooks(): Int
+
     @Insert
     suspend fun insertBook(book: Book): Long
 
