@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import nl.wdhertog.library.data.db.LocationType
 import nl.wdhertog.library.data.repository.LocationNode
 import nl.wdhertog.library.data.repository.LocationTree
@@ -64,6 +66,9 @@ fun LocationEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        // Zelf de insets afhandelen, zodat de dialoog boven het toetsenbord blijft en Opslaan zichtbaar is.
+        properties = DialogProperties(decorFitsSystemWindows = false),
+        modifier = Modifier.imePadding(),
         title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
