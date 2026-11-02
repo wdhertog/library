@@ -33,6 +33,11 @@ enum class ColumnTarget(val label: String, private val names: List<String> = emp
     REVIEW("Recensie", listOf("recensie", "review", "my review")),
     LENT_TO("Uitgeleend (aan)", listOf("uitgeleend", "uitgeleend aan", "lent", "lent to", "geleend aan")),
     GONE("Niet meer in bezit (1/ja)", listOf("is al weg", "weg", "verkocht", "weggedaan", "niet meer in bezit", "weggegeven")),
+    DISPOSED_TO("Weggedaan aan", listOf("weggegeven aan", "verkocht aan", "weggedaan aan")),
+    DISPOSED_DATE("Weggedaan op (datum)", listOf("weggegeven op", "verkocht op", "weggedaan op", "datum weg")),
+    FAVORITE("Favoriet (1/ja)", listOf("favoriet", "favorieten", "favorite", "favourite", "favorites")),
+    OWNER("Eigenaar (naam)", listOf("eigenaar", "owner", "van wie", "eigendom van")),
+    OWNER_IF_TRUE("Eigenaar als 1/ja (de kolomnaam)"),
     NOTES("Notities", listOf("notities", "notitie", "opmerkingen", "opmerking", "notes", "note")),
     NOTE_WITH_HEADER("Notitie \"kolomnaam: waarde\""),
     ;
@@ -89,6 +94,12 @@ object TableImporter {
             emptyList()
         }
 
+        val owners = all(ColumnTarget.OWNER).filter(String::isNotEmpty) +
+            targets.indices.filter { targets[it] == ColumnTarget.OWNER_IF_TRUE && ColumnTarget.parseBoolean(row.getOrElse(it) { "" }) == true }
+                .map { header[it].trim() }
+        val disposedTo = first(ColumnTarget.DISPOSED_TO)
+        val disposedAt = first(ColumnTarget.DISPOSED_DATE)?.let(::date)
+
         val lent = first(ColumnTarget.LENT_TO)?.let { value ->
             when (ColumnTarget.parseBoolean(value)) {
                 true -> ""
@@ -111,7 +122,12 @@ object TableImporter {
             tags = tags.distinctBy(String::lowercase),
             readings = readings,
             lentTo = lent,
-            owned = first(ColumnTarget.GONE)?.let(ColumnTarget::parseBoolean) != true,
+            owned = first(ColumnTarget.GONE)?.let(ColumnTarget::parseBoolean) != true && disposedTo == null && disposedAt == null,
+            disposedTo = disposedTo,
+            disposedAt = disposedAt,
+            favorite = first(ColumnTarget.FAVORITE)?.let(ColumnTarget::parseBoolean) == true,
+            // Twee eigenaren (bijv. Matthias én Ienje) wordt "Matthias & Ienje".
+            owner = owners.distinct().joinToString(" & ").ifEmpty { null },
             locationPath = first(ColumnTarget.LOCATION),
             notes = notes.joinToString("\n").ifEmpty { null },
         )

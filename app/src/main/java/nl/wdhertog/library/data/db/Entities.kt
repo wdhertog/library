@@ -1,5 +1,6 @@
 package nl.wdhertog.library.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -42,6 +43,14 @@ data class Book(
     /** Komma-gescheiden. */
     val tags: String? = null,
     val ownership: Ownership = Ownership.OWNED,
+    /** Bij "niet (meer) in bezit": hoe het boek weg is gegaan, aan wie en wanneer. */
+    val disposalReason: DisposalReason? = null,
+    val disposedTo: String? = null,
+    val disposedAt: LocalDate? = null,
+    @ColumnInfo(defaultValue = "0")
+    val favorite: Boolean = false,
+    /** Van wie het boek is bij een gedeelde collectie, bijv. "Willem" of "samen"; leeg = niet ingevuld. */
+    val owner: String? = null,
     val borrowedFromPersonId: Long? = null,
     val borrowedDueDate: LocalDate? = null,
     val locationId: Long? = null,
@@ -193,6 +202,9 @@ data class ReadingSession(
     /** YEAR = alleen het jaar is bekend (oude leesdatums). */
     val datePrecision: DatePrecision = DatePrecision.DAY,
     val status: ReadingStatus,
+    /** Leesvoortgang bij een boek dat je nu leest. */
+    val progressPage: Int? = null,
+    val progressPercent: Int? = null,
     /** 0–5, decimaal. */
     val rating: Double? = null,
     val review: String? = null,

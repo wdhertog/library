@@ -92,6 +92,10 @@ class ImportService(
                 tags = imported.tags.joinToString(", ").ifEmpty { null },
                 notes = imported.notes,
                 ownership = if (imported.owned) Ownership.OWNED else Ownership.NOT_OWNED,
+                disposedTo = imported.disposedTo.takeIf { !imported.owned },
+                disposedAt = imported.disposedAt.takeIf { !imported.owned },
+                favorite = imported.favorite,
+                owner = imported.owner,
                 wantToRead = imported.wantToRead,
                 // Met ISBN gaat het boek in de verrijkingswachtrij; die vult alleen lege velden aan.
                 enrichStatus = if (imported.isbn13 != null) EnrichStatus.NEW else EnrichStatus.MANUAL,
@@ -117,6 +121,8 @@ class ImportService(
                 tags = (book.tags?.split(',').orEmpty().map(String::trim) + imported.tags)
                     .filter(String::isNotEmpty).distinctBy(String::lowercase).joinToString(", ").ifEmpty { null },
                 wantToRead = book.wantToRead || imported.wantToRead,
+                favorite = book.favorite || imported.favorite,
+                owner = if (decision.overwrite) imported.owner ?: book.owner else book.owner ?: imported.owner,
                 notes = when {
                     imported.notes == null || book.notes?.contains(imported.notes) == true -> book.notes
                     book.notes == null || decision.overwrite -> imported.notes
@@ -159,14 +165,27 @@ class ImportService(
                         status = reading.status,
                         rating = reading.rating,
                         review = reading.review,
+                        progressPage = reading.progressPage,
+                        progressPercent = reading.progressPercent,
                     ),
                 )
             } else {
                 existing.remove(same)
                 val rating = if (overwrite) reading.rating ?: same.rating else same.rating ?: reading.rating
                 val review = if (overwrite) reading.review ?: same.review else same.review ?: reading.review
-                if (rating != same.rating || review != same.review) {
-                    dao.updateSession(same.copy(rating = rating, review = review, updatedAt = Instant.now()))
+                // Voortgang uit een nieuwere export is altijd actueler.
+                val progressPage = reading.progressPage ?: same.progressPage
+                val progressPercent = reading.progressPercent ?: same.progressPercent
+                if (rating != same.rating || review != same.review || progressPage != same.progressPage || progressPercent != same.progressPercent) {
+                    dao.updateSession(
+                        same.copy(
+                            rating = rating,
+                            review = review,
+                            progressPage = progressPage,
+                            progressPercent = progressPercent,
+                            updatedAt = Instant.now(),
+                        ),
+                    )
                 }
             }
         }

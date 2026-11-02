@@ -1,6 +1,8 @@
 package nl.wdhertog.library.ui.bookdetail
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -61,7 +63,9 @@ fun LoanSection(
     onReturned: (Long) -> Unit,
     onMarkBorrowed: () -> Unit,
     onMarkOwned: () -> Unit,
+    onDispose: () -> Unit,
     onDelete: (LoanRow) -> Unit,
+    disposal: String? = null,
 ) {
     val today = LocalDate.now()
     val active = loans.firstOrNull { it.returnedAt == null }
@@ -88,13 +92,13 @@ fun LoanSection(
                 OutlinedButton(onClick = { onReturned(active.loanId) }) { Text("Teruggekregen") }
                 DeleteButton { onDelete(active) }
             }
-            ownership == Ownership.OWNED -> Row {
+            ownership == Ownership.OWNED -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onLend) { Text("Uitlenen…") }
-                Spacer(Modifier.width(8.dp))
                 TextButton(onClick = onMarkBorrowed) { Text("Dit boek is geleend…") }
+                TextButton(onClick = onDispose) { Text("Weggedaan…") }
             }
             ownership == Ownership.NOT_OWNED -> Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Niet (meer) in bezit", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(disposal ?: "Niet (meer) in bezit", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = onMarkOwned) { Text("Toch in bezit") }
             }
         }
