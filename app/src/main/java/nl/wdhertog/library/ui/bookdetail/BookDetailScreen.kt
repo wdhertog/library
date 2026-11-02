@@ -48,6 +48,9 @@ import nl.wdhertog.library.data.db.Book
 import nl.wdhertog.library.data.repository.BookDetail
 import nl.wdhertog.library.data.repository.LocationTree
 import nl.wdhertog.library.ui.locations.LocationPickerDialog
+import nl.wdhertog.library.ui.loans.BorrowedReturnDialog
+import nl.wdhertog.library.ui.loans.LoanDialog
+import nl.wdhertog.library.ui.components.rememberNotificationPermissionRequest
 import androidx.compose.material.icons.filled.Place
 import nl.wdhertog.library.data.repository.displayTitle
 import nl.wdhertog.library.data.repository.label
@@ -67,13 +70,18 @@ fun BookDetailScreen(
     onOpenBook: (Long) -> Unit,
     onOpenLocation: (Long) -> Unit,
     viewModel: BookDetailViewModel = appViewModel { container, handle ->
-        BookDetailViewModel(handle, container.bookRepository, container.enrichmentService, container.locationRepository)
+        BookDetailViewModel(handle, container.bookRepository, container.enrichmentService, container.locationRepository, container.loanRepository)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val tree by viewModel.locationTree.collectAsStateWithLifecycle()
     val locationIndex = remember(tree) { LocationTree.index(tree) }
     var pickingLocation by remember { mutableStateOf(false) }
+    val bookLoans by viewModel.bookLoans.collectAsStateWithLifecycle()
+    val borrowed by viewModel.borrowed.collectAsStateWithLifecycle()
+    val personNames by viewModel.personNames.collectAsStateWithLifecycle()
+    var loanDialog by remember { mutableStateOf<String?>(null) }
+    val requestNotifications = rememberNotificationPermissionRequest()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -127,9 +135,46 @@ fun BookDetailScreen(
                     onPickLocation = { pickingLocation = true },
                     refreshing = refreshing,
                     onRefresh = viewModel::refresh,
+                    banner = { borrowed?.let { BorrowedBanner(it, onReturned = { loanDialog = "returned" }) } },
+                    loanSection = {
+                        LoanSection(
+                            ownership = s.detail.book.ownership,
+                            loans = bookLoans,
+                            onLend = { loanDialog = "lend" },
+                            onReturned = viewModel::markReturned,
+                            onMarkBorrowed = { loanDialog = "borrow" },
+                            onMarkOwned = viewModel::markOwned,
+                        )
+                    },
                 )
             }
         }
+    }
+
+    val bookTitle = (state as? BookDetailUiState.Loaded)?.detail?.book?.displayTitle.orEmpty()
+    when (loanDialog) {
+        "lend", "borrow" -> {
+            val lending = loanDialog == "lend"
+            LoanDialog(
+                title = if (lending) "Uitlenen" else "Geleend van iemand",
+                bookTitle = bookTitle,
+                personLabel = if (lending) "Aan wie?" else "Van wie?",
+                personSuggestions = personNames,
+                showNote = lending,
+                onConfirm = { person, due, note ->
+                    if (lending) viewModel.lend(person, due, note) else viewModel.markBorrowed(person, due)
+                    if (due != null) requestNotifications()
+                    loanDialog = null
+                },
+                onDismiss = { loanDialog = null },
+            )
+        }
+        "returned" -> BorrowedReturnDialog(
+            bookTitle = bookTitle,
+            onKeep = { viewModel.markBorrowedReturned(keep = true, onDeleted = onBack); loanDialog = null },
+            onDelete = { viewModel.markBorrowedReturned(keep = false, onDeleted = onBack); loanDialog = null },
+            onDismiss = { loanDialog = null },
+        )
     }
 
     if (pickingLocation) {
@@ -173,6 +218,8 @@ private fun DetailContent(
     onPickLocation: () -> Unit,
     refreshing: Boolean,
     onRefresh: () -> Unit,
+    banner: @Composable () -> Unit,
+    loanSection: @Composable () -> Unit,
 ) {
     val book = detail.book
     Column(
@@ -181,6 +228,7 @@ private fun DetailContent(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
     ) {
+        banner()
         Row {
             CoverImage(book.title, book.coverUrl, Modifier.size(width = 104.dp, height = 156.dp))
             Spacer(Modifier.width(16.dp))
@@ -218,6 +266,8 @@ private fun DetailContent(
             Spacer(Modifier.height(8.dp))
             Text("Op je leeslijst", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
+
+        Section("Uitlenen") { loanSection() }
 
         detail.works.firstOrNull()?.originalTitle?.takeIf { it != book.title }?.let {
             Section("Oorspronkelijke titel") { Text(it) }

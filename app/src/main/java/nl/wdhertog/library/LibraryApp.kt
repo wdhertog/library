@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.repository.BookRepository
+import nl.wdhertog.library.data.repository.LoanRepository
 import nl.wdhertog.library.data.repository.LocationRepository
 import nl.wdhertog.library.lookup.EnrichScheduler
 import nl.wdhertog.library.lookup.EnrichmentService
@@ -16,12 +17,14 @@ import nl.wdhertog.library.lookup.sources.DnbSource
 import nl.wdhertog.library.lookup.sources.KbSource
 import nl.wdhertog.library.lookup.sources.OpenLibrarySource
 import nl.wdhertog.library.lookup.sources.WikidataSource
+import nl.wdhertog.library.reminders.LoanReminderWorker
 
 /** Handmatige dependency injection: één container voor de hele app. */
 class AppContainer(app: Application) {
     private val database by lazy { LibraryDatabase.create(app) }
     val bookRepository by lazy { BookRepository(database) }
     val locationRepository by lazy { LocationRepository(database) }
+    val loanRepository by lazy { LoanRepository(database, bookRepository) }
 
     /** Voor werk dat een scherm moet overleven, zoals de snelle lookup na een scan. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -46,5 +49,6 @@ class LibraryApp : Application() {
         container = AppContainer(this)
         // Pak eventueel onderbroken werk weer op; doet niets als de wachtrij leeg is.
         container.enrichScheduler.schedule()
+        LoanReminderWorker.schedule(this)
     }
 }
