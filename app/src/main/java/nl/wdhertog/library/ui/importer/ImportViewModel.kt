@@ -16,6 +16,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.wdhertog.library.data.db.ImportRun
 import nl.wdhertog.library.importer.HirtParser
+import nl.wdhertog.library.importer.XlsxReader
+import nl.wdhertog.library.importer.TableImporter
+import nl.wdhertog.library.importer.Table
+import nl.wdhertog.library.importer.Sheet
+import nl.wdhertog.library.importer.ImportProfiles
+import nl.wdhertog.library.importer.CsvReader
+import nl.wdhertog.library.importer.ColumnTarget
 import nl.wdhertog.library.importer.ImportDecision
 import nl.wdhertog.library.importer.ImportMatcher
 import nl.wdhertog.library.importer.ImportResult
@@ -40,12 +47,24 @@ sealed interface ImportUiState {
     data object Reading : ImportUiState
     data class Error(val message: String) : ImportUiState
 
+    /** CSV/Excel: per kolom kiezen waar hij terechtkomt. */
+    data class Mapping(
+        val fileName: String?,
+        val sheets: List<Sheet>,
+        val sheetIndex: Int,
+        val targets: List<ColumnTarget>,
+    ) : ImportUiState {
+        val table get() = sheets[sheetIndex].table
+        val hasTitle get() = ColumnTarget.TITLE in targets
+    }
+
     data class Review(
         val source: String,
         val fileName: String?,
         val items: List<ReviewItem>,
         val goals: Map<Int, Int>,
-        val skippedInFile: Int,
+        /** Bijv. "336 boeken in je bezit (364 andere overgeslagen…)". */
+        val summary: String,
         /** Keuze voor alle bestaande boeken samen. */
         val defaultChoice: MergeChoice = MergeChoice.FILL,
         /** Afwijkende keuze per boek (index in [items]). */
@@ -66,6 +85,7 @@ sealed interface ImportUiState {
 
 class ImportViewModel(
     private val service: ImportService,
+    private val profiles: ImportProfiles,
     private val scheduler: EnrichScheduler,
     /** Importeren loopt door als je het scherm verlaat. */
     private val appScope: CoroutineScope,
@@ -88,7 +108,8 @@ class ImportViewModel(
                     fileName = name,
                     items = export.books.zip(matches, ::ReviewItem),
                     goals = export.goals,
-                    skippedInFile = export.skipped,
+                    summary = "${export.books.size} boeken in je bezit" +
+                        if (export.skipped > 0) " (${export.skipped} andere overgeslagen: niet in bezit, e-book of luisterboek)" else "",
                 )
             } catch (e: HirtParser.FormatException) {
                 ImportUiState.Error(e.message ?: "Onbekend formaat")
@@ -97,6 +118,67 @@ class ImportViewModel(
             }
         }
     }
+
+    /** CSV of Excel: eerst kolommen koppelen. */
+    fun openTable(resolver: ContentResolver, uri: Uri) {
+        state.value = ImportUiState.Reading
+        viewModelScope.launch {
+            state.value = try {
+                val (bytes, name) = withContext(Dispatchers.IO) {
+                    (resolver.openInputStream(uri)?.use { it.readBytes() } ?: error("leeg")) to displayName(resolver, uri)
+                }
+                val sheets = withContext(Dispatchers.Default) {
+                    // Een xlsx is een zip-bestand en begint met "PK".
+                    if (bytes.size > 1 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte()) {
+                        XlsxReader.read(bytes)
+                    } else {
+                        listOf(Sheet(name.orEmpty(), CsvReader.read(bytes)))
+                    }
+                }.filter { it.table.header.isNotEmpty() }
+                if (sheets.isEmpty()) {
+                    ImportUiState.Error("Geen gegevens gevonden in dit bestand")
+                } else {
+                    ImportUiState.Mapping(name, sheets, 0, targetsFor(sheets.first().table))
+                }
+            } catch (e: XlsxReader.FormatException) {
+                ImportUiState.Error(e.message ?: "Onbekend formaat")
+            } catch (e: Exception) {
+                ImportUiState.Error("Bestand niet te lezen: ${e.message}")
+            }
+        }
+    }
+
+    fun selectSheet(index: Int) = updateMapping { it.copy(sheetIndex = index, targets = targetsFor(it.sheets[index].table)) }
+
+    fun setTarget(column: Int, target: ColumnTarget) = updateMapping { mapping ->
+        mapping.copy(targets = mapping.targets.toMutableList().also { it[column] = target })
+    }
+
+    fun confirmMapping() {
+        val mapping = state.value as? ImportUiState.Mapping ?: return
+        if (!mapping.hasTitle) return
+        profiles.save(mapping.table.header, mapping.targets)
+        state.value = ImportUiState.Reading
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.Default) { TableImporter.toBooks(mapping.table, mapping.targets) }
+            val matches = ImportMatcher.match(result.books, service.existingBooks())
+            val sheet = mapping.sheets[mapping.sheetIndex].name.takeIf { mapping.sheets.size > 1 }
+            state.value = ImportUiState.Review(
+                source = TABLE_SOURCE,
+                fileName = listOfNotNull(mapping.fileName, sheet).joinToString(" · ").ifEmpty { null },
+                items = result.books.zip(matches, ::ReviewItem),
+                goals = emptyMap(),
+                summary = "${result.books.size} boeken" + if (result.skipped > 0) " (${result.skipped} rijen zonder titel overgeslagen)" else "",
+            )
+        }
+    }
+
+    /** Eerder opgeslagen toewijzing voor deze kopregel, anders een gok per kolom. */
+    private fun targetsFor(table: Table): List<ColumnTarget> =
+        profiles.load(table.header) ?: table.header.mapIndexed { index, header -> ColumnTarget.guess(header, table.column(index)) }
+
+    private fun updateMapping(change: (ImportUiState.Mapping) -> ImportUiState.Mapping) =
+        state.update { (it as? ImportUiState.Mapping)?.let(change) ?: it }
 
     /** Geldt voor alle zekere koppelingen; eigen keuzes bij twijfelgevallen blijven staan. */
     fun setDefaultChoice(choice: MergeChoice) = updateReview { review ->
@@ -144,6 +226,10 @@ class ImportViewModel(
 
     private fun updateReview(change: (ImportUiState.Review) -> ImportUiState.Review) =
         state.update { (it as? ImportUiState.Review)?.let(change) ?: it }
+
+    private companion object {
+        const val TABLE_SOURCE = "Import"
+    }
 
     private fun readText(resolver: ContentResolver, uri: Uri): String =
         resolver.openInputStream(uri)?.use { it.readBytes().decodeToString() } ?: error("leeg")

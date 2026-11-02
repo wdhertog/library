@@ -32,7 +32,7 @@ class ImportMatcherTest {
 
     @Test
     fun `different isbns are only a possible match`() {
-        val match = ImportMatcher.match(listOf(ImportedBook("Stoner", listOf("John Williams"), isbn13 = "9780099561330")), existing).single()
+        val match = ImportMatcher.match(listOf(ImportedBook("Stoner", authors = listOf("John Williams"), isbn13 = "9780099561330")), existing).single()
         assertEquals(4L, match?.existing?.id)
         assertEquals(MatchReason.OTHER_ISBN, match?.reason)
         assertFalse(match!!.certain)
