@@ -20,7 +20,7 @@ import java.util.UUID
         ForeignKey(Location::class, ["id"], ["locationId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(Person::class, ["id"], ["borrowedFromPersonId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("isbn13"), Index("locationId"), Index("borrowedFromPersonId"), Index("hirtId")],
+    indices = [Index("isbn13"), Index("locationId"), Index("borrowedFromPersonId"), Index("hirtId"), Index("importRunId")],
 )
 data class Book(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -57,6 +57,8 @@ data class Book(
     val storygraphId: String? = null,
     /** Id uit de Have I Read That-export, voor herhaald importeren zonder dubbelen. */
     val hirtId: Long? = null,
+    /** De import die dit boek heeft aangemaakt; zo kan een import ongedaan worden gemaakt. */
+    val importRunId: Long? = null,
     /** Genormaliseerde zoektekst (titel, auteurs, serie, ISBN, tags) voor snel zoeken. */
     val searchText: String = "",
     val addedAt: Instant = Instant.now(),
@@ -201,4 +203,15 @@ data class ReadingSession(
 data class ReadingGoal(
     @PrimaryKey val year: Int,
     val target: Int,
+)
+
+/** Eén keer importeren uit een bestand. */
+@Entity(tableName = "import_run")
+data class ImportRun(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val source: String,
+    val fileName: String?,
+    val importedAt: Instant = Instant.now(),
+    val added: Int = 0,
+    val updated: Int = 0,
 )
