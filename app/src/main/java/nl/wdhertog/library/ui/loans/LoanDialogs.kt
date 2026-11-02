@@ -1,10 +1,11 @@
 package nl.wdhertog.library.ui.loans
 
 import androidx.compose.foundation.clickable
-import nl.wdhertog.library.data.repository.cover
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,8 +41,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import nl.wdhertog.library.data.db.DisposalReason
 import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.displayTitle
+import nl.wdhertog.library.data.repository.cover
 import nl.wdhertog.library.ui.components.CoverImage
 import nl.wdhertog.library.ui.components.SuggestionTextField
 import nl.wdhertog.library.util.LoanDates
@@ -182,6 +185,110 @@ fun BorrowedActionsDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
+    )
+}
+
+/** Boek weggedaan: hoe, aan wie (optioneel) en wanneer (standaard vandaag). */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun DisposeDialog(
+    bookTitle: String,
+    personSuggestions: List<String>,
+    onConfirm: (reason: DisposalReason, to: String?, date: LocalDate?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val today = remember { LocalDate.now() }
+    var reason by remember { mutableStateOf(DisposalReason.GIVEN_AWAY) }
+    var person by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf<LocalDate?>(today) }
+    var pickingDate by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(decorFitsSystemWindows = false),
+        modifier = Modifier.imePadding(),
+        title = { Text("Weggedaan") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(bookTitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DisposalReason.entries.forEach { option ->
+                        FilterChip(selected = reason == option, onClick = { reason = option }, label = { Text(option.label) })
+                    }
+                }
+                if (reason == DisposalReason.GIVEN_AWAY || reason == DisposalReason.SOLD) {
+                    SuggestionTextField("Aan wie? (optioneel)", person, personSuggestions, onValueChange = { person = it }, modifier = Modifier.fillMaxWidth())
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = date == today, onClick = { date = today }, label = { Text("Vandaag") })
+                    FilterChip(
+                        selected = date != null && date != today,
+                        onClick = { pickingDate = true },
+                        label = { Text(date?.takeIf { it != today }?.let { LoanDates.format(it, today) } ?: "Datum…") },
+                    )
+                    FilterChip(selected = date == null, onClick = { date = null }, label = { Text("Onbekend") })
+                }
+                Text(
+                    "Het boek blijft in je bibliotheek als \"niet meer in bezit\", zodat je leesgeschiedenis bewaard blijft.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val to = person.trim().takeIf { reason == DisposalReason.GIVEN_AWAY || reason == DisposalReason.SOLD }
+                onConfirm(reason, to, date)
+            }) { Text("Opslaan") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
+    )
+
+    if (pickingDate) {
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = (date ?: today).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { pickingDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { date = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
+                    pickingDate = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Annuleren") } },
+        ) {
+            DatePicker(state)
+        }
+    }
+}
+
+/** Van wie het boek is; leeg laten = niet ingevuld. */
+@Composable
+fun OwnerDialog(current: String?, suggestions: List<String>, onConfirm: (String?) -> Unit, onDismiss: () -> Unit) {
+    var owner by remember { mutableStateOf(current.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(decorFitsSystemWindows = false),
+        modifier = Modifier.imePadding(),
+        title = { Text("Van wie is dit boek?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SuggestionTextField("Eigenaar", owner, suggestions, onValueChange = { owner = it }, modifier = Modifier.fillMaxWidth())
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (suggestions + "Samen").distinct().forEach { name ->
+                        FilterChip(selected = owner == name, onClick = { owner = name }, label = { Text(name) })
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(owner.trim().ifEmpty { null }) }) { Text("Opslaan") } },
+        dismissButton = {
+            Row {
+                if (current != null) TextButton(onClick = { onConfirm(null) }) { Text("Wissen") }
+                TextButton(onClick = onDismiss) { Text("Annuleren") }
+            }
+        },
     )
 }
 

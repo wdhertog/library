@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.receiveAsFlow
 import nl.wdhertog.library.data.db.BorrowedRow
+import nl.wdhertog.library.data.db.DisposalReason
 import nl.wdhertog.library.data.db.LoanRow
 import nl.wdhertog.library.data.db.LocationType
 import nl.wdhertog.library.data.repository.LoanRepository
@@ -75,6 +76,22 @@ class BookDetailViewModel(
     fun deleteLoan(loanId: Long) {
         viewModelScope.launch { loans.deleteLoan(loanId) }
     }
+
+    fun markDisposed(reason: DisposalReason, to: String?, date: LocalDate?) {
+        viewModelScope.launch { loans.markDisposed(bookId, reason, to, date) }
+    }
+
+    fun toggleFavorite() {
+        val book = (state.value as? BookDetailUiState.Loaded)?.detail?.book ?: return
+        viewModelScope.launch { repository.setFavorite(bookId, !book.favorite) }
+    }
+
+    fun setOwner(owner: String?) {
+        viewModelScope.launch { repository.setOwner(bookId, owner) }
+    }
+
+    val ownerNames: StateFlow<List<String>> = repository.observeOwnerNames()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun markOwned() {
         viewModelScope.launch { loans.markOwned(bookId) }

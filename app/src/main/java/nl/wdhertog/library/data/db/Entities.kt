@@ -1,5 +1,6 @@
 package nl.wdhertog.library.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -20,7 +21,7 @@ import java.util.UUID
         ForeignKey(Location::class, ["id"], ["locationId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(Person::class, ["id"], ["borrowedFromPersonId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("isbn13"), Index("locationId"), Index("borrowedFromPersonId"), Index("hirtId")],
+    indices = [Index("isbn13"), Index("locationId"), Index("borrowedFromPersonId"), Index("hirtId"), Index("importRunId")],
 )
 data class Book(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -42,6 +43,14 @@ data class Book(
     /** Komma-gescheiden. */
     val tags: String? = null,
     val ownership: Ownership = Ownership.OWNED,
+    /** Bij "niet (meer) in bezit": hoe het boek weg is gegaan, aan wie en wanneer. */
+    val disposalReason: DisposalReason? = null,
+    val disposedTo: String? = null,
+    val disposedAt: LocalDate? = null,
+    @ColumnInfo(defaultValue = "0")
+    val favorite: Boolean = false,
+    /** Van wie het boek is bij een gedeelde collectie, bijv. "Willem" of "samen"; leeg = niet ingevuld. */
+    val owner: String? = null,
     val borrowedFromPersonId: Long? = null,
     val borrowedDueDate: LocalDate? = null,
     val locationId: Long? = null,
@@ -57,6 +66,8 @@ data class Book(
     val storygraphId: String? = null,
     /** Id uit de Have I Read That-export, voor herhaald importeren zonder dubbelen. */
     val hirtId: Long? = null,
+    /** De import die dit boek heeft aangemaakt; zo kan een import ongedaan worden gemaakt. */
+    val importRunId: Long? = null,
     /** Genormaliseerde zoektekst (titel, auteurs, serie, ISBN, tags) voor snel zoeken. */
     val searchText: String = "",
     val addedAt: Instant = Instant.now(),
@@ -191,6 +202,9 @@ data class ReadingSession(
     /** YEAR = alleen het jaar is bekend (oude leesdatums). */
     val datePrecision: DatePrecision = DatePrecision.DAY,
     val status: ReadingStatus,
+    /** Leesvoortgang bij een boek dat je nu leest. */
+    val progressPage: Int? = null,
+    val progressPercent: Int? = null,
     /** 0–5, decimaal. */
     val rating: Double? = null,
     val review: String? = null,
@@ -201,4 +215,15 @@ data class ReadingSession(
 data class ReadingGoal(
     @PrimaryKey val year: Int,
     val target: Int,
+)
+
+/** Eén keer importeren uit een bestand. */
+@Entity(tableName = "import_run")
+data class ImportRun(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val source: String,
+    val fileName: String?,
+    val importedAt: Instant = Instant.now(),
+    val added: Int = 0,
+    val updated: Int = 0,
 )

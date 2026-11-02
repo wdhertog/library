@@ -108,6 +108,9 @@ interface LoanDao {
     @Query("SELECT COUNT(*) FROM loan WHERE bookId = :bookId AND returnedAt IS NULL")
     suspend fun activeLoanCount(bookId: Long): Int
 
+    @Query("SELECT COUNT(*) FROM loan WHERE bookId = :bookId")
+    suspend fun loanCount(bookId: Long): Int
+
     @Insert
     suspend fun insertLoan(loan: Loan): Long
 
@@ -124,6 +127,18 @@ interface LoanDao {
         """
     )
     suspend fun setOwnership(bookId: Long, ownership: Ownership, personId: Long?, dueAt: LocalDate?, now: Instant)
+
+    @Query(
+        """
+        UPDATE book SET ownership = 'NOT_OWNED', borrowedFromPersonId = NULL, borrowedDueDate = NULL,
+               disposalReason = :reason, disposedTo = :to, disposedAt = :date, updatedAt = :now
+        WHERE id = :bookId
+        """
+    )
+    suspend fun setDisposed(bookId: Long, reason: DisposalReason?, to: String?, date: LocalDate?, now: Instant)
+
+    @Query("UPDATE book SET disposalReason = NULL, disposedTo = NULL, disposedAt = NULL WHERE id = :bookId")
+    suspend fun clearDisposal(bookId: Long)
 
     @Query("DELETE FROM loan WHERE id = :loanId")
     suspend fun deleteLoan(loanId: Long)

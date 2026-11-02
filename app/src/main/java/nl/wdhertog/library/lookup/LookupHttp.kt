@@ -5,6 +5,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import nl.wdhertog.library.BuildConfig
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -67,7 +68,7 @@ class LookupHttp(
     }
 
     companion object {
-        const val USER_AGENT = "BibliotheekApp/0.1 (https://github.com/wdhertog/library)"
+        const val USER_AGENT = "BibliotheekApp/${BuildConfig.VERSION_NAME} (https://github.com/wdhertog/library)"
 
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)

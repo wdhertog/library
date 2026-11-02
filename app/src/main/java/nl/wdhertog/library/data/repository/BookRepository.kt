@@ -147,6 +147,11 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     coverFile = existing.coverFile,
                     translators = existing.translators,
                     ownership = existing.ownership,
+                    disposalReason = existing.disposalReason,
+                    disposedTo = existing.disposedTo,
+                    disposedAt = existing.disposedAt,
+                    favorite = existing.favorite,
+                    owner = existing.owner,
                     borrowedFromPersonId = existing.borrowedFromPersonId,
                     borrowedDueDate = existing.borrowedDueDate,
                     locationId = existing.locationId,
@@ -156,6 +161,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     openLibraryEditionId = existing.openLibraryEditionId,
                     storygraphId = existing.storygraphId,
                     hirtId = existing.hirtId,
+                    importRunId = existing.importRunId,
                     addedAt = existing.addedAt,
                 ),
             )
@@ -195,11 +201,15 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
     /**
      * Schrijft opgezochte gegevens naar boek en werk. Vergrendelde (zelf ingevulde) velden blijven
      * altijd staan; andere velden alleen als ze leeg zijn, of ook gevuld bij [refresh].
+     * [status] null laat de verrijkingsstatus ongemoeid (bij importeren in een bestaand boek).
      */
-    suspend fun applyMetadata(bookId: Long, metadata: BookMetadata, refresh: Boolean, status: EnrichStatus) =
+    suspend fun applyMetadata(bookId: Long, metadata: BookMetadata, refresh: Boolean, status: EnrichStatus?) =
         db.withTransaction {
             val book = dao.getBook(bookId) ?: return@withTransaction
             val locked = book.lockedFields.toFieldSet()
+            // Geïmporteerde auteurs en vertalers zijn rommelig (rollen omgedraaid); de eerste
+            // bron die ze kent, vervangt ze.
+            val provisional = book.importRunId != null && book.enrichStatus == EnrichStatus.NEW && status != null
             fun <T> pick(field: String, current: T?, found: T?): T? = when {
                 field in locked || found == null -> current
                 refresh || current == null || (current is String && current.isBlank()) -> found
@@ -211,7 +221,9 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     title = pick("title", book.title, metadata.title) ?: book.title,
                     subtitle = pick("subtitle", book.subtitle, metadata.subtitle),
                     language = pick("language", book.language, metadata.language),
-                    translators = pick("translators", book.translators, metadata.translators.joinToString(", ").ifEmpty { null }),
+                    translators = metadata.translators.joinToString(", ").ifEmpty { null }.let { found ->
+                        if (provisional && found != null && "translators" !in locked) found else pick("translators", book.translators, found)
+                    },
                     publisher = pick("publisher", book.publisher, metadata.publisher),
                     publishedYear = pick("publishedYear", book.publishedYear, metadata.publishedYear),
                     pages = pick("pages", book.pages, metadata.pages),
@@ -219,7 +231,11 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     description = pick("description", book.description, metadata.description),
                     coverUrl = pick("cover", book.coverUrl, metadata.coverUrl),
                     openLibraryEditionId = metadata.openLibraryEditionId ?: book.openLibraryEditionId,
-                    enrichStatus = if (book.enrichStatus == EnrichStatus.ENRICHED && status == EnrichStatus.QUICK) book.enrichStatus else status,
+                    enrichStatus = when {
+                        status == null -> book.enrichStatus
+                        book.enrichStatus == EnrichStatus.ENRICHED && status == EnrichStatus.QUICK -> book.enrichStatus
+                        else -> status
+                    },
                     enrichedSources = (book.enrichedSources.toFieldSet(", ") + metadata.source.split(", ").filter(String::isNotBlank))
                         .joinToString(", ").ifEmpty { null },
                     updatedAt = Instant.now(),
@@ -232,12 +248,15 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                 dao.insertBookWork(BookWork(bookId, work.id, position = 0))
             }
             val currentAuthors = dao.getAuthorNames(work.id)
-            if ("authors" !in locked && metadata.authors.isNotEmpty() && (refresh || currentAuthors.isEmpty())) {
+            if ("authors" !in locked && metadata.authors.isNotEmpty() && (refresh || provisional || currentAuthors.isEmpty())) {
                 setWorkAuthors(work.id, metadata.authors)
             }
             val seriesLocked = "series" in locked
             val takeSeries = !seriesLocked && metadata.seriesName != null && (refresh || work.seriesId == null)
             val series = if (takeSeries) findOrCreateSeries(metadata.seriesName!!) else null
+            // Zelfde serie, maar nog zonder deelnummer: dat nummer alsnog overnemen.
+            val sameSeries = !seriesLocked && work.seriesId != null &&
+                work.seriesId.let { dao.getSeries(it)?.name }.equals(metadata.seriesName, ignoreCase = true)
             val originalTitle = pick("originalTitle", work.originalTitle, metadata.originalTitle)
             dao.updateWork(
                 work.copy(
@@ -246,7 +265,11 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     originalLanguage = pick("originalLanguage", work.originalLanguage, metadata.originalLanguage),
                     firstPublishedYear = pick("firstPublishedYear", work.firstPublishedYear, metadata.firstPublishedYear),
                     seriesId = series?.id ?: work.seriesId,
-                    seriesIndex = if (takeSeries) metadata.seriesIndex else work.seriesIndex,
+                    seriesIndex = when {
+                        takeSeries -> metadata.seriesIndex
+                        sameSeries -> work.seriesIndex ?: metadata.seriesIndex
+                        else -> work.seriesIndex
+                    },
                     openLibraryWorkId = metadata.openLibraryWorkId ?: work.openLibraryWorkId,
                     wikidataId = metadata.workWikidataId ?: work.wikidataId,
                     updatedAt = Instant.now(),
@@ -294,6 +317,15 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
 
     suspend fun getBook(bookId: Long): Book? = dao.getBook(bookId)
 
+    suspend fun setFavorite(bookId: Long, favorite: Boolean) = dao.setFavorite(bookId, favorite, Instant.now())
+
+    suspend fun setOwner(bookId: Long, owner: String?) {
+        dao.setOwner(bookId, owner?.trim()?.ifEmpty { null }, Instant.now())
+        refreshSearchText(bookId)
+    }
+
+    fun observeOwnerNames(): Flow<List<String>> = dao.observeOwnerNames()
+
     private suspend fun findOrCreateSeries(name: String): Series? {
         val trimmed = name.trim().ifEmpty { return null }
         return dao.findSeries(trimmed) ?: Series(name = trimmed).let { it.copy(id = dao.insertSeries(it)) }
@@ -316,7 +348,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
         val authors = work?.let { dao.getAuthorNames(it.id) }.orEmpty()
         val series = work?.seriesId?.let { dao.getSeries(it)?.name }
         val text = TextNormalizer.searchKey(
-            listOf(book.title, book.subtitle, work?.originalTitle, series, book.isbn13, book.publisher, book.tags, book.translators) + authors,
+            listOf(book.title, book.subtitle, work?.originalTitle, series, book.isbn13, book.publisher, book.tags, book.translators, book.owner) + authors,
         )
         if (text != book.searchText) dao.updateBook(book.copy(searchText = text))
     }

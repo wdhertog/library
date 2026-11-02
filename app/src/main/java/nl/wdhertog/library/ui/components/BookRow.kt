@@ -1,7 +1,6 @@
 package nl.wdhertog.library.ui.components
 
 import androidx.compose.foundation.clickable
-import nl.wdhertog.library.data.repository.cover
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.displayTitle
 import nl.wdhertog.library.data.repository.isAwaitingLookup
+import nl.wdhertog.library.data.repository.cover
 
 /** Eén boek in een lijst: cover, titel, auteurs, serie/jaar/taal en eventueel de locatie. */
 @Composable
@@ -50,12 +51,23 @@ fun BookRow(
         CoverImage(item.book.title, item.book.cover, Modifier.size(width = 52.dp, height = 76.dp), showTitle = false)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                item.book.displayTitle,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    item.book.displayTitle,
+                    Modifier.weight(1f, fill = false),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (item.book.favorite) {
+                    Icon(
+                        Icons.Default.Favorite,
+                        contentDescription = "Favoriet",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 6.dp).size(16.dp),
+                    )
+                }
+            }
             if (item.authors.isNotEmpty()) {
                 Text(
                     item.authorLine,
