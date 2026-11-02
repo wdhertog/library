@@ -7,6 +7,9 @@ import nl.wdhertog.library.data.db.EnrichStatus
 import nl.wdhertog.library.data.db.Work
 
 /** Titel voor weergave; een net gescand boek heeft nog geen titel. */
+/** Eigen foto (bestandsnaam) gaat voor de cover uit een bron; zie CoverStore.model. */
+val Book.cover: String? get() = coverFile ?: coverUrl
+
 val Book.displayTitle: String get() = title.ifBlank { isbn13?.let { "ISBN $it" } ?: "Zonder titel" }
 
 val Book.isAwaitingLookup: Boolean

@@ -56,6 +56,9 @@ interface BookDao {
     @Query("UPDATE book SET enrichStatus = :status, updatedAt = :now WHERE id = :id")
     suspend fun setEnrichStatus(id: Long, status: EnrichStatus, now: java.time.Instant)
 
+    @Query("UPDATE book SET coverFile = :coverFile, updatedAt = :now WHERE id = :id")
+    suspend fun setCoverFile(id: Long, coverFile: String?, now: java.time.Instant)
+
     @Insert
     suspend fun insertBook(book: Book): Long
 

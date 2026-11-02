@@ -1,6 +1,7 @@
 package nl.wdhertog.library.ui.bookdetail
 
 import androidx.compose.foundation.clickable
+import nl.wdhertog.library.data.repository.cover
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.HideImage
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -41,11 +44,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.db.Book
+import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.repository.BookDetail
+import nl.wdhertog.library.data.repository.LocationTree
+import nl.wdhertog.library.ui.locations.LocationPickerDialog
+import nl.wdhertog.library.ui.loans.BorrowedActionsDialog
+import nl.wdhertog.library.ui.loans.DeleteLoanDialog
+import nl.wdhertog.library.ui.loans.LoanDialog
+import nl.wdhertog.library.ui.components.rememberNotificationPermissionRequest
+import androidx.compose.material.icons.filled.Place
 import nl.wdhertog.library.data.repository.displayTitle
 import nl.wdhertog.library.data.repository.label
 import androidx.compose.material3.OutlinedButton
@@ -62,11 +74,22 @@ fun BookDetailScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onOpenBook: (Long) -> Unit,
+    onOpenLocation: (Long) -> Unit,
+    onPhotoCover: (Long) -> Unit,
     viewModel: BookDetailViewModel = appViewModel { container, handle ->
-        BookDetailViewModel(handle, container.bookRepository, container.enrichmentService)
+        BookDetailViewModel(handle, container.bookRepository, container.enrichmentService, container.locationRepository, container.loanRepository)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val tree by viewModel.locationTree.collectAsStateWithLifecycle()
+    val locationIndex = remember(tree) { LocationTree.index(tree) }
+    var pickingLocation by remember { mutableStateOf(false) }
+    val bookLoans by viewModel.bookLoans.collectAsStateWithLifecycle()
+    val borrowed by viewModel.borrowed.collectAsStateWithLifecycle()
+    val personNames by viewModel.personNames.collectAsStateWithLifecycle()
+    var loanDialog by remember { mutableStateOf<String?>(null) }
+    var loanToDelete by remember { mutableStateOf<nl.wdhertog.library.data.db.LoanRow?>(null) }
+    val requestNotifications = rememberNotificationPermissionRequest()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -94,6 +117,24 @@ fun BookDetailScreen(
                             }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                 DropdownMenuItem(
+                                    text = { Text("Cover fotograferen") },
+                                    leadingIcon = { Icon(Icons.Default.AddAPhoto, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        onPhotoCover(viewModel.bookId)
+                                    },
+                                )
+                                if ((state as? BookDetailUiState.Loaded)?.detail?.book?.coverFile != null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Eigen cover-foto weghalen") },
+                                        leadingIcon = { Icon(Icons.Default.HideImage, contentDescription = null) },
+                                        onClick = {
+                                            menuOpen = false
+                                            viewModel.removeCoverPhoto()
+                                        },
+                                    )
+                                }
+                                DropdownMenuItem(
                                     text = { Text("Verwijderen") },
                                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
                                     onClick = {
@@ -112,9 +153,84 @@ fun BookDetailScreen(
             when (val s = state) {
                 BookDetailUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 BookDetailUiState.NotFound -> Text("Dit boek bestaat niet meer.", Modifier.align(Alignment.Center))
-                is BookDetailUiState.Loaded -> DetailContent(s.detail, onOpenBook, refreshing, viewModel::refresh)
+                is BookDetailUiState.Loaded -> DetailContent(
+                    detail = s.detail,
+                    locationLabel = { id -> id?.let { locationIndex[it]?.pathLabel } },
+                    onOpenBook = onOpenBook,
+                    onOpenLocation = onOpenLocation,
+                    onPickLocation = { pickingLocation = true },
+                    onPhotoCover = { onPhotoCover(viewModel.bookId) },
+                    refreshing = refreshing,
+                    onRefresh = viewModel::refresh,
+                    banner = { borrowed?.let { BorrowedBanner(it, onReturned = { loanDialog = "returned" }) } },
+                    // Een geleend boek leen je niet uit; zonder geschiedenis valt er dan niets te tonen.
+                    loanSection = if (s.detail.book.ownership == Ownership.BORROWED && bookLoans.isEmpty()) {
+                        null
+                    } else {
+                        {
+                            LoanSection(
+                                ownership = s.detail.book.ownership,
+                                loans = bookLoans,
+                                onLend = { loanDialog = "lend" },
+                                onReturned = viewModel::markReturned,
+                                onMarkBorrowed = { loanDialog = "borrow" },
+                                onMarkOwned = viewModel::markOwned,
+                                onDelete = { loanToDelete = it },
+                            )
+                        }
+                    },
+                )
             }
         }
+    }
+
+    val bookTitle = (state as? BookDetailUiState.Loaded)?.detail?.book?.displayTitle.orEmpty()
+    when (loanDialog) {
+        "lend", "borrow" -> {
+            val lending = loanDialog == "lend"
+            LoanDialog(
+                title = if (lending) "Uitlenen" else "Geleend van iemand",
+                bookTitle = bookTitle,
+                personLabel = if (lending) "Aan wie?" else "Van wie?",
+                personSuggestions = personNames,
+                showNote = lending,
+                onConfirm = { person, due, note ->
+                    if (lending) viewModel.lend(person, due, note) else viewModel.markBorrowed(person, due)
+                    if (due != null) requestNotifications()
+                    loanDialog = null
+                },
+                onDismiss = { loanDialog = null },
+            )
+        }
+        "returned" -> BorrowedActionsDialog(
+            bookTitle = bookTitle,
+            onKeep = { viewModel.markBorrowedReturned(keep = true, onDeleted = onBack); loanDialog = null },
+            onDelete = { viewModel.markBorrowedReturned(keep = false, onDeleted = onBack); loanDialog = null },
+            onOwned = { viewModel.markOwned(); loanDialog = null },
+            onDismiss = { loanDialog = null },
+        )
+    }
+    loanToDelete?.let { loan ->
+        DeleteLoanDialog(
+            personName = loan.personName,
+            onConfirm = { viewModel.deleteLoan(loan.loanId); loanToDelete = null },
+            onDismiss = { loanToDelete = null },
+        )
+    }
+
+    if (pickingLocation) {
+        LocationPickerDialog(
+            title = "Waar staat dit boek?",
+            tree = tree,
+            selectedId = (state as? BookDetailUiState.Loaded)?.detail?.book?.locationId,
+            noneLabel = "Geen locatie",
+            onSelect = {
+                viewModel.moveTo(it)
+                pickingLocation = false
+            },
+            onCreate = viewModel::createLocation,
+            onDismiss = { pickingLocation = false },
+        )
     }
 
     if (confirmDelete) {
@@ -135,7 +251,18 @@ fun BookDetailScreen(
 }
 
 @Composable
-private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit, refreshing: Boolean, onRefresh: () -> Unit) {
+private fun DetailContent(
+    detail: BookDetail,
+    locationLabel: (Long?) -> String?,
+    onOpenBook: (Long) -> Unit,
+    onOpenLocation: (Long) -> Unit,
+    onPickLocation: () -> Unit,
+    onPhotoCover: () -> Unit,
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
+    banner: @Composable () -> Unit,
+    loanSection: (@Composable () -> Unit)?,
+) {
     val book = detail.book
     Column(
         Modifier
@@ -143,8 +270,20 @@ private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit, refres
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
     ) {
+        banner()
         Row {
-            CoverImage(book.title, book.coverUrl, Modifier.size(width = 104.dp, height = 156.dp))
+            // Tik op de cover om (opnieuw) te fotograferen.
+            Box(Modifier.clickable(onClick = onPhotoCover)) {
+                CoverImage(book.title, book.cover, Modifier.size(width = 104.dp, height = 156.dp))
+                if (book.cover == null) {
+                    Icon(
+                        Icons.Default.AddAPhoto,
+                        contentDescription = "Cover fotograferen",
+                        tint = Color.White,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).size(20.dp),
+                    )
+                }
+            }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(book.displayTitle, style = MaterialTheme.typography.headlineSmall)
@@ -161,6 +300,12 @@ private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit, refres
             }
         }
 
+        LocationLine(
+            label = locationLabel(book.locationId),
+            onOpen = book.locationId?.let { id -> { onOpenLocation(id) } },
+            onChange = onPickLocation,
+        )
+
         detail.series.forEach { s ->
             Spacer(Modifier.height(16.dp))
             AssistChip(
@@ -175,6 +320,8 @@ private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit, refres
             Text("Op je leeslijst", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
 
+        loanSection?.let { Section("Uitlenen") { it() } }
+
         detail.works.firstOrNull()?.originalTitle?.takeIf { it != book.title }?.let {
             Section("Oorspronkelijke titel") { Text(it) }
         }
@@ -182,7 +329,7 @@ private fun DetailContent(detail: BookDetail, onOpenBook: (Long) -> Unit, refres
 
         if (detail.otherEditions.isNotEmpty()) {
             Section("Andere edities in je collectie") {
-                detail.otherEditions.forEach { EditionRow(it, onClick = { onOpenBook(it.id) }) }
+                detail.otherEditions.forEach { EditionRow(it, locationLabel(it.locationId), onClick = { onOpenBook(it.id) }) }
             }
         }
 
@@ -247,16 +394,33 @@ private fun DetailRow(label: String, value: String?) {
 }
 
 @Composable
-private fun EditionRow(book: Book, onClick: () -> Unit) {
+private fun EditionRow(book: Book, location: String?, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CoverImage(book.title, book.coverUrl, Modifier.size(width = 32.dp, height = 48.dp), showTitle = false)
+        CoverImage(book.title, book.cover, Modifier.size(width = 32.dp, height = 48.dp), showTitle = false)
         Spacer(Modifier.width(12.dp))
         Column {
             Text(book.title, style = MaterialTheme.typography.bodyLarge)
-            MetaLine(listOfNotNull(book.language?.let(Languages::displayName), book.publishedYear?.toString()))
+            MetaLine(listOfNotNull(book.language?.let(Languages::displayName), book.publishedYear?.toString(), location?.let { "📍 $it" }))
         }
+    }
+}
+
+/** Waar het boek staat; tik op de plek om erheen te gaan, op Wijzig om te verplaatsen. */
+@Composable
+private fun LocationLine(label: String?, onOpen: (() -> Unit)?, onChange: () -> Unit) {
+    Spacer(Modifier.height(12.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Place, contentDescription = "Locatie", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            label ?: "Geen locatie",
+            Modifier.weight(1f).then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (label != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TextButton(onClick = onChange) { Text(if (label != null) "Verplaatsen" else "Plek kiezen") }
     }
 }

@@ -50,6 +50,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.db.BookFormat
+import nl.wdhertog.library.ui.components.SuggestionTextField
 import nl.wdhertog.library.ui.navigation.appViewModel
 import nl.wdhertog.library.util.Languages
 import nl.wdhertog.library.util.TextNormalizer
@@ -109,7 +110,7 @@ fun BookEditScreen(
 
             draft.authors.forEachIndexed { index, author ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    SuggestionInput(
+                    SuggestionTextField(
                         label = if (index == 0) "Auteur" else "Auteur ${index + 1}",
                         value = author,
                         suggestions = authorSuggestions,
@@ -139,7 +140,7 @@ fun BookEditScreen(
             TextInput("Oorspronkelijke titel", draft.originalTitle, { v -> viewModel.update { it.copy(originalTitle = v) } })
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SuggestionInput("Serie", draft.seriesName, seriesSuggestions,
+                SuggestionTextField("Serie", draft.seriesName, seriesSuggestions,
                     { v -> viewModel.update { it.copy(seriesName = v) } }, Modifier.weight(2f))
                 TextInput("Deel", draft.seriesIndex, { v -> viewModel.update { it.copy(seriesIndex = v) } },
                     Modifier.weight(1f))
@@ -204,62 +205,6 @@ private fun TextInput(
         ),
         modifier = modifier,
     )
-}
-
-/** Tekstveld met suggesties uit wat al in de collectie staat (auteurs, series). */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SuggestionInput(
-    label: String,
-    value: String,
-    suggestions: List<String>,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var focused by remember { mutableStateOf(false) }
-    var dismissed by remember { mutableStateOf(false) }
-    val matches = remember(value, suggestions) {
-        val needle = TextNormalizer.normalize(value)
-        if (needle.isEmpty()) emptyList()
-        else suggestions.filter {
-            val candidate = TextNormalizer.normalize(it)
-            candidate.contains(needle) && candidate != needle
-        }.take(6)
-    }
-    ExposedDropdownMenuBox(
-        expanded = focused && !dismissed && matches.isNotEmpty(),
-        onExpandedChange = { dismissed = !it },
-        modifier = modifier,
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {
-                dismissed = false
-                onValueChange(it)
-            },
-            label = { Text(label) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { focused = it.isFocused }
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
-        )
-        ExposedDropdownMenu(
-            expanded = focused && !dismissed && matches.isNotEmpty(),
-            onDismissRequest = { dismissed = true },
-        ) {
-            matches.forEach { suggestion ->
-                DropdownMenuItem(
-                    text = { Text(suggestion) },
-                    onClick = {
-                        onValueChange(suggestion)
-                        dismissed = true
-                    },
-                )
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

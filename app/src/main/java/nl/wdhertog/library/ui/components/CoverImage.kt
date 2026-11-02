@@ -8,6 +8,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import nl.wdhertog.library.covers.CoverStore
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,13 +27,17 @@ private val placeholderColors = listOf(
     Color(0xFF7B3B2E), Color(0xFF4A5A2A), Color(0xFF3D3D5C), Color(0xFF6B4B33),
 )
 
-/** Cover van het boek, of een gekleurd vlak met de titel zolang er geen cover is. */
+/**
+ * Cover van het boek, of een gekleurd vlak met de titel zolang er geen cover is.
+ * [cover] is een URL of de bestandsnaam van een eigen foto (zie Book.cover).
+ */
 @Composable
-fun CoverImage(title: String, coverUrl: String?, modifier: Modifier = Modifier, showTitle: Boolean = true) {
+fun CoverImage(title: String, cover: String?, modifier: Modifier = Modifier, showTitle: Boolean = true) {
     val shape = RoundedCornerShape(4.dp)
-    if (coverUrl != null) {
+    if (cover != null) {
+        val context = LocalContext.current
         SubcomposeAsyncImage(
-            model = coverUrl,
+            model = remember(cover) { CoverStore.model(context, cover) },
             contentDescription = "Cover van $title",
             contentScale = ContentScale.Crop,
             modifier = modifier.clip(shape),

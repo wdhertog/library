@@ -11,6 +11,7 @@ import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.db.Series
 import nl.wdhertog.library.data.db.Work
 import nl.wdhertog.library.data.db.WorkAuthor
+import nl.wdhertog.library.covers.CoverStore
 import nl.wdhertog.library.lookup.BookMetadata
 import nl.wdhertog.library.scan.Isbn
 import nl.wdhertog.library.util.TextNormalizer
@@ -23,7 +24,7 @@ sealed interface ScanAddResult {
     data class AlreadyPresent(override val bookId: Long) : ScanAddResult
 }
 
-class BookRepository(private val db: LibraryDatabase) {
+class BookRepository(private val db: LibraryDatabase, private val covers: CoverStore) {
 
     private val dao = db.bookDao()
 
@@ -274,11 +275,24 @@ class BookRepository(private val db: LibraryDatabase) {
         if (dao.getAuthorNames(existing.id).isEmpty()) setWorkAuthors(existing.id, dao.getAuthorNames(workId))
     }
 
-    suspend fun delete(bookId: Long) = db.withTransaction {
-        val book = dao.getBook(bookId) ?: return@withTransaction
-        dao.deleteBook(book)
-        deleteOrphans()
+    suspend fun delete(bookId: Long) {
+        val book = db.withTransaction {
+            val book = dao.getBook(bookId) ?: return@withTransaction null
+            dao.deleteBook(book)
+            deleteOrphans()
+            book
+        }
+        covers.delete(book?.coverFile)
     }
+
+    /** Eigen cover-foto instellen (of met null weghalen); de vorige foto wordt opgeruimd. */
+    suspend fun setCoverFile(bookId: Long, coverFile: String?) {
+        val previous = dao.getBook(bookId)?.coverFile
+        dao.setCoverFile(bookId, coverFile, Instant.now())
+        if (previous != coverFile) covers.delete(previous)
+    }
+
+    suspend fun getBook(bookId: Long): Book? = dao.getBook(bookId)
 
     private suspend fun findOrCreateSeries(name: String): Series? {
         val trimmed = name.trim().ifEmpty { return null }

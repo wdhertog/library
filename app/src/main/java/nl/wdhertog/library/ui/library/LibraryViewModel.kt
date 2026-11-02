@@ -4,18 +4,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
-import nl.wdhertog.library.lookup.EnrichScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import nl.wdhertog.library.data.db.LocationType
 import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.BookRepository
+import nl.wdhertog.library.data.repository.LocationNode
+import nl.wdhertog.library.data.repository.LocationRepository
+import nl.wdhertog.library.data.repository.LocationTree
+import nl.wdhertog.library.lookup.EnrichScheduler
 import nl.wdhertog.library.util.TextNormalizer
 
 enum class SortOrder(val label: String) {
@@ -23,6 +27,7 @@ enum class SortOrder(val label: String) {
     AUTHOR("Auteur"),
     ADDED("Laatst toegevoegd"),
     YEAR("Jaar van uitgave"),
+    LOCATION("Locatie (plankvolgorde)"),
 }
 
 data class LibraryUiState(
@@ -33,9 +38,14 @@ data class LibraryUiState(
     val sort: SortOrder = SortOrder.TITLE,
     val language: String? = null,
     val availableLanguages: List<String> = emptyList(),
+    /** Filter op deze locatie inclusief alles erbinnen. */
+    val location: LocationNode? = null,
+    val locationTree: List<LocationNode> = emptyList(),
+    /** Pad per locatie-id, voor de 📍-regel in de lijst. */
+    val locationLabels: Map<Long, String> = emptyMap(),
 )
 
-private data class Filters(val query: String, val sort: SortOrder, val language: String?)
+private data class Filters(val query: String, val sort: SortOrder, val language: String?, val locationId: Long?)
 
 /** Lijstitem met vooraf berekende sorteersleutels, zodat sorteren en filteren snel blijven. */
 private class Indexed(val item: BookListItem) {
@@ -46,6 +56,7 @@ private class Indexed(val item: BookListItem) {
 
 class LibraryViewModel(
     private val repository: BookRepository,
+    private val locations: LocationRepository,
     private val scheduler: EnrichScheduler,
 ) : ViewModel() {
 
@@ -76,18 +87,27 @@ class LibraryViewModel(
 
     private val sort = MutableStateFlow(SortOrder.TITLE)
     private val language = MutableStateFlow<String?>(null)
+    private val locationId = MutableStateFlow<Long?>(null)
 
     private val indexed = repository.observeLibrary()
         .map { items -> items.map(::Indexed) }
         .flowOn(Dispatchers.Default)
 
+    private val filters = combine(query, sort, language, locationId, ::Filters)
+
     val state: StateFlow<LibraryUiState> =
-        combine(indexed, combine(query, sort, language, ::Filters)) { all, filters ->
+        combine(indexed, locations.observeTree(), filters) { all, tree, filters ->
+            val flat = LocationTree.flatten(tree)
+            val byId = flat.associateBy { it.id }
+            val selected = filters.locationId?.let(byId::get)
+            val inSelected = selected?.let(LocationTree::descendantIds)
+            val treeOrder = flat.withIndex().associate { (index, node) -> node.id to index }
             val words = TextNormalizer.normalize(filters.query).split(' ').filter(String::isNotEmpty)
             val visible = all
                 .filter { filters.language == null || it.item.book.language == filters.language }
+                .filter { inSelected == null || it.item.book.locationId in inSelected }
                 .filter { entry -> words.all { entry.item.book.searchText.contains(it) } }
-                .sortedWith(comparatorFor(filters.sort))
+                .sortedWith(comparatorFor(filters.sort, treeOrder))
                 .map { it.item }
             LibraryUiState(
                 loading = false,
@@ -97,6 +117,9 @@ class LibraryViewModel(
                 sort = filters.sort,
                 language = filters.language,
                 availableLanguages = all.mapNotNull { it.item.book.language }.distinct().sorted(),
+                location = selected,
+                locationTree = tree,
+                locationLabels = flat.associate { it.id to it.pathLabel },
             )
         }
             .flowOn(Dispatchers.Default)
@@ -114,7 +137,13 @@ class LibraryViewModel(
         language.value = value
     }
 
-    private fun comparatorFor(order: SortOrder): Comparator<Indexed> = when (order) {
+    fun setLocation(value: Long?) {
+        locationId.value = value
+    }
+
+    suspend fun createLocation(name: String, type: LocationType, parentId: Long?): Long = locations.add(name, type, parentId)
+
+    private fun comparatorFor(order: SortOrder, treeOrder: Map<Long, Int>): Comparator<Indexed> = when (order) {
         SortOrder.TITLE -> compareBy<Indexed> { it.titleKey.isEmpty() }.thenBy { it.titleKey }
         SortOrder.AUTHOR -> compareBy<Indexed> { it.authorKey }
             .thenBy { it.item.series?.seriesName }
@@ -122,5 +151,9 @@ class LibraryViewModel(
             .thenBy { it.titleKey }
         SortOrder.ADDED -> compareByDescending { it.item.book.addedAt }
         SortOrder.YEAR -> compareBy<Indexed, Int?>(nullsLast()) { it.item.book.publishedYear }.thenBy { it.titleKey }
+        // Zoals de boeken in huis staan: locaties in boomvolgorde, daarbinnen plankvolgorde.
+        SortOrder.LOCATION -> compareBy<Indexed, Int?>(nullsLast()) { it.item.book.locationId?.let(treeOrder::get) }
+            .thenBy(nullsLast()) { it.item.book.shelfPosition }
+            .thenBy { it.titleKey }
     }
 }

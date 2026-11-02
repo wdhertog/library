@@ -27,6 +27,10 @@ import androidx.room.TypeConverters
 abstract class LibraryDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
 
+    abstract fun locationDao(): LocationDao
+
+    abstract fun loanDao(): LoanDao
+
     companion object {
         fun create(context: Context): LibraryDatabase =
             Room.databaseBuilder(context, LibraryDatabase::class.java, "library.db").build()
