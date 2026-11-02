@@ -80,9 +80,9 @@ data class BookDetailRoute(val bookId: Long)
 @Serializable
 data class ScanRoute(val locationId: Long = 0)
 
-/** bookId 0 = nieuw boek. */
+/** bookId 0 = nieuw boek; titel en auteur kunnen alvast ingevuld worden (bijv. na cover-herkenning). */
 @Serializable
-data class BookEditRoute(val bookId: Long = 0)
+data class BookEditRoute(val bookId: Long = 0, val title: String = "", val author: String = "", val coverFile: String = "")
 
 @Serializable
 data class CoverRoute(val bookId: Long)
@@ -239,6 +239,9 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onOpenBook = { navController.navigate(BookDetailRoute(it)) },
                     onManualEntry = { navController.navigate(BookEditRoute()) },
                     onPhotoCover = { navController.navigate(CoverRoute(it)) },
+                    onManualFromCover = { title, author, coverFile ->
+                        navController.navigate(BookEditRoute(title = title, author = author, coverFile = coverFile.orEmpty()))
+                    },
                 )
             }
             composable<BookDetailRoute> { entry ->

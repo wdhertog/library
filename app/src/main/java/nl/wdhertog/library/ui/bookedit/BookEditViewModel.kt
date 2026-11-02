@@ -57,10 +57,16 @@ class BookEditViewModel(
     private val scheduler: EnrichScheduler,
 ) : ViewModel() {
 
-    val bookId = savedStateHandle.toRoute<BookEditRoute>().bookId
+    private val route = savedStateHandle.toRoute<BookEditRoute>()
+    val bookId = route.bookId
     val isNew = bookId == 0L
 
-    private val _state = MutableStateFlow(BookEditUiState(loading = !isNew))
+    private val _state = MutableStateFlow(
+        BookEditUiState(
+            loading = !isNew,
+            draft = BookDraft(title = route.title, authors = listOf(route.author)),
+        ),
+    )
     val state: StateFlow<BookEditUiState> = _state.asStateFlow()
 
     val authorSuggestions = repository.observeAuthorNames()
@@ -100,9 +106,17 @@ class BookEditViewModel(
         _state.update { it.copy(saving = true) }
         viewModelScope.launch {
             val id = repository.save(bookId, current.draft)
+            if (isNew && route.coverFile.isNotBlank()) repository.setCoverFile(id, route.coverFile)
             // Een nieuw boek met ISBN kan op de achtergrond worden aangevuld (cover, serie, …).
             if (current.draft.isbn.isNotBlank()) scheduler.schedule()
             _state.update { it.copy(saving = false, savedBookId = id) }
+        }
+    }
+
+    /** Niet opgeslagen: de alvast bewaarde cover-foto opruimen. */
+    override fun onCleared() {
+        if (isNew && route.coverFile.isNotBlank() && _state.value.savedBookId == null) {
+            repository.discardCoverFile(route.coverFile)
         }
     }
 }

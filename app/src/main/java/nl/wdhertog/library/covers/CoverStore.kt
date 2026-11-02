@@ -26,6 +26,11 @@ class CoverStore(context: Context) {
         name
     }
 
+    /** Zonder te wachten verwijderen (bijv. bij het sluiten van een scherm). */
+    fun discard(name: String) {
+        File(dir, name).delete()
+    }
+
     suspend fun delete(name: String?) {
         if (name == null) return
         withContext(Dispatchers.IO) { File(dir, name).delete() }

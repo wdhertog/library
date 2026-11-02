@@ -20,6 +20,7 @@ import nl.wdhertog.library.lookup.EnrichScheduler
 import nl.wdhertog.library.lookup.EnrichmentService
 import nl.wdhertog.library.lookup.LookupHttp
 import nl.wdhertog.library.lookup.SourceRouter
+import nl.wdhertog.library.lookup.search.BookSearch
 import nl.wdhertog.library.lookup.sources.BnfSource
 import nl.wdhertog.library.lookup.sources.DnbSource
 import nl.wdhertog.library.lookup.sources.KbSource
@@ -55,6 +56,7 @@ class AppContainer(val app: Application) {
         )
     }
     val enrichScheduler = EnrichScheduler(app)
+    val bookSearch by lazy { BookSearch(http) }
 }
 
 class LibraryApp : Application() {

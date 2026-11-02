@@ -317,6 +317,9 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
 
     suspend fun getBook(bookId: Long): Book? = dao.getBook(bookId)
 
+    /** Een cover-foto die toch bij geen enkel boek terechtkwam. */
+    fun discardCoverFile(name: String) = covers.discard(name)
+
     suspend fun setFavorite(bookId: Long, favorite: Boolean) = dao.setFavorite(bookId, favorite, Instant.now())
 
     suspend fun setOwner(bookId: Long, owner: String?) {
