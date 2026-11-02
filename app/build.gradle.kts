@@ -16,6 +16,9 @@ android {
         targetSdk = 36
         versionCode = 10
         versionName = "1.0"
+
+        // Alleen ARM (alle gangbare telefoons); x86 is voor emulators en scheelt ~35 MB aan ML Kit-bibliotheken.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     // Releasesleutel staat buiten de repo; zet de gegevens in ~/.gradle/gradle.properties.
