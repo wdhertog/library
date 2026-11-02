@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.receiveAsFlow
 import nl.wdhertog.library.data.db.BorrowedRow
 import nl.wdhertog.library.data.db.DisposalReason
+import nl.wdhertog.library.data.db.ReadingSession
+import nl.wdhertog.library.data.db.SessionRow
+import nl.wdhertog.library.data.repository.ReadingRepository
 import nl.wdhertog.library.data.db.LoanRow
 import nl.wdhertog.library.data.db.LocationType
 import nl.wdhertog.library.data.repository.LoanRepository
@@ -38,6 +41,7 @@ class BookDetailViewModel(
     private val enrichment: EnrichmentService,
     private val locations: LocationRepository,
     private val loans: LoanRepository,
+    private val reading: ReadingRepository,
 ) : ViewModel() {
 
     val bookId = savedStateHandle.toRoute<BookDetailRoute>().bookId
@@ -75,6 +79,31 @@ class BookDetailViewModel(
 
     fun deleteLoan(loanId: Long) {
         viewModelScope.launch { loans.deleteLoan(loanId) }
+    }
+
+    /** Leessessies van dit werk, in welke editie dan ook. */
+    val sessions: StateFlow<List<SessionRow>> = reading.observeSessionsForWork(bookId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun startReading() {
+        viewModelScope.launch { reading.start(bookId) }
+    }
+
+    fun saveSession(session: ReadingSession) {
+        viewModelScope.launch { reading.save(session) }
+    }
+
+    fun deleteSession(sessionId: Long) {
+        viewModelScope.launch { reading.delete(sessionId) }
+    }
+
+    fun updateProgress(sessionId: Long, page: Int?, percent: Int?) {
+        viewModelScope.launch { reading.updateProgress(sessionId, page, percent) }
+    }
+
+    fun toggleWantToRead() {
+        val book = (state.value as? BookDetailUiState.Loaded)?.detail?.book ?: return
+        viewModelScope.launch { reading.setWantToRead(bookId, !book.wantToRead) }
     }
 
     fun markDisposed(reason: DisposalReason, to: String?, date: LocalDate?) {
