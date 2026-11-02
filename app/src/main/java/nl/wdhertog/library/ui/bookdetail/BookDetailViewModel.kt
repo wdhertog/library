@@ -116,6 +116,11 @@ class BookDetailViewModel(
         .map { detail -> detail?.let(BookDetailUiState::Loaded) ?: BookDetailUiState.NotFound }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BookDetailUiState.Loading)
 
+    /** Eigen foto weghalen; een cover uit een bron (als die er is) komt dan weer terug. */
+    fun removeCoverPhoto() {
+        viewModelScope.launch { repository.setCoverFile(bookId, null) }
+    }
+
     fun delete(onDeleted: () -> Unit) {
         viewModelScope.launch {
             repository.delete(bookId)

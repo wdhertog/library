@@ -1,6 +1,7 @@
 package nl.wdhertog.library.ui.scan
 
 import android.Manifest
+import nl.wdhertog.library.data.repository.cover
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FlashlightOff
@@ -77,6 +79,7 @@ fun ScanScreen(
     onClose: () -> Unit,
     onOpenBook: (Long) -> Unit,
     onManualEntry: () -> Unit,
+    onPhotoCover: (Long) -> Unit,
     viewModel: ScanViewModel = appViewModel { container, handle ->
         ScanViewModel(
             handle,
@@ -153,7 +156,7 @@ fun ScanScreen(
         val list: @Composable (Modifier) -> Unit = { modifier ->
             Column(modifier) {
                 ShelfBar(shelfLabel, onClick = { pickingShelf = true }, onClear = { viewModel.setShelf(null) })
-                SessionList(session, onOpenBook, viewModel::undoMove, Modifier.weight(1f))
+                SessionList(session, onOpenBook, viewModel::undoMove, onPhotoCover, Modifier.weight(1f))
             }
         }
 
@@ -220,7 +223,13 @@ private fun PermissionMessage(permanentlyDenied: Boolean, onRequest: () -> Unit,
 }
 
 @Composable
-private fun SessionList(rows: List<SessionRow>, onOpenBook: (Long) -> Unit, onUndo: (String) -> Unit, modifier: Modifier) {
+private fun SessionList(
+    rows: List<SessionRow>,
+    onOpenBook: (Long) -> Unit,
+    onUndo: (String) -> Unit,
+    onPhotoCover: (Long) -> Unit,
+    modifier: Modifier,
+) {
     Column(modifier) {
         Text(
             if (rows.isEmpty()) "Richt de camera op de barcode achterop het boek." else "Deze sessie (${rows.size})",
@@ -230,7 +239,12 @@ private fun SessionList(rows: List<SessionRow>, onOpenBook: (Long) -> Unit, onUn
         )
         LazyColumn {
             items(rows, key = { it.entry.isbn13 }) { row ->
-                SessionRowItem(row, onClick = { onOpenBook(row.entry.bookId) }, onUndo = { onUndo(row.entry.isbn13) })
+                SessionRowItem(
+                    row,
+                    onClick = { onOpenBook(row.entry.bookId) },
+                    onUndo = { onUndo(row.entry.isbn13) },
+                    onPhotoCover = { onPhotoCover(row.entry.bookId) },
+                )
                 HorizontalDivider(Modifier.padding(start = 68.dp))
             }
         }
@@ -238,13 +252,13 @@ private fun SessionList(rows: List<SessionRow>, onOpenBook: (Long) -> Unit, onUn
 }
 
 @Composable
-private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> Unit) {
+private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> Unit, onPhotoCover: () -> Unit) {
     val book = row.item?.book
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CoverImage(book?.title.orEmpty(), book?.coverUrl, Modifier.size(width = 36.dp, height = 52.dp), showTitle = false)
+        CoverImage(book?.title.orEmpty(), book?.cover, Modifier.size(width = 36.dp, height = 52.dp), showTitle = false)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -280,6 +294,11 @@ private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> U
             TextButton(onClick = onUndo) { Text("Ongedaan maken") }
         } else if (book?.enrichStatus == EnrichStatus.NEW && row.entry.outcome == ScanOutcome.ADDED) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+        } else if (book != null && book.cover == null) {
+            // Geen open bron met een cover: meteen zelf fotograferen nu het boek in je hand ligt.
+            IconButton(onClick = onPhotoCover) {
+                Icon(Icons.Default.AddAPhoto, contentDescription = "Cover fotograferen", tint = MaterialTheme.colorScheme.primary)
+            }
         }
     }
 }

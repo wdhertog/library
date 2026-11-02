@@ -1,6 +1,7 @@
 package nl.wdhertog.library.ui.loans
 
 import androidx.compose.foundation.clickable
+import nl.wdhertog.library.data.repository.cover
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -230,7 +231,7 @@ fun BookPickerDialog(
                             Modifier.fillMaxWidth().clickable { onPick(item) }.padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            CoverImage(item.book.title, item.book.coverUrl, Modifier.size(width = 32.dp, height = 48.dp), showTitle = false)
+                            CoverImage(item.book.title, item.book.cover, Modifier.size(width = 32.dp, height = 48.dp), showTitle = false)
                             Spacer(Modifier.width(12.dp))
                             Column {
                                 Text(item.book.displayTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
