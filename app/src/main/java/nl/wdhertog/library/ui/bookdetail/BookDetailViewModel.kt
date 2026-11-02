@@ -72,6 +72,10 @@ class BookDetailViewModel(
         }
     }
 
+    fun deleteLoan(loanId: Long) {
+        viewModelScope.launch { loans.deleteLoan(loanId) }
+    }
+
     fun markOwned() {
         viewModelScope.launch { loans.markOwned(bookId) }
     }

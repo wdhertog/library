@@ -45,10 +45,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.db.Book
+import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.repository.BookDetail
 import nl.wdhertog.library.data.repository.LocationTree
 import nl.wdhertog.library.ui.locations.LocationPickerDialog
-import nl.wdhertog.library.ui.loans.BorrowedReturnDialog
+import nl.wdhertog.library.ui.loans.BorrowedActionsDialog
+import nl.wdhertog.library.ui.loans.DeleteLoanDialog
 import nl.wdhertog.library.ui.loans.LoanDialog
 import nl.wdhertog.library.ui.components.rememberNotificationPermissionRequest
 import androidx.compose.material.icons.filled.Place
@@ -81,6 +83,7 @@ fun BookDetailScreen(
     val borrowed by viewModel.borrowed.collectAsStateWithLifecycle()
     val personNames by viewModel.personNames.collectAsStateWithLifecycle()
     var loanDialog by remember { mutableStateOf<String?>(null) }
+    var loanToDelete by remember { mutableStateOf<nl.wdhertog.library.data.db.LoanRow?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
@@ -136,15 +139,21 @@ fun BookDetailScreen(
                     refreshing = refreshing,
                     onRefresh = viewModel::refresh,
                     banner = { borrowed?.let { BorrowedBanner(it, onReturned = { loanDialog = "returned" }) } },
-                    loanSection = {
-                        LoanSection(
-                            ownership = s.detail.book.ownership,
-                            loans = bookLoans,
-                            onLend = { loanDialog = "lend" },
-                            onReturned = viewModel::markReturned,
-                            onMarkBorrowed = { loanDialog = "borrow" },
-                            onMarkOwned = viewModel::markOwned,
-                        )
+                    // Een geleend boek leen je niet uit; zonder geschiedenis valt er dan niets te tonen.
+                    loanSection = if (s.detail.book.ownership == Ownership.BORROWED && bookLoans.isEmpty()) {
+                        null
+                    } else {
+                        {
+                            LoanSection(
+                                ownership = s.detail.book.ownership,
+                                loans = bookLoans,
+                                onLend = { loanDialog = "lend" },
+                                onReturned = viewModel::markReturned,
+                                onMarkBorrowed = { loanDialog = "borrow" },
+                                onMarkOwned = viewModel::markOwned,
+                                onDelete = { loanToDelete = it },
+                            )
+                        }
                     },
                 )
             }
@@ -169,11 +178,19 @@ fun BookDetailScreen(
                 onDismiss = { loanDialog = null },
             )
         }
-        "returned" -> BorrowedReturnDialog(
+        "returned" -> BorrowedActionsDialog(
             bookTitle = bookTitle,
             onKeep = { viewModel.markBorrowedReturned(keep = true, onDeleted = onBack); loanDialog = null },
             onDelete = { viewModel.markBorrowedReturned(keep = false, onDeleted = onBack); loanDialog = null },
+            onOwned = { viewModel.markOwned(); loanDialog = null },
             onDismiss = { loanDialog = null },
+        )
+    }
+    loanToDelete?.let { loan ->
+        DeleteLoanDialog(
+            personName = loan.personName,
+            onConfirm = { viewModel.deleteLoan(loan.loanId); loanToDelete = null },
+            onDismiss = { loanToDelete = null },
         )
     }
 
@@ -219,7 +236,7 @@ private fun DetailContent(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     banner: @Composable () -> Unit,
-    loanSection: @Composable () -> Unit,
+    loanSection: (@Composable () -> Unit)?,
 ) {
     val book = detail.book
     Column(
@@ -267,7 +284,7 @@ private fun DetailContent(
             Text("Op je leeslijst", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
 
-        Section("Uitlenen") { loanSection() }
+        loanSection?.let { Section("Uitlenen") { it() } }
 
         detail.works.firstOrNull()?.originalTitle?.takeIf { it != book.title }?.let {
             Section("Oorspronkelijke titel") { Text(it) }

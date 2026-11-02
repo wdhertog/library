@@ -12,7 +12,9 @@ import androidx.compose.material.icons.automirrored.filled.CallMade
 import androidx.compose.material.icons.automirrored.filled.CallReceived
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -59,6 +61,7 @@ fun LoanSection(
     onReturned: (Long) -> Unit,
     onMarkBorrowed: () -> Unit,
     onMarkOwned: () -> Unit,
+    onDelete: (LoanRow) -> Unit,
 ) {
     val today = LocalDate.now()
     val active = loans.firstOrNull { it.returnedAt == null }
@@ -83,6 +86,7 @@ fun LoanSection(
                     active.note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }
                 OutlinedButton(onClick = { onReturned(active.loanId) }) { Text("Teruggekregen") }
+                DeleteButton { onDelete(active) }
             }
             ownership == Ownership.OWNED -> Row {
                 OutlinedButton(onClick = onLend) { Text("Uitlenen…") }
@@ -100,11 +104,22 @@ fun LoanSection(
             Text("Eerder uitgeleend", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             history.forEach { loan ->
                 val period = listOfNotNull(loan.lentAt, loan.returnedAt).joinToString(" – ") { LoanDates.format(it, today) }
-                Text(
-                    listOfNotNull(loan.personName ?: "onbekend", period.ifEmpty { null }).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        listOfNotNull(loan.personName ?: "onbekend", period.ifEmpty { null }).joinToString(" · "),
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    DeleteButton { onDelete(loan) }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun DeleteButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(Icons.Default.DeleteOutline, contentDescription = "Uitlening verwijderen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

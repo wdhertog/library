@@ -63,4 +63,8 @@ class LoansViewModel(
     fun markBorrowedReturned(bookId: Long, keep: Boolean) {
         viewModelScope.launch { loans.markBorrowedReturned(bookId, keep) }
     }
+
+    fun markOwned(bookId: Long) {
+        viewModelScope.launch { loans.markOwned(bookId) }
+    }
 }

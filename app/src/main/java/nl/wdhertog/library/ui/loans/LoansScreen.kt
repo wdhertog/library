@@ -121,10 +121,11 @@ fun LoansScreen(
         )
     }
     returning?.let { row ->
-        BorrowedReturnDialog(
+        BorrowedActionsDialog(
             bookTitle = row.title.ifBlank { "Boek" },
             onKeep = { viewModel.markBorrowedReturned(row.bookId, keep = true); returning = null },
             onDelete = { viewModel.markBorrowedReturned(row.bookId, keep = false); returning = null },
+            onOwned = { viewModel.markOwned(row.bookId); returning = null },
             onDismiss = { returning = null },
         )
     }

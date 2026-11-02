@@ -124,7 +124,20 @@ interface LoanDao {
     )
     suspend fun setOwnership(bookId: Long, ownership: Ownership, personId: Long?, dueAt: LocalDate?, now: Instant)
 
+    @Query("DELETE FROM loan WHERE id = :loanId")
+    suspend fun deleteLoan(loanId: Long)
+
     // --- Personen ---
+
+    /** Namen die nergens meer gebruikt worden, verdwijnen ook uit de suggesties. */
+    @Query(
+        """
+        DELETE FROM person
+        WHERE id NOT IN (SELECT personId FROM loan WHERE personId IS NOT NULL)
+          AND id NOT IN (SELECT borrowedFromPersonId FROM book WHERE borrowedFromPersonId IS NOT NULL)
+        """
+    )
+    suspend fun deleteUnusedPersons()
 
     @Query("SELECT * FROM person WHERE name = :name COLLATE NOCASE LIMIT 1")
     suspend fun findPerson(name: String): Person?
