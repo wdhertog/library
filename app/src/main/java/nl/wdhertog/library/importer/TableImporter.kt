@@ -25,9 +25,9 @@ enum class ColumnTarget(val label: String, private val names: List<String> = emp
     LANGUAGE("Taal", listOf("taal", "language")),
     SERIES("Serie", listOf("serie", "reeks", "series")),
     SERIES_INDEX("Deel in serie", listOf("deel", "nummer", "volume", "series number", "deel in serie", "serienummer")),
-    LOCATION("Locatie (bijv. Woonkamer/Kast 2/Plank 3)", listOf("locatie", "plek", "plaats", "kast", "location", "shelf")),
+    LOCATION("Locatie (Kamer/Kast/Plank)", listOf("locatie", "plek", "plaats", "kast", "location", "shelf")),
     TAGS("Tags (komma-gescheiden)", listOf("tags", "genre", "genres", "categorie", "labels", "bookshelves")),
-    TAG_IF_TRUE("Tag als 1/ja (de kolomnaam)"),
+    TAG_IF_TRUE("Tag (bij 1/ja)"),
     READ("Gelezen (ja/nee of datum)", listOf("gelezen", "read", "gelezen op", "date read", "datum gelezen")),
     RATING("Waardering (0-5)", listOf("waardering", "beoordeling", "rating", "sterren", "score", "my rating")),
     REVIEW("Recensie", listOf("recensie", "review", "my review")),
@@ -37,9 +37,9 @@ enum class ColumnTarget(val label: String, private val names: List<String> = emp
     DISPOSED_DATE("Weggedaan op (datum)", listOf("weggegeven op", "verkocht op", "weggedaan op", "datum weg")),
     FAVORITE("Favoriet (1/ja)", listOf("favoriet", "favorieten", "favorite", "favourite", "favorites")),
     OWNER("Eigenaar (naam)", listOf("eigenaar", "owner", "van wie", "eigendom van")),
-    OWNER_IF_TRUE("Eigenaar als 1/ja (de kolomnaam)"),
+    OWNER_IF_TRUE("Eigenaar (bij 1/ja)"),
     NOTES("Notities", listOf("notities", "notitie", "opmerkingen", "opmerking", "notes", "note")),
-    NOTE_WITH_HEADER("Notitie \"kolomnaam: waarde\""),
+    NOTE_WITH_HEADER("Notitie (kolom: waarde)"),
     ;
 
     companion object {

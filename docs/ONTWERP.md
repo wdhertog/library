@@ -131,12 +131,16 @@ Twee niveaus: een **Work** (het verhaal/werk, los van taal en uitgave) en een **
 │   OWNED / BORROWED / │
 │   NOT_OWNED          │        ┌──────────────────────────┐
 │ borrowedFrom, dueAt  │1──────*│ ReadingSession           │
-│ shelfPosition, notes │        │──────────────────────────│
+│ disposalReason, -To, │        │──────────────────────────│
+│   -At (weggedaan)    │        │                          │
+│ favorite, owner      │        │                          │
+│ shelfPosition, notes │        │                          │
 │ enrichStatus         │        │ id, bookId, startedAt,   │
 │   NIEUW/SNEL/        │        │ finishedAt, status       │
 │   VERRIJKT/MISLUKT/  │        │  (bezig/gelezen/gestopt) │
 │   HANDMATIG          │        │ rating (0–5), review     │
 │ enrichedSources      │        │ datePrecision (dag/jaar) │
+│ hirtId, importRunId  │        │ progressPage, -Percent   │
 │                      │        └──────────────────────────┘
 │ lockedFields         │
 │ openLibraryEditionId │        ┌──────────────┐  ┌──────────────────────────┐
@@ -157,6 +161,8 @@ Toelichting:
 - **Lezen** wordt per boek vastgelegd (je weet dus welke editie/taal je las), maar "gelezen" geldt voor het hele werk: heb je de Engelse versie gelezen, dan staat de Nederlandse ook als gelezen.
 - **Zelf geleend** is een eigenschap van het boek (`ownership = BORROWED`, van wie, terugbrengen vóór). Na terugbrengen kies je: verwijderen of bewaren als "gelezen, niet in bezit" (handig voor de leeshistorie).
 - **Uitgeleend** is een aparte `Loan`-regel, zodat de uitleengeschiedenis bewaard blijft.
+- **Weggedaan** (weggegeven, verkocht, kwijt) zet het boek op "niet in bezit" met aan wie en wanneer; het blijft voor de leesgeschiedenis.
+- **Eigenaar** is een naam per boek ("Willem", "Ienje", "samen"), voor een collectie die je deelt. Leeg = niet ingevuld.
 - **Leesstatus** wordt afgeleid: geen sessie = ongelezen; plus een losse vlag "wil ik lezen".
 - `seriesIndex` is tekst, want series nummeren ook als "0.5" of "II".
 
@@ -349,6 +355,14 @@ Wizard in 4 stappen — omdat het formaat van jouw bestand nog onbekend is, is d
 
 Locatieteksten zoals "Woonkamer/Kast 2/Plank 3" worden automatisch omgezet naar de locatieboom.
 
+Zoals gebouwd (fase 4):
+- Eigen lezers voor .xlsx (alle tabbladen, kies er één) en .csv/.tsv; geen extra bibliotheek.
+- Doelvelden o.a. auteur als volledige naam óf voornaam / tussenvoegsel / achternaam, gelezen (ja/nee of datum), waardering, uitgeleend (aan), niet meer in bezit, weggedaan aan/op, favoriet, eigenaar, locatie, tags, notities.
+- Een kolom met 1/0 of ja/nee kan de kolomnaam als **tag** of als **eigenaar** opleveren (bijv. kolommen "Matthias" en "Ienje"); onbekende ja/nee-kolommen worden standaard een tag. Een kolom kan ook een notitie "Kolom: waarde" worden.
+- De toewijzing wordt per kopregel onthouden.
+- Bestaande boeken: zeker (zelfde ISBN, of titel + auteur als één ISBN ontbreekt) of twijfel (zelfde titel en auteur, ander ISBN; standaard apart toevoegen). Keuze voor alles samen en per boek: aanvullen / bestand gaat voor / overslaan.
+- Elke import is ongedaan te maken: de toegevoegde boeken worden verwijderd, aanvullingen op bestaande boeken blijven.
+
 ### 6.11 Importeren uit Have I Read That (JSON)
 
 Vaste importeur (geen kolomtoewijzing nodig), want het formaat is bekend. Analyse van de export van 01-11-2026: 700 boeken. Geïmporteerd wordt elk boek met `owned: true` **of** de tag `eigen-boeken`, behalve ebooks en luisterboeken → **336 boeken**.
@@ -433,7 +447,7 @@ Tests: unittests voor ISBN-logica, bron-parsers (met opgeslagen voorbeeldantwoor
 | 1 | Projectopzet, database, bibliotheeklijst, detail, handmatig toevoegen/bewerken | Bruikbare catalogus zonder scanner |
 | 2 | Barcodescanner (doorlopend), snelle lookup, achtergrond-verrijking, "Bibliotheek bijwerken", bronnen OL/DNB/BnF/Wikidata | Snel boeken scannen |
 | 3 | Locaties + plank-modus, uitleen in beide richtingen + herinneringen, cover fotograferen (direct na scan en vanuit boekdetail) | Weten waar elk boek is; covers voor Nederlandse boeken (geen open bron heeft die) |
-| 4 | Import CSV/Excel (zodra het voorbeeldbestand er is). Details vragen aan het begin van deze fase | Bestaande collectie erin |
+| 4 | Import Have I Read That (JSON) en CSV/Excel met kolomtoewijzing, controle per boek en ongedaan maken. Erbij: favoriet, eigenaar (gedeelde collectie), weggedaan (hoe, aan wie, wanneer), leesvoortgang | Bestaande collectie erin |
 | 5 | Lezen (sessies, statistiek), series-schermen | Have I Read That-functies |
 | 6 | Cover-herkenning, export/back-up, afwerking | Compleet |
 
