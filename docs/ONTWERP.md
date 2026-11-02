@@ -493,7 +493,7 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 | B. Eigenaar per plank | Op de locatiepagina: "Eigenaar voor alle boeken hier", daarna afwijkende boeken los aanpassen | Snel en eenvoudig | Alleen voor eigenaar; met A is dit "alles selecteren" |
 | C. Eigenaar-modus bij scannen | Net als plank-modus: kies een eigenaar en scan; elk gescand boek krijgt die eigenaar | Handig bij het fysiek doorlopen van een gemengde kast | Alleen met boeken met barcode; aanvulling op A, geen vervanging |
 
-Voorstel: A bouwen, en C toevoegen als het bij het gebruik gemist wordt.
+**Besloten (2 november 2026): optie A.** C komt er alleen bij als het bij het gebruik gemist wordt.
 
 ### Later, misschien
 - **Synchronisatie tussen telefoons.** Records hebben al een UUID en een `updatedAt` (§6.12).
