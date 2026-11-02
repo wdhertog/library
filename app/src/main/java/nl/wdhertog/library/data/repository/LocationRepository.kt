@@ -25,6 +25,27 @@ class LocationRepository(private val db: LibraryDatabase) {
         dao.insert(Location(parentId = parentId, name = name.trim(), type = type, sortOrder = dao.nextSortOrder(parentId)))
     }
 
+    /**
+     * Locatie bij een pad als "Woonkamer/Kast 2/Plank 3" (ook met > of ›): bestaande plekken
+     * worden hergebruikt (hoofdletters maken niet uit), ontbrekende aangemaakt.
+     */
+    suspend fun findOrCreatePath(path: String): Long? = db.withTransaction {
+        val names = path.split('/', '>', '›', '\\').map(String::trim).filter(String::isNotEmpty)
+        if (names.isEmpty()) return@withTransaction null
+        val all = dao.getLocations().toMutableList()
+        var parent: Location? = null
+        for (name in names) {
+            parent = all.firstOrNull { it.parentId == parent?.id && it.name.equals(name, ignoreCase = true) }
+                ?: Location(
+                    parentId = parent?.id,
+                    name = name,
+                    type = LocationTree.defaultChildType(parent?.type),
+                    sortOrder = dao.nextSortOrder(parent?.id),
+                ).let { it.copy(id = dao.insert(it)) }.also { all += it }
+        }
+        parent?.id
+    }
+
     suspend fun update(id: Long, name: String, type: LocationType) {
         val location = dao.getLocation(id) ?: return
         dao.update(location.copy(name = name.trim(), type = type, updatedAt = Instant.now()))

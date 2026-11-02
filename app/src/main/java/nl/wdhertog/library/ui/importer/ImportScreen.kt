@@ -3,6 +3,10 @@ package nl.wdhertog.library.ui.importer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import nl.wdhertog.library.importer.ColumnTarget
+import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,6 +60,16 @@ import java.time.format.DateTimeFormatter
 
 private val runDate = DateTimeFormatter.ofPattern("d-M-yyyy HH:mm")
 
+/** Excel, CSV en TSV; sommige bestandsbeheerders geven CSV als text/plain of octet-stream. */
+private val tableTypes = arrayOf(
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/csv",
+    "text/comma-separated-values",
+    "text/tab-separated-values",
+    "text/plain",
+    "application/octet-stream",
+)
+
 /** Keuzes voor boeken die zeker al in je bibliotheek staan. */
 private val mergeChoices = listOf(MergeChoice.FILL, MergeChoice.OVERWRITE, MergeChoice.SKIP)
 
@@ -65,7 +79,7 @@ private val mergeChoices = listOf(MergeChoice.FILL, MergeChoice.OVERWRITE, Merge
 fun ImportScreen(
     onBack: () -> Unit,
     viewModel: ImportViewModel = appViewModel { container, _ ->
-        ImportViewModel(container.importService, container.enrichScheduler, container.appScope)
+        ImportViewModel(container.importService, container.importProfiles, container.enrichScheduler, container.appScope)
     },
 ) {
     val context = LocalContext.current
@@ -74,6 +88,9 @@ fun ImportScreen(
     var runToUndo by remember { mutableStateOf<ImportRun?>(null) }
     val pickHirt = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.openHirt(context.contentResolver, it) }
+    }
+    val pickTable = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { viewModel.openTable(context.contentResolver, it) }
     }
 
     Scaffold(
@@ -92,9 +109,17 @@ fun ImportScreen(
                     error = (s as? ImportUiState.Error)?.message,
                     runs = runs,
                     onPickHirt = { pickHirt.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                    onPickTable = { pickTable.launch(tableTypes) },
                     onUndo = { runToUndo = it },
                 )
                 ImportUiState.Reading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                is ImportUiState.Mapping -> Mapping(
+                    s,
+                    onSheet = viewModel::selectSheet,
+                    onTarget = viewModel::setTarget,
+                    onCancel = viewModel::reset,
+                    onNext = viewModel::confirmMapping,
+                )
                 is ImportUiState.Review -> Review(
                     s,
                     onDefaultChoice = viewModel::setDefaultChoice,
@@ -145,7 +170,7 @@ fun ImportScreen(
 }
 
 @Composable
-private fun Start(error: String?, runs: List<ImportRun>, onPickHirt: () -> Unit, onUndo: (ImportRun) -> Unit) {
+private fun Start(error: String?, runs: List<ImportRun>, onPickHirt: () -> Unit, onPickTable: () -> Unit, onUndo: (ImportRun) -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         item {
@@ -159,8 +184,9 @@ private fun Start(error: String?, runs: List<ImportRun>, onPickHirt: () -> Unit,
         item {
             SourceCard(
                 title = "CSV / Excel",
-                text = "Volgt zodra het voorbeeldbestand er is.",
-                action = { OutlinedButton(onClick = {}, enabled = false) { Text("Bestand kiezen…") } },
+                text = "Een lijst uit Excel of een andere app (.xlsx, .csv, .tsv). Je kiest zelf per kolom waar " +
+                    "hij terechtkomt; de app onthoudt dat voor een volgende keer.",
+                action = { Button(onClick = onPickTable) { Text("Bestand kiezen…") } },
             )
         }
         if (runs.isNotEmpty()) {
@@ -212,11 +238,7 @@ private fun Review(
         LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp)) {
             item {
                 Text(review.fileName ?: review.source, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "${review.items.size} boeken in je bezit" +
-                        (if (review.skippedInFile > 0) " (${review.skippedInFile} andere overgeslagen: niet in bezit, e-book of luisterboek)" else ""),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Text(review.summary, style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Nieuw: ${review.newCount}", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
@@ -339,6 +361,87 @@ private fun MatchRow(
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                 options.forEach { option ->
                     DropdownMenuItem(text = { Text(option.label) }, onClick = { onChoice(option); open = false })
+                }
+            }
+        }
+    }
+}
+
+/** Per kolom: kop, een paar voorbeeldwaarden en waar hij terechtkomt. */
+@Composable
+private fun Mapping(
+    mapping: ImportUiState.Mapping,
+    onSheet: (Int) -> Unit,
+    onTarget: (Int, ColumnTarget) -> Unit,
+    onCancel: () -> Unit,
+    onNext: () -> Unit,
+) {
+    val table = mapping.table
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp)) {
+            item {
+                Text(mapping.fileName.orEmpty(), style = MaterialTheme.typography.titleMedium)
+                Text("${table.rows.size} rijen", style = MaterialTheme.typography.bodyMedium)
+                if (mapping.sheets.size > 1) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        mapping.sheets.forEachIndexed { index, sheet ->
+                            FilterChip(selected = index == mapping.sheetIndex, onClick = { onSheet(index) }, label = { Text(sheet.name) })
+                        }
+                    }
+                }
+                Text(
+                    "Kies per kolom waar hij terechtkomt. Een kolom met 1/0 of ja/nee kan een tag worden " +
+                        "(de kolomnaam), of een notitie als \"Kolom: waarde\".",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+                if (!mapping.hasTitle) {
+                    Text("Kies welke kolom de titel bevat.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                HorizontalDivider()
+            }
+            itemsIndexed(table.header) { index, header ->
+                val samples = table.column(index).filter(String::isNotBlank).distinct().take(3)
+                ColumnRow(
+                    header = header.ifBlank { "(kolom zonder naam)" },
+                    samples = samples.joinToString(" · ").ifEmpty { "leeg" },
+                    target = mapping.targets[index],
+                    onTarget = { onTarget(index, it) },
+                )
+                HorizontalDivider()
+            }
+        }
+        HorizontalDivider()
+        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onCancel) { Text("Annuleren") }
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = onNext, enabled = mapping.hasTitle) { Text("Verder") }
+        }
+    }
+}
+
+@Composable
+private fun ColumnRow(header: String, samples: String, target: ColumnTarget, onTarget: (ColumnTarget) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(header, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(samples, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Box(Modifier.weight(1f)) {
+            TextButton(onClick = { open = true }) {
+                Text(
+                    target.label,
+                    color = if (target == ColumnTarget.IGNORE) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                    maxLines = 2,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                ColumnTarget.entries.forEach { option ->
+                    DropdownMenuItem(text = { Text(option.label) }, onClick = { onTarget(option); open = false })
                 }
             }
         }

@@ -9,6 +9,7 @@ import java.time.LocalDate
 /** Eén boek uit een importbestand, los van het formaat (Have I Read That, CSV, Excel). */
 data class ImportedBook(
     val title: String,
+    val subtitle: String? = null,
     val authors: List<String> = emptyList(),
     val translators: List<String> = emptyList(),
     val isbn13: String? = null,
@@ -32,6 +33,11 @@ data class ImportedBook(
     val readings: List<ImportedReading> = emptyList(),
     val hirtId: Long? = null,
     val storygraphId: String? = null,
+    /** false = staat in het bestand, maar is niet (meer) in bezit. */
+    val owned: Boolean = true,
+    /** Pad in de locatieboom, bijv. "Woonkamer/Kast 2/Plank 3". */
+    val locationPath: String? = null,
+    val notes: String? = null,
 )
 
 data class ImportedReading(
@@ -47,6 +53,7 @@ data class ImportedReading(
 fun ImportedBook.toMetadata(source: String) = BookMetadata(
     source = source,
     title = title,
+    subtitle = subtitle,
     authors = authors,
     translators = translators,
     language = language,

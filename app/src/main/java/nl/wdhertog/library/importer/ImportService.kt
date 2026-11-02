@@ -8,11 +8,13 @@ import nl.wdhertog.library.data.db.EnrichStatus
 import nl.wdhertog.library.data.db.ImportRun
 import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.db.Loan
+import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.db.Person
 import nl.wdhertog.library.data.db.ReadingGoal
 import nl.wdhertog.library.data.db.ReadingSession
 import nl.wdhertog.library.data.db.Work
 import nl.wdhertog.library.data.repository.BookRepository
+import nl.wdhertog.library.data.repository.LocationRepository
 import nl.wdhertog.library.scan.Isbn
 import java.time.Instant
 import java.time.ZoneId
@@ -33,7 +35,11 @@ data class ImportResult(val runId: Long, val added: Int, val updated: Int, val s
  * zelf ingevulde velden altijd blijven staan; leessessies, tags en uitleningen komen erbij
  * zonder dubbelingen, dus opnieuw importeren van een nieuwere export kan zonder problemen.
  */
-class ImportService(private val db: LibraryDatabase, private val books: BookRepository) {
+class ImportService(
+    private val db: LibraryDatabase,
+    private val books: BookRepository,
+    private val locations: LocationRepository,
+) {
     private val dao = db.importDao()
     private val bookDao = db.bookDao()
     private val loanDao = db.loanDao()
@@ -84,6 +90,8 @@ class ImportService(private val db: LibraryDatabase, private val books: BookRepo
                 isbn10 = imported.isbn13?.let(Isbn::toIsbn10),
                 title = imported.title,
                 tags = imported.tags.joinToString(", ").ifEmpty { null },
+                notes = imported.notes,
+                ownership = if (imported.owned) Ownership.OWNED else Ownership.NOT_OWNED,
                 wantToRead = imported.wantToRead,
                 // Met ISBN gaat het boek in de verrijkingswachtrij; die vult alleen lege velden aan.
                 enrichStatus = if (imported.isbn13 != null) EnrichStatus.NEW else EnrichStatus.MANUAL,
@@ -98,6 +106,7 @@ class ImportService(private val db: LibraryDatabase, private val books: BookRepo
         books.applyMetadata(bookId, imported.toMetadata(source), refresh = false, status = null)
         addReadings(bookId, imported, overwrite = false)
         addLoan(bookId, imported)
+        imported.locationPath?.let { locations.findOrCreatePath(it) }?.let { locations.moveBook(bookId, it) }
     }
 
     private suspend fun merge(decision: ImportDecision.Merge, source: String, imported: ImportedBook) {
@@ -108,6 +117,11 @@ class ImportService(private val db: LibraryDatabase, private val books: BookRepo
                 tags = (book.tags?.split(',').orEmpty().map(String::trim) + imported.tags)
                     .filter(String::isNotEmpty).distinctBy(String::lowercase).joinToString(", ").ifEmpty { null },
                 wantToRead = book.wantToRead || imported.wantToRead,
+                notes = when {
+                    imported.notes == null || book.notes?.contains(imported.notes) == true -> book.notes
+                    book.notes == null || decision.overwrite -> imported.notes
+                    else -> "${book.notes}\n${imported.notes}"
+                },
                 hirtId = imported.hirtId ?: book.hirtId,
                 storygraphId = book.storygraphId ?: imported.storygraphId,
                 // Have I Read That weet vaak al jaren eerder dat je het boek hebt.
@@ -123,6 +137,8 @@ class ImportService(private val db: LibraryDatabase, private val books: BookRepo
         books.applyMetadata(book.id, imported.toMetadata(source), refresh = decision.overwrite, status = null)
         addReadings(book.id, imported, decision.overwrite)
         addLoan(book.id, imported)
+        // Een plek die je zelf al had gekozen, blijft staan.
+        if (book.locationId == null) imported.locationPath?.let { locations.findOrCreatePath(it) }?.let { locations.moveBook(book.id, it) }
     }
 
     /** Sessies met dezelfde datums (of allebei zonder datum, zelfde status) zijn dezelfde. */
@@ -162,7 +178,7 @@ class ImportService(private val db: LibraryDatabase, private val books: BookRepo
      */
     private suspend fun addLoan(bookId: Long, imported: ImportedBook) {
         val lentTo = imported.lentTo ?: return
-        if (loanDao.loanCount(bookId) > 0) return
+        if (!imported.owned || loanDao.loanCount(bookId) > 0) return
         val personId = lentTo.trim().ifEmpty { null }?.let { name ->
             loanDao.findPerson(name)?.id ?: loanDao.insertPerson(Person(name = name))
         }
