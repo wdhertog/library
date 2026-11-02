@@ -1,6 +1,7 @@
 package nl.wdhertog.library.ui.components
 
 import androidx.compose.foundation.clickable
+import nl.wdhertog.library.data.repository.cover
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,7 +47,7 @@ fun BookRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        CoverImage(item.book.title, item.book.coverUrl, Modifier.size(width = 52.dp, height = 76.dp), showTitle = false)
+        CoverImage(item.book.title, item.book.cover, Modifier.size(width = 52.dp, height = 76.dp), showTitle = false)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(

@@ -48,6 +48,7 @@ import nl.wdhertog.library.AppContainer
 import nl.wdhertog.library.LibraryApp
 import nl.wdhertog.library.ui.bookdetail.BookDetailScreen
 import nl.wdhertog.library.ui.bookedit.BookEditScreen
+import nl.wdhertog.library.ui.cover.CoverScreen
 import nl.wdhertog.library.ui.library.LibraryScreen
 import nl.wdhertog.library.ui.locations.LocationDetailScreen
 import nl.wdhertog.library.ui.locations.LocationsScreen
@@ -76,6 +77,9 @@ data class ScanRoute(val locationId: Long = 0)
 /** bookId 0 = nieuw boek. */
 @Serializable
 data class BookEditRoute(val bookId: Long = 0)
+
+@Serializable
+data class CoverRoute(val bookId: Long)
 
 private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector)
 
@@ -191,6 +195,7 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onClose = { navController.popFrom(entry) },
                     onOpenBook = { navController.navigate(BookDetailRoute(it)) },
                     onManualEntry = { navController.navigate(BookEditRoute()) },
+                    onPhotoCover = { navController.navigate(CoverRoute(it)) },
                 )
             }
             composable<BookDetailRoute> { entry ->
@@ -199,7 +204,11 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onEdit = { navController.navigate(BookEditRoute(it)) },
                     onOpenBook = { navController.navigate(BookDetailRoute(it)) },
                     onOpenLocation = { navController.navigate(LocationDetailRoute(it)) },
+                    onPhotoCover = { navController.navigate(CoverRoute(it)) },
                 )
+            }
+            composable<CoverRoute> { entry ->
+                CoverScreen(onClose = { navController.popFrom(entry) })
             }
             composable<BookEditRoute> { entry ->
                 BookEditScreen(

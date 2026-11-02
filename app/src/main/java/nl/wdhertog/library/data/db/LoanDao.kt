@@ -13,6 +13,7 @@ data class LoanRow(
     val bookId: Long,
     val title: String,
     val isbn13: String?,
+    /** Eigen foto (bestandsnaam) of URL van een bron; zie CoverStore.model. */
     val coverUrl: String?,
     val personName: String?,
     val lentAt: LocalDate?,
@@ -36,7 +37,7 @@ interface LoanDao {
 
     @Query(
         """
-        SELECT l.id AS loanId, l.bookId, b.title, b.isbn13, b.coverUrl, p.name AS personName,
+        SELECT l.id AS loanId, l.bookId, b.title, b.isbn13, COALESCE(b.coverFile, b.coverUrl) AS coverUrl, p.name AS personName,
                l.lentAt, l.dueAt, l.returnedAt, l.note
         FROM loan l JOIN book b ON b.id = l.bookId LEFT JOIN person p ON p.id = l.personId
         WHERE l.returnedAt IS NULL
@@ -47,7 +48,7 @@ interface LoanDao {
 
     @Query(
         """
-        SELECT l.id AS loanId, l.bookId, b.title, b.isbn13, b.coverUrl, p.name AS personName,
+        SELECT l.id AS loanId, l.bookId, b.title, b.isbn13, COALESCE(b.coverFile, b.coverUrl) AS coverUrl, p.name AS personName,
                l.lentAt, l.dueAt, l.returnedAt, l.note
         FROM loan l JOIN book b ON b.id = l.bookId LEFT JOIN person p ON p.id = l.personId
         WHERE l.returnedAt IS NOT NULL
@@ -59,7 +60,7 @@ interface LoanDao {
 
     @Query(
         """
-        SELECT l.id AS loanId, l.bookId, b.title, b.isbn13, b.coverUrl, p.name AS personName,
+        SELECT l.id AS loanId, l.bookId, b.title, b.isbn13, COALESCE(b.coverFile, b.coverUrl) AS coverUrl, p.name AS personName,
                l.lentAt, l.dueAt, l.returnedAt, l.note
         FROM loan l JOIN book b ON b.id = l.bookId LEFT JOIN person p ON p.id = l.personId
         WHERE l.bookId = :bookId
@@ -70,7 +71,7 @@ interface LoanDao {
 
     @Query(
         """
-        SELECT b.id AS bookId, b.title, b.isbn13, b.coverUrl, p.name AS personName, b.borrowedDueDate AS dueAt
+        SELECT b.id AS bookId, b.title, b.isbn13, COALESCE(b.coverFile, b.coverUrl) AS coverUrl, p.name AS personName, b.borrowedDueDate AS dueAt
         FROM book b LEFT JOIN person p ON p.id = b.borrowedFromPersonId
         WHERE b.ownership = 'BORROWED'
         ORDER BY b.borrowedDueDate IS NULL, b.borrowedDueDate
@@ -81,7 +82,7 @@ interface LoanDao {
     /** Voor herinneringen: uitleningen en geleende boeken die uiterlijk op [date] terug moeten. */
     @Query(
         """
-        SELECT l.id AS loanId, l.bookId, b.title, b.isbn13, b.coverUrl, p.name AS personName,
+        SELECT l.id AS loanId, l.bookId, b.title, b.isbn13, COALESCE(b.coverFile, b.coverUrl) AS coverUrl, p.name AS personName,
                l.lentAt, l.dueAt, l.returnedAt, l.note
         FROM loan l JOIN book b ON b.id = l.bookId LEFT JOIN person p ON p.id = l.personId
         WHERE l.returnedAt IS NULL AND l.dueAt IS NOT NULL AND l.dueAt <= :date
@@ -91,7 +92,7 @@ interface LoanDao {
 
     @Query(
         """
-        SELECT b.id AS bookId, b.title, b.isbn13, b.coverUrl, p.name AS personName, b.borrowedDueDate AS dueAt
+        SELECT b.id AS bookId, b.title, b.isbn13, COALESCE(b.coverFile, b.coverUrl) AS coverUrl, p.name AS personName, b.borrowedDueDate AS dueAt
         FROM book b LEFT JOIN person p ON p.id = b.borrowedFromPersonId
         WHERE b.ownership = 'BORROWED' AND b.borrowedDueDate IS NOT NULL AND b.borrowedDueDate <= :date
         """

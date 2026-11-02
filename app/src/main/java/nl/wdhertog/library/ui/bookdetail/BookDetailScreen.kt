@@ -1,6 +1,7 @@
 package nl.wdhertog.library.ui.bookdetail
 
 import androidx.compose.foundation.clickable
+import nl.wdhertog.library.data.repository.cover
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.HideImage
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -41,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,6 +75,7 @@ fun BookDetailScreen(
     onEdit: (Long) -> Unit,
     onOpenBook: (Long) -> Unit,
     onOpenLocation: (Long) -> Unit,
+    onPhotoCover: (Long) -> Unit,
     viewModel: BookDetailViewModel = appViewModel { container, handle ->
         BookDetailViewModel(handle, container.bookRepository, container.enrichmentService, container.locationRepository, container.loanRepository)
     },
@@ -112,6 +117,24 @@ fun BookDetailScreen(
                             }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                 DropdownMenuItem(
+                                    text = { Text("Cover fotograferen") },
+                                    leadingIcon = { Icon(Icons.Default.AddAPhoto, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        onPhotoCover(viewModel.bookId)
+                                    },
+                                )
+                                if ((state as? BookDetailUiState.Loaded)?.detail?.book?.coverFile != null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Eigen cover-foto weghalen") },
+                                        leadingIcon = { Icon(Icons.Default.HideImage, contentDescription = null) },
+                                        onClick = {
+                                            menuOpen = false
+                                            viewModel.removeCoverPhoto()
+                                        },
+                                    )
+                                }
+                                DropdownMenuItem(
                                     text = { Text("Verwijderen") },
                                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
                                     onClick = {
@@ -136,6 +159,7 @@ fun BookDetailScreen(
                     onOpenBook = onOpenBook,
                     onOpenLocation = onOpenLocation,
                     onPickLocation = { pickingLocation = true },
+                    onPhotoCover = { onPhotoCover(viewModel.bookId) },
                     refreshing = refreshing,
                     onRefresh = viewModel::refresh,
                     banner = { borrowed?.let { BorrowedBanner(it, onReturned = { loanDialog = "returned" }) } },
@@ -233,6 +257,7 @@ private fun DetailContent(
     onOpenBook: (Long) -> Unit,
     onOpenLocation: (Long) -> Unit,
     onPickLocation: () -> Unit,
+    onPhotoCover: () -> Unit,
     refreshing: Boolean,
     onRefresh: () -> Unit,
     banner: @Composable () -> Unit,
@@ -247,7 +272,18 @@ private fun DetailContent(
     ) {
         banner()
         Row {
-            CoverImage(book.title, book.coverUrl, Modifier.size(width = 104.dp, height = 156.dp))
+            // Tik op de cover om (opnieuw) te fotograferen.
+            Box(Modifier.clickable(onClick = onPhotoCover)) {
+                CoverImage(book.title, book.cover, Modifier.size(width = 104.dp, height = 156.dp))
+                if (book.cover == null) {
+                    Icon(
+                        Icons.Default.AddAPhoto,
+                        contentDescription = "Cover fotograferen",
+                        tint = Color.White,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).size(20.dp),
+                    )
+                }
+            }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(book.displayTitle, style = MaterialTheme.typography.headlineSmall)
@@ -363,7 +399,7 @@ private fun EditionRow(book: Book, location: String?, onClick: () -> Unit) {
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CoverImage(book.title, book.coverUrl, Modifier.size(width = 32.dp, height = 48.dp), showTitle = false)
+        CoverImage(book.title, book.cover, Modifier.size(width = 32.dp, height = 48.dp), showTitle = false)
         Spacer(Modifier.width(12.dp))
         Column {
             Text(book.title, style = MaterialTheme.typography.bodyLarge)
