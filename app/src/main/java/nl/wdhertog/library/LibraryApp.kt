@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.repository.BookRepository
+import nl.wdhertog.library.data.repository.LocationRepository
 import nl.wdhertog.library.lookup.EnrichScheduler
 import nl.wdhertog.library.lookup.EnrichmentService
 import nl.wdhertog.library.lookup.LookupHttp
@@ -20,6 +21,7 @@ import nl.wdhertog.library.lookup.sources.WikidataSource
 class AppContainer(app: Application) {
     private val database by lazy { LibraryDatabase.create(app) }
     val bookRepository by lazy { BookRepository(database) }
+    val locationRepository by lazy { LocationRepository(database) }
 
     /** Voor werk dat een scherm moet overleven, zoals de snelle lookup na een scan. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
