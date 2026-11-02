@@ -66,10 +66,20 @@ class LoanRepository(private val db: LibraryDatabase, private val books: BookRep
     suspend fun markBorrowedReturned(bookId: Long, keep: Boolean) {
         if (keep) dao.setOwnership(bookId, Ownership.NOT_OWNED, null, null, Instant.now())
         else books.delete(bookId)
+        dao.deleteUnusedPersons()
     }
 
     /** Toch eigen boek (bijv. per ongeluk als geleend gemarkeerd, of gekocht). */
-    suspend fun markOwned(bookId: Long) = dao.setOwnership(bookId, Ownership.OWNED, null, null, Instant.now())
+    suspend fun markOwned(bookId: Long) = db.withTransaction {
+        dao.setOwnership(bookId, Ownership.OWNED, null, null, Instant.now())
+        dao.deleteUnusedPersons()
+    }
+
+    /** Uitlening helemaal weghalen, ook uit de geschiedenis (bijv. een vergissing). */
+    suspend fun deleteLoan(loanId: Long) = db.withTransaction {
+        dao.deleteLoan(loanId)
+        dao.deleteUnusedPersons()
+    }
 
     private suspend fun personId(name: String): Long? {
         val trimmed = name.trim().ifEmpty { return null }

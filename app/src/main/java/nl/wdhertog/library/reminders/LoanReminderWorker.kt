@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -104,6 +105,11 @@ class LoanReminderWorker(context: Context, params: WorkerParameters) : Coroutine
         private const val CHANNEL = "loans"
         private const val PREFS = "loan-reminders"
         private const val WORK_NAME = "loan-reminders"
+
+        /** Eenmalig, nu meteen (voor testen). */
+        fun runNow(context: Context) {
+            WorkManager.getInstance(context).enqueue(OneTimeWorkRequestBuilder<LoanReminderWorker>().build())
+        }
 
         /** Eens per dag, rond 9 uur 's ochtends. Bestaand schema blijft staan. */
         fun schedule(context: Context) {

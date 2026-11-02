@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -148,17 +149,50 @@ fun LoanDialog(
     }
 }
 
-/** Geleend boek teruggebracht: bewaren (voor je leesgeschiedenis) of uit de bibliotheek halen. */
+/**
+ * Geleend boek: teruggebracht (bewaren voor je leesgeschiedenis, of uit de bibliotheek halen),
+ * of toch je eigen boek (vergissing, of gekocht).
+ */
 @Composable
-fun BorrowedReturnDialog(bookTitle: String, onKeep: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+fun BorrowedActionsDialog(
+    bookTitle: String,
+    onKeep: () -> Unit,
+    onDelete: () -> Unit,
+    onOwned: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("\"$bookTitle\" teruggebracht") },
+        title = { Text(bookTitle) },
         text = {
-            Text("Wil je het boek in je bibliotheek houden als \"niet meer in bezit\", bijvoorbeeld omdat je het gelezen hebt? Of helemaal verwijderen?")
+            Column {
+                Text("Teruggebracht:", style = MaterialTheme.typography.labelLarge)
+                TextButton(onClick = onKeep) { Text("Bewaren als \"niet meer in bezit\"") }
+                Text(
+                    "Handig als je het gelezen hebt: het blijft in je leesgeschiedenis.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+                TextButton(onClick = onDelete) { Text("Uit de bibliotheek verwijderen") }
+                Spacer(Modifier.height(8.dp))
+                Text("Of:", style = MaterialTheme.typography.labelLarge)
+                TextButton(onClick = onOwned) { Text("Toch mijn eigen boek") }
+            }
         },
-        confirmButton = { TextButton(onClick = onKeep) { Text("Bewaren") } },
-        dismissButton = { TextButton(onClick = onDelete) { Text("Verwijderen") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
+    )
+}
+
+/** Bevestiging voor het weghalen van een uitlening (ook uit de geschiedenis). */
+@Composable
+fun DeleteLoanDialog(personName: String?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Uitlening verwijderen?") },
+        text = { Text("De uitlening aan ${personName ?: "onbekend"} wordt helemaal verwijderd, ook uit de geschiedenis. Het boek blijft gewoon in je bibliotheek.") },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Verwijderen") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
     )
 }
 
