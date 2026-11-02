@@ -61,7 +61,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.db.EnrichStatus
+import nl.wdhertog.library.data.repository.LocationTree
 import nl.wdhertog.library.data.repository.displayTitle
+import nl.wdhertog.library.ui.locations.LocationPickerDialog
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import nl.wdhertog.library.ui.components.CoverImage
 import nl.wdhertog.library.ui.navigation.appViewModel
 
@@ -71,8 +77,15 @@ fun ScanScreen(
     onClose: () -> Unit,
     onOpenBook: (Long) -> Unit,
     onManualEntry: () -> Unit,
-    viewModel: ScanViewModel = appViewModel { container, _ ->
-        ScanViewModel(container.bookRepository, container.enrichmentService, container.enrichScheduler, container.appScope)
+    viewModel: ScanViewModel = appViewModel { container, handle ->
+        ScanViewModel(
+            handle,
+            container.bookRepository,
+            container.locationRepository,
+            container.enrichmentService,
+            container.enrichScheduler,
+            container.appScope,
+        )
     },
 ) {
     val context = LocalContext.current
@@ -92,6 +105,10 @@ fun ScanScreen(
 
     val session by viewModel.session.collectAsStateWithLifecycle()
     val torchOn by viewModel.torchOn.collectAsStateWithLifecycle()
+    val shelfId by viewModel.shelfId.collectAsStateWithLifecycle()
+    val tree by viewModel.locationTree.collectAsStateWithLifecycle()
+    val shelfLabel = shelfId?.let { LocationTree.index(tree)[it]?.pathLabel }
+    var pickingShelf by remember { mutableStateOf(false) }
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
@@ -133,7 +150,12 @@ fun ScanScreen(
                 }
             }
         }
-        val list: @Composable (Modifier) -> Unit = { modifier -> SessionList(session, onOpenBook, modifier) }
+        val list: @Composable (Modifier) -> Unit = { modifier ->
+            Column(modifier) {
+                ShelfBar(shelfLabel, onClick = { pickingShelf = true }, onClear = { viewModel.setShelf(null) })
+                SessionList(session, onOpenBook, viewModel::undoMove, Modifier.weight(1f))
+            }
+        }
 
         if (landscape) {
             Row(Modifier.padding(padding).fillMaxSize()) {
@@ -146,6 +168,21 @@ fun ScanScreen(
                 list(Modifier.fillMaxWidth().weight(0.55f))
             }
         }
+    }
+
+    if (pickingShelf) {
+        LocationPickerDialog(
+            title = "Plank-modus: waar komen de boeken?",
+            tree = tree,
+            selectedId = shelfId,
+            noneLabel = "Plank-modus uit",
+            onSelect = {
+                viewModel.setShelf(it)
+                pickingShelf = false
+            },
+            onCreate = viewModel::createLocation,
+            onDismiss = { pickingShelf = false },
+        )
     }
 }
 
@@ -183,7 +220,7 @@ private fun PermissionMessage(permanentlyDenied: Boolean, onRequest: () -> Unit,
 }
 
 @Composable
-private fun SessionList(rows: List<SessionRow>, onOpenBook: (Long) -> Unit, modifier: Modifier) {
+private fun SessionList(rows: List<SessionRow>, onOpenBook: (Long) -> Unit, onUndo: (String) -> Unit, modifier: Modifier) {
     Column(modifier) {
         Text(
             if (rows.isEmpty()) "Richt de camera op de barcode achterop het boek." else "Deze sessie (${rows.size})",
@@ -193,7 +230,7 @@ private fun SessionList(rows: List<SessionRow>, onOpenBook: (Long) -> Unit, modi
         )
         LazyColumn {
             items(rows, key = { it.entry.isbn13 }) { row ->
-                SessionRowItem(row, onClick = { onOpenBook(row.entry.bookId) })
+                SessionRowItem(row, onClick = { onOpenBook(row.entry.bookId) }, onUndo = { onUndo(row.entry.isbn13) })
                 HorizontalDivider(Modifier.padding(start = 68.dp))
             }
         }
@@ -201,7 +238,7 @@ private fun SessionList(rows: List<SessionRow>, onOpenBook: (Long) -> Unit, modi
 }
 
 @Composable
-private fun SessionRowItem(row: SessionRow, onClick: () -> Unit) {
+private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> Unit) {
     val book = row.item?.book
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -216,25 +253,64 @@ private fun SessionRowItem(row: SessionRow, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            val status = when {
-                row.entry.alreadyPresent -> "Staat al in je collectie"
-                book == null -> ""
-                book.enrichStatus == EnrichStatus.NEW -> "Zoeken…"
-                book.enrichStatus == EnrichStatus.FAILED -> "Niet gevonden — later aanvullen"
-                else -> row.item?.authorLine.orEmpty()
+            val highlight = row.entry.outcome != ScanOutcome.ADDED
+            val status = when (row.entry.outcome) {
+                ScanOutcome.ALREADY_PRESENT -> "Staat al in je collectie"
+                ScanOutcome.ALREADY_HERE -> "Stond al op deze plek"
+                ScanOutcome.MOVED -> "Verplaatst" + (row.previousLocation?.let { " van $it" } ?: "")
+                ScanOutcome.UNDONE -> "Teruggezet" + (row.previousLocation?.let { " naar $it" } ?: "")
+                ScanOutcome.ADDED -> when {
+                    book == null -> ""
+                    book.enrichStatus == EnrichStatus.NEW -> "Zoeken…"
+                    book.enrichStatus == EnrichStatus.FAILED -> "Niet gevonden — later aanvullen"
+                    else -> row.item?.authorLine.orEmpty()
+                }
             }
             if (status.isNotEmpty()) {
                 Text(
                     status,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (row.entry.alreadyPresent) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (highlight) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
-        if (book?.enrichStatus == EnrichStatus.NEW && !row.entry.alreadyPresent) {
+        if (row.entry.outcome == ScanOutcome.MOVED) {
+            TextButton(onClick = onUndo) { Text("Ongedaan maken") }
+        } else if (book?.enrichStatus == EnrichStatus.NEW && row.entry.outcome == ScanOutcome.ADDED) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+        }
+    }
+}
+
+/** Plank-modus aan/uit: alles wat je scant komt op deze plek, in scanvolgorde. */
+@Composable
+private fun ShelfBar(label: String?, onClick: () -> Unit, onClear: () -> Unit) {
+    Surface(
+        color = if (label != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Place, contentDescription = null, Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                Text(
+                    if (label != null) "Plank-modus" else "Plank-modus uit",
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    label ?: "Tik om een plank te kiezen",
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (label != null) {
+                IconButton(onClick = onClear) { Icon(Icons.Default.Close, contentDescription = "Plank-modus uit") }
+            } else {
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, Modifier.padding(end = 12.dp))
+            }
         }
     }
 }

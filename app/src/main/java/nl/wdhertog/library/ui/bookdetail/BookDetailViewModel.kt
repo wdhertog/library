@@ -8,6 +8,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.receiveAsFlow
+import nl.wdhertog.library.data.db.LocationType
+import nl.wdhertog.library.data.repository.LocationNode
+import nl.wdhertog.library.data.repository.LocationRepository
 import nl.wdhertog.library.lookup.EnrichmentService
 import nl.wdhertog.library.lookup.LookupException
 import kotlinx.coroutines.flow.StateFlow
@@ -28,9 +31,21 @@ class BookDetailViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: BookRepository,
     private val enrichment: EnrichmentService,
+    private val locations: LocationRepository,
 ) : ViewModel() {
 
     val bookId = savedStateHandle.toRoute<BookDetailRoute>().bookId
+
+    val locationTree: StateFlow<List<LocationNode>> = locations.observeTree()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Zet het boek achteraan op de gekozen plek, of haalt het van zijn plek (null). */
+    fun moveTo(locationId: Long?) {
+        viewModelScope.launch { locations.moveBook(bookId, locationId) }
+    }
+
+    suspend fun createLocation(name: String, type: LocationType, parentId: Long?): Long =
+        locations.add(name, type, parentId)
 
     val refreshing = MutableStateFlow(false)
 

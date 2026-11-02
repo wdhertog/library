@@ -1,6 +1,21 @@
 package nl.wdhertog.library.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -8,11 +23,14 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.serialization.Serializable
 import nl.wdhertog.library.AppContainer
@@ -20,20 +38,37 @@ import nl.wdhertog.library.LibraryApp
 import nl.wdhertog.library.ui.bookdetail.BookDetailScreen
 import nl.wdhertog.library.ui.bookedit.BookEditScreen
 import nl.wdhertog.library.ui.library.LibraryScreen
+import nl.wdhertog.library.ui.locations.LocationDetailScreen
+import nl.wdhertog.library.ui.locations.LocationsScreen
 import nl.wdhertog.library.ui.scan.ScanScreen
+import kotlin.reflect.KClass
 
 @Serializable
 object LibraryRoute
 
 @Serializable
-data class BookDetailRoute(val bookId: Long)
+object LocationsRoute
 
 @Serializable
-object ScanRoute
+data class LocationDetailRoute(val locationId: Long)
+
+@Serializable
+data class BookDetailRoute(val bookId: Long)
+
+/** locationId 0 = plank-modus uit. */
+@Serializable
+data class ScanRoute(val locationId: Long = 0)
 
 /** bookId 0 = nieuw boek. */
 @Serializable
 data class BookEditRoute(val bookId: Long = 0)
+
+private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector)
+
+private val topLevel = listOf(
+    TopLevel(LibraryRoute, LibraryRoute::class, "Bibliotheek", Icons.AutoMirrored.Filled.LibraryBooks),
+    TopLevel(LocationsRoute, LocationsRoute::class, "Locaties", Icons.Default.Place),
+)
 
 /** ViewModel met toegang tot de AppContainer en de navigatie-argumenten. */
 @Composable
@@ -59,41 +94,86 @@ private fun NavController.popFrom(entry: NavBackStackEntry) {
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = LibraryRoute) {
-        composable<LibraryRoute> {
-            LibraryScreen(
-                onBookClick = { navController.navigate(BookDetailRoute(it)) },
-                onAddBook = { navController.navigate(BookEditRoute()) },
-                onScan = { navController.navigate(ScanRoute) },
-            )
-        }
-        composable<ScanRoute> { entry ->
-            ScanScreen(
-                onClose = { navController.popFrom(entry) },
-                onOpenBook = { navController.navigate(BookDetailRoute(it)) },
-                onManualEntry = { navController.navigate(BookEditRoute()) },
-            )
-        }
-        composable<BookDetailRoute> { entry ->
-            BookDetailScreen(
-                onBack = { navController.popFrom(entry) },
-                onEdit = { navController.navigate(BookEditRoute(it)) },
-                onOpenBook = { navController.navigate(BookDetailRoute(it)) },
-            )
-        }
-        composable<BookEditRoute> { entry ->
-            BookEditScreen(
-                onClose = { navController.popFrom(entry) },
-                onSaved = { bookId, isNew ->
-                    if (isNew) {
-                        navController.navigate(BookDetailRoute(bookId)) {
-                            popUpTo<BookEditRoute> { inclusive = true }
-                        }
-                    } else {
-                        navController.popFrom(entry)
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val destination = backStackEntry?.destination
+    val showBottomBar = topLevel.any { tab -> destination?.hasRoute(tab.routeClass) == true }
+
+    // Alleen de menubalk krijgt hier ruimte; de schermen regelen hun eigen statusbalk.
+    Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    topLevel.forEach { tab ->
+                        NavigationBarItem(
+                            selected = destination?.hierarchy?.any { it.hasRoute(tab.routeClass) } == true,
+                            onClick = {
+                                navController.navigate(tab.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(tab.icon, contentDescription = null) },
+                            label = { Text(tab.label) },
+                        )
                     }
-                },
-            )
+                }
+            }
+        },
+    ) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = LibraryRoute,
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+        ) {
+            composable<LibraryRoute> {
+                LibraryScreen(
+                    onBookClick = { navController.navigate(BookDetailRoute(it)) },
+                    onAddBook = { navController.navigate(BookEditRoute()) },
+                    onScan = { navController.navigate(ScanRoute()) },
+                )
+            }
+            composable<LocationsRoute> {
+                LocationsScreen(onOpenLocation = { navController.navigate(LocationDetailRoute(it)) })
+            }
+            composable<LocationDetailRoute> { entry ->
+                LocationDetailScreen(
+                    onBack = { navController.popFrom(entry) },
+                    onOpenLocation = { navController.navigate(LocationDetailRoute(it)) },
+                    onOpenBook = { navController.navigate(BookDetailRoute(it)) },
+                    onScanHere = { navController.navigate(ScanRoute(it)) },
+                )
+            }
+            composable<ScanRoute> { entry ->
+                ScanScreen(
+                    onClose = { navController.popFrom(entry) },
+                    onOpenBook = { navController.navigate(BookDetailRoute(it)) },
+                    onManualEntry = { navController.navigate(BookEditRoute()) },
+                )
+            }
+            composable<BookDetailRoute> { entry ->
+                BookDetailScreen(
+                    onBack = { navController.popFrom(entry) },
+                    onEdit = { navController.navigate(BookEditRoute(it)) },
+                    onOpenBook = { navController.navigate(BookDetailRoute(it)) },
+                    onOpenLocation = { navController.navigate(LocationDetailRoute(it)) },
+                )
+            }
+            composable<BookEditRoute> { entry ->
+                BookEditScreen(
+                    onClose = { navController.popFrom(entry) },
+                    onSaved = { bookId, isNew ->
+                        if (isNew) {
+                            navController.navigate(BookDetailRoute(bookId)) {
+                                popUpTo<BookEditRoute> { inclusive = true }
+                            }
+                        } else {
+                            navController.popFrom(entry)
+                        }
+                    },
+                )
+            }
         }
     }
 }
