@@ -262,7 +262,7 @@ private fun Review(
                     Text("Mogelijk hetzelfde boek: ${review.possibleCount}", style = MaterialTheme.typography.titleSmall)
                     Text(
                         "Zelfde titel en auteur, maar een ander ISBN: een andere editie, of hetzelfde exemplaar waarbij " +
-                            "Have I Read That een andere uitgave koos. Standaard wordt het een apart boek; kies " +
+                            "het bestand een andere uitgave noemt. Standaard wordt het een apart boek; kies " +
                             "\"Aanvullen\" als het om hetzelfde boek gaat.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -390,8 +390,8 @@ private fun Mapping(
                     }
                 }
                 Text(
-                    "Kies per kolom waar hij terechtkomt. Een kolom met 1/0 of ja/nee kan een tag worden " +
-                        "(de kolomnaam), of een notitie als \"Kolom: waarde\".",
+                    "Kies per kolom waar hij terechtkomt. Bij een kolom met 1/0 of ja/nee wordt de kolomnaam " +
+                        "de tag of de eigenaar; een notitie wordt \"Kolom: waarde\".",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
