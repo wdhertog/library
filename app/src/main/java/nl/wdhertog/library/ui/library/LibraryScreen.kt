@@ -1,6 +1,5 @@
 package nl.wdhertog.library.ui.library
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +20,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
@@ -30,8 +28,9 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
-import nl.wdhertog.library.data.repository.displayTitle
-import nl.wdhertog.library.data.repository.isAwaitingLookup
+import nl.wdhertog.library.ui.components.BookRow
+import nl.wdhertog.library.ui.locations.LocationPickerDialog
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -57,7 +56,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.repository.BookListItem
-import nl.wdhertog.library.ui.components.CoverImage
 import nl.wdhertog.library.ui.navigation.appViewModel
 import nl.wdhertog.library.util.Languages
 
@@ -68,13 +66,14 @@ fun LibraryScreen(
     onAddBook: () -> Unit,
     onScan: () -> Unit,
     viewModel: LibraryViewModel = appViewModel { container, _ ->
-        LibraryViewModel(container.bookRepository, container.enrichScheduler)
+        LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.queryText.collectAsStateWithLifecycle()
     val awaitingLookup by viewModel.awaitingLookup.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    var pickingLocation by remember { mutableStateOf(false) }
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
 
     Scaffold(
@@ -118,6 +117,21 @@ fun LibraryScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 LanguageFilter(state.language, state.availableLanguages, viewModel::setLanguage)
+                if (state.locationTree.isNotEmpty()) {
+                    FilterChip(
+                        selected = state.location != null,
+                        onClick = { pickingLocation = true },
+                        label = {
+                            Text(
+                                state.location?.location?.name ?: "Locatie",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = 140.dp),
+                            )
+                        },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+                    )
+                }
                 Spacer(Modifier.weight(1f))
                 Text(
                     text = countLabel(state),
@@ -144,72 +158,41 @@ fun LibraryScreen(
                 state.items.isEmpty() -> EmptyMessage("Geen boeken gevonden.")
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 88.dp)) {
                     items(state.items, key = { it.book.id }) { item ->
-                        BookRow(item, onClick = { onBookClick(item.book.id) })
+                        BookRow(
+                            item,
+                            onClick = { onBookClick(item.book.id) },
+                            locationLabel = item.book.locationId?.let(state.locationLabels::get),
+                        )
                         HorizontalDivider(Modifier.padding(start = 84.dp))
                     }
                 }
             }
         }
     }
+
+    if (pickingLocation) LocationFilterDialog(state, viewModel, onDismiss = { pickingLocation = false })
+}
+
+@Composable
+private fun LocationFilterDialog(state: LibraryUiState, viewModel: LibraryViewModel, onDismiss: () -> Unit) {
+    LocationPickerDialog(
+        title = "Toon boeken in",
+        tree = state.locationTree,
+        selectedId = state.location?.id,
+        noneLabel = "Alle locaties",
+        onSelect = {
+            viewModel.setLocation(it)
+            onDismiss()
+        },
+        onCreate = viewModel::createLocation,
+        onDismiss = onDismiss,
+    )
 }
 
 private fun countLabel(state: LibraryUiState): String {
     val books = if (state.totalCount == 1) "boek" else "boeken"
     return if (state.items.size == state.totalCount) "${state.totalCount} $books"
     else "${state.items.size} van ${state.totalCount} $books"
-}
-
-@Composable
-private fun BookRow(item: BookListItem, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CoverImage(item.book.title, item.book.coverUrl, Modifier.size(width = 52.dp, height = 76.dp), showTitle = false)
-        Spacer(Modifier.width(16.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                item.book.displayTitle,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (item.authors.isNotEmpty()) {
-                Text(
-                    item.authorLine,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            val meta = listOfNotNull(
-                item.series?.let { s -> s.seriesName + (s.seriesIndex?.let { " #$it" } ?: "") },
-                item.book.publishedYear?.toString(),
-                item.book.language?.uppercase(),
-            ).joinToString(" · ")
-            if (meta.isNotEmpty()) {
-                Text(
-                    meta,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        if (item.book.isAwaitingLookup) {
-            Icon(
-                Icons.Default.HourglassEmpty,
-                contentDescription = "Gegevens worden opgehaald",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
 }
 
 @Composable
