@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Meldingsicoon: drie boeken, eenkleurig (Android kleurt het zelf in). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M4,5h3v13h-3z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M8,3.5h3.5v14.5h-3.5z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12.6,6.1l3,-0.8l3.4,12.6l-3,0.8z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M3,19h18v1.5h-18z" />
+</vector>

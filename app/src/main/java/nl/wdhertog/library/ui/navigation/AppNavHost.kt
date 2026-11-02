@@ -6,12 +6,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import nl.wdhertog.library.data.repository.LoanRepository
+import nl.wdhertog.library.ui.loans.LoansScreen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -50,6 +61,9 @@ object LibraryRoute
 object LocationsRoute
 
 @Serializable
+object LoansRoute
+
+@Serializable
 data class LocationDetailRoute(val locationId: Long)
 
 @Serializable
@@ -68,7 +82,14 @@ private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label
 private val topLevel = listOf(
     TopLevel(LibraryRoute, LibraryRoute::class, "Bibliotheek", Icons.AutoMirrored.Filled.LibraryBooks),
     TopLevel(LocationsRoute, LocationsRoute::class, "Locaties", Icons.Default.Place),
+    TopLevel(LoansRoute, LoansRoute::class, "Uitleen", Icons.Default.SwapHoriz),
 )
+
+/** Gegevens voor de menubalk zelf: het aantal te late uitleningen als badge. */
+class NavBarViewModel(loans: LoanRepository) : ViewModel() {
+    val overdue: StateFlow<Int> = loans.observeOverdueCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+}
 
 /** ViewModel met toegang tot de AppContainer en de navigatie-argumenten. */
 @Composable
@@ -92,11 +113,22 @@ private fun NavController.popFrom(entry: NavBackStackEntry) {
 }
 
 @Composable
-fun AppNavHost() {
+fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) {
     val navController = rememberNavController()
+    LaunchedEffect(openLoans) {
+        if (openLoans) {
+            navController.navigate(LoansRoute) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+            }
+            onOpenLoansHandled()
+        }
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
     val showBottomBar = topLevel.any { tab -> destination?.hasRoute(tab.routeClass) == true }
+    val navBar = appViewModel { container, _ -> NavBarViewModel(container.loanRepository) }
+    val overdue by navBar.overdue.collectAsStateWithLifecycle()
 
     // Alleen de menubalk krijgt hier ruimte; de schermen regelen hun eigen statusbalk.
     Scaffold(
@@ -114,7 +146,13 @@ fun AppNavHost() {
                                     restoreState = true
                                 }
                             },
-                            icon = { Icon(tab.icon, contentDescription = null) },
+                            icon = {
+                                if (tab.route == LoansRoute && overdue > 0) {
+                                    BadgedBox(badge = { Badge { Text("$overdue") } }) { Icon(tab.icon, contentDescription = null) }
+                                } else {
+                                    Icon(tab.icon, contentDescription = null)
+                                }
+                            },
                             label = { Text(tab.label) },
                         )
                     }
@@ -136,6 +174,9 @@ fun AppNavHost() {
             }
             composable<LocationsRoute> {
                 LocationsScreen(onOpenLocation = { navController.navigate(LocationDetailRoute(it)) })
+            }
+            composable<LoansRoute> {
+                LoansScreen(onOpenBook = { navController.navigate(BookDetailRoute(it)) })
             }
             composable<LocationDetailRoute> { entry ->
                 LocationDetailScreen(
