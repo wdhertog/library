@@ -30,6 +30,7 @@ class HirtParserTest {
         assertEquals(listOf("Max Schuchart"), duin.translators)
         assertEquals(BookFormat.PAPERBACK, duin.format)
         assertEquals(listOf("fictie", "sci-fi"), duin.tags)
+        assertTrue(duin.favorite)
         assertEquals(LocalDate.of(2012, 2, 1), duin.addedAt)
     }
 
@@ -55,7 +56,10 @@ class HirtParserTest {
         assertEquals("", book.lentTo)
         assertEquals(emptyList<String>(), book.tags)
         assertEquals("Tales from Alagaësia", book.seriesName)
-        assertEquals(listOf(ImportedReading(ReadingStatus.READING, startedAt = LocalDate.of(2026, 10, 22))), book.readings)
+        assertEquals(
+            listOf(ImportedReading(ReadingStatus.READING, startedAt = LocalDate.of(2026, 10, 22), progressPage = 200, progressPercent = 63)),
+            book.readings,
+        )
     }
 
     @Test

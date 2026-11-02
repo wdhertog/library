@@ -1,7 +1,6 @@
 package nl.wdhertog.library.ui.scan
 
 import android.Manifest
-import nl.wdhertog.library.data.repository.cover
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -65,6 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.db.EnrichStatus
 import nl.wdhertog.library.data.repository.LocationTree
 import nl.wdhertog.library.data.repository.displayTitle
+import nl.wdhertog.library.data.repository.cover
 import nl.wdhertog.library.ui.locations.LocationPickerDialog
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Place

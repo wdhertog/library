@@ -38,6 +38,12 @@ data class ImportedBook(
     /** Pad in de locatieboom, bijv. "Woonkamer/Kast 2/Plank 3". */
     val locationPath: String? = null,
     val notes: String? = null,
+    val favorite: Boolean = false,
+    /** Van wie het boek is (gedeelde collectie). */
+    val owner: String? = null,
+    /** Bij niet (meer) in bezit: aan wie en wanneer. */
+    val disposedTo: String? = null,
+    val disposedAt: LocalDate? = null,
 )
 
 data class ImportedReading(
@@ -47,6 +53,8 @@ data class ImportedReading(
     val datePrecision: DatePrecision = DatePrecision.DAY,
     val rating: Double? = null,
     val review: String? = null,
+    val progressPage: Int? = null,
+    val progressPercent: Int? = null,
 )
 
 /** Wat de bestaande verrijkingslogica kan wegschrijven (zie BookRepository.applyMetadata). */

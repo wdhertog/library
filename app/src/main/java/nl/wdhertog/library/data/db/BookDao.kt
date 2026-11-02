@@ -59,6 +59,15 @@ interface BookDao {
     @Query("UPDATE book SET coverFile = :coverFile, updatedAt = :now WHERE id = :id")
     suspend fun setCoverFile(id: Long, coverFile: String?, now: java.time.Instant)
 
+    @Query("UPDATE book SET favorite = :favorite, updatedAt = :now WHERE id = :id")
+    suspend fun setFavorite(id: Long, favorite: Boolean, now: java.time.Instant)
+
+    @Query("UPDATE book SET owner = :owner, updatedAt = :now WHERE id = :id")
+    suspend fun setOwner(id: Long, owner: String?, now: java.time.Instant)
+
+    @Query("SELECT DISTINCT owner FROM book WHERE owner IS NOT NULL ORDER BY owner COLLATE NOCASE")
+    fun observeOwnerNames(): Flow<List<String>>
+
     @Insert
     suspend fun insertBook(book: Book): Long
 

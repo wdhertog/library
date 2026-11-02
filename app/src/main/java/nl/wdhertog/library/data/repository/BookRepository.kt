@@ -147,6 +147,11 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     coverFile = existing.coverFile,
                     translators = existing.translators,
                     ownership = existing.ownership,
+                    disposalReason = existing.disposalReason,
+                    disposedTo = existing.disposedTo,
+                    disposedAt = existing.disposedAt,
+                    favorite = existing.favorite,
+                    owner = existing.owner,
                     borrowedFromPersonId = existing.borrowedFromPersonId,
                     borrowedDueDate = existing.borrowedDueDate,
                     locationId = existing.locationId,
@@ -156,6 +161,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     openLibraryEditionId = existing.openLibraryEditionId,
                     storygraphId = existing.storygraphId,
                     hirtId = existing.hirtId,
+                    importRunId = existing.importRunId,
                     addedAt = existing.addedAt,
                 ),
             )
@@ -311,6 +317,15 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
 
     suspend fun getBook(bookId: Long): Book? = dao.getBook(bookId)
 
+    suspend fun setFavorite(bookId: Long, favorite: Boolean) = dao.setFavorite(bookId, favorite, Instant.now())
+
+    suspend fun setOwner(bookId: Long, owner: String?) {
+        dao.setOwner(bookId, owner?.trim()?.ifEmpty { null }, Instant.now())
+        refreshSearchText(bookId)
+    }
+
+    fun observeOwnerNames(): Flow<List<String>> = dao.observeOwnerNames()
+
     private suspend fun findOrCreateSeries(name: String): Series? {
         val trimmed = name.trim().ifEmpty { return null }
         return dao.findSeries(trimmed) ?: Series(name = trimmed).let { it.copy(id = dao.insertSeries(it)) }
@@ -333,7 +348,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
         val authors = work?.let { dao.getAuthorNames(it.id) }.orEmpty()
         val series = work?.seriesId?.let { dao.getSeries(it)?.name }
         val text = TextNormalizer.searchKey(
-            listOf(book.title, book.subtitle, work?.originalTitle, series, book.isbn13, book.publisher, book.tags, book.translators) + authors,
+            listOf(book.title, book.subtitle, work?.originalTitle, series, book.isbn13, book.publisher, book.tags, book.translators, book.owner) + authors,
         )
         if (text != book.searchText) dao.updateBook(book.copy(searchText = text))
     }

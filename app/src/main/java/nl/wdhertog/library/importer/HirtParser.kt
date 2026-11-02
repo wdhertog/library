@@ -32,6 +32,7 @@ object HirtParser {
     const val SOURCE = "Have I Read That"
     private const val OWN_TAG = "eigen-boeken"
     private const val LENT_TAG = "geleend"
+    private const val FAVORITE_TAG = "favorieten"
 
     /** "Duin (Duin, #1)" → titel "Duin", serie "Duin", deel "1". */
     private val seriesInTitle = Regex("""^(.*?)\s*\(([^()]*?),?\s*#\s*([\w.]+)\)\s*$""")
@@ -97,7 +98,8 @@ object HirtParser {
             description = json.str("description"),
             seriesName = seriesName,
             seriesIndex = seriesIndex,
-            tags = tags.filter { it != OWN_TAG && it != LENT_TAG }.distinctBy(String::lowercase),
+            tags = tags.filter { it != OWN_TAG && it != LENT_TAG && it != FAVORITE_TAG }.distinctBy(String::lowercase),
+            favorite = FAVORITE_TAG in tagsOf(json),
             awards = json.str("awards"),
             wantToRead = status == "to-read",
             lentTo = if (LENT_TAG in tagsOf(json)) "" else null,
@@ -120,16 +122,25 @@ object HirtParser {
             else -> null
         }
         val reads = json.arr("reads").orEmpty().filterIsInstance<JsonObject>()
-            .map { it.str("started")?.let(::date) to it.str("finished")?.let(::date) }
-            .sortedBy { (started, finished) -> finished ?: started ?: LocalDate.MAX }
-        val sessions = reads.mapIndexed { index, (started, finished) ->
+            .sortedBy { read -> read.str("finished")?.let(::date) ?: read.str("started")?.let(::date) ?: LocalDate.MAX }
+        val sessions = reads.mapIndexed { index, read ->
+            val started = read.str("started")?.let(::date)
+            val finished = read.str("finished")?.let(::date)
             val last = index == reads.lastIndex
             val sessionStatus = when {
                 last && finalStatus != null && finalStatus != ReadingStatus.FINISHED -> finalStatus
                 finished != null || finalStatus == ReadingStatus.FINISHED || !last -> ReadingStatus.FINISHED
                 else -> ReadingStatus.READING
             }
-            ImportedReading(sessionStatus, started, finished, precision(started, finished))
+            ImportedReading(
+                sessionStatus,
+                started,
+                finished,
+                precision(started, finished),
+                // Voortgang telt alleen bij een boek dat je nog leest.
+                progressPage = read.int("progress_page").takeIf { sessionStatus == ReadingStatus.READING },
+                progressPercent = read.int("progress_percent").takeIf { sessionStatus == ReadingStatus.READING },
+            )
         }.ifEmpty { listOfNotNull(finalStatus?.let { ImportedReading(it) }) }
 
         val rating = (json["rating"] as? JsonPrimitive)?.doubleOrNull?.takeIf { it > 0 }

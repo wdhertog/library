@@ -7,6 +7,7 @@ import nl.wdhertog.library.data.db.BorrowedRow
 import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.db.Loan
 import nl.wdhertog.library.data.db.LoanRow
+import nl.wdhertog.library.data.db.DisposalReason
 import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.db.Person
 import java.time.Instant
@@ -72,8 +73,13 @@ class LoanRepository(private val db: LibraryDatabase, private val books: BookRep
     /** Toch eigen boek (bijv. per ongeluk als geleend gemarkeerd, of gekocht). */
     suspend fun markOwned(bookId: Long) = db.withTransaction {
         dao.setOwnership(bookId, Ownership.OWNED, null, null, Instant.now())
+        dao.clearDisposal(bookId)
         dao.deleteUnusedPersons()
     }
+
+    /** Boek weggedaan (weggegeven, verkocht, kwijt): blijft in de bibliotheek voor je leesgeschiedenis. */
+    suspend fun markDisposed(bookId: Long, reason: DisposalReason, to: String?, date: LocalDate?) =
+        dao.setDisposed(bookId, reason, to?.trim()?.ifEmpty { null }, date, Instant.now())
 
     /** Uitlening helemaal weghalen, ook uit de geschiedenis (bijv. een vergissing). */
     suspend fun deleteLoan(loanId: Long) = db.withTransaction {

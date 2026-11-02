@@ -55,6 +55,23 @@ class TableImporterTest {
     }
 
     @Test
+    fun `owner columns with 1 or 0 become the owner`() {
+        val table = Table(
+            listOf("Titel", "Bram", "Anna", "Favoriet", "Weggegeven aan"),
+            listOf(listOf("A", "1", "0", "ja", ""), listOf("B", "1", "1", "", "Wilfred"), listOf("C", "0", "0", "", "")),
+        )
+        val targets = listOf(ColumnTarget.TITLE, ColumnTarget.OWNER_IF_TRUE, ColumnTarget.OWNER_IF_TRUE, ColumnTarget.FAVORITE, ColumnTarget.DISPOSED_TO)
+        val (a, b, c) = TableImporter.toBooks(table, targets).books
+        assertEquals("Bram", a.owner)
+        assertEquals(true, a.favorite)
+        assertEquals("Bram & Anna", b.owner)
+        assertFalse(b.owned)
+        assertEquals("Wilfred", b.disposedTo)
+        assertEquals(null, c.owner)
+        assertEquals(ColumnTarget.FAVORITE, ColumnTarget.guess("Favoriet", emptyList()))
+    }
+
+    @Test
     fun `author names in one column`() {
         assertEquals(listOf("J.R.R. Tolkien"), TableImporter.authors("Tolkien, J.R.R.", null, null, null))
         assertEquals(listOf("Rita Monaldi", "Francesco Sorti"), TableImporter.authors("Rita Monaldi & Francesco Sorti", null, null, null))

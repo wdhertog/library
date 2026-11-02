@@ -1,7 +1,6 @@
 package nl.wdhertog.library.ui.bookdetail
 
 import androidx.compose.foundation.clickable
-import nl.wdhertog.library.data.repository.cover
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +21,9 @@ import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HideImage
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -31,6 +33,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -55,11 +58,16 @@ import nl.wdhertog.library.data.repository.LocationTree
 import nl.wdhertog.library.ui.locations.LocationPickerDialog
 import nl.wdhertog.library.ui.loans.BorrowedActionsDialog
 import nl.wdhertog.library.ui.loans.DeleteLoanDialog
+import nl.wdhertog.library.ui.loans.DisposeDialog
+import nl.wdhertog.library.ui.loans.OwnerDialog
+import nl.wdhertog.library.util.LoanDates
+import java.time.LocalDate
 import nl.wdhertog.library.ui.loans.LoanDialog
 import nl.wdhertog.library.ui.components.rememberNotificationPermissionRequest
 import androidx.compose.material.icons.filled.Place
 import nl.wdhertog.library.data.repository.displayTitle
 import nl.wdhertog.library.data.repository.label
+import nl.wdhertog.library.data.repository.cover
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -87,6 +95,8 @@ fun BookDetailScreen(
     val bookLoans by viewModel.bookLoans.collectAsStateWithLifecycle()
     val borrowed by viewModel.borrowed.collectAsStateWithLifecycle()
     val personNames by viewModel.personNames.collectAsStateWithLifecycle()
+    val ownerNames by viewModel.ownerNames.collectAsStateWithLifecycle()
+    var editingOwner by remember { mutableStateOf(false) }
     var loanDialog by remember { mutableStateOf<String?>(null) }
     var loanToDelete by remember { mutableStateOf<nl.wdhertog.library.data.db.LoanRow?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
@@ -107,6 +117,15 @@ fun BookDetailScreen(
                     }
                 },
                 actions = {
+                    (state as? BookDetailUiState.Loaded)?.detail?.book?.let { book ->
+                        IconButton(onClick = viewModel::toggleFavorite) {
+                            Icon(
+                                if (book.favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = if (book.favorite) "Geen favoriet meer" else "Favoriet",
+                                tint = if (book.favorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                            )
+                        }
+                    }
                     if (state is BookDetailUiState.Loaded) {
                         IconButton(onClick = { onEdit(viewModel.bookId) }) {
                             Icon(Icons.Default.Edit, contentDescription = "Bewerken")
@@ -159,6 +178,7 @@ fun BookDetailScreen(
                     onOpenBook = onOpenBook,
                     onOpenLocation = onOpenLocation,
                     onPickLocation = { pickingLocation = true },
+                    onEditOwner = { editingOwner = true },
                     onPhotoCover = { onPhotoCover(viewModel.bookId) },
                     refreshing = refreshing,
                     onRefresh = viewModel::refresh,
@@ -175,7 +195,9 @@ fun BookDetailScreen(
                                 onReturned = viewModel::markReturned,
                                 onMarkBorrowed = { loanDialog = "borrow" },
                                 onMarkOwned = viewModel::markOwned,
+                                onDispose = { loanDialog = "dispose" },
                                 onDelete = { loanToDelete = it },
+                                disposal = disposalText(s.detail.book),
                             )
                         }
                     },
@@ -202,6 +224,12 @@ fun BookDetailScreen(
                 onDismiss = { loanDialog = null },
             )
         }
+        "dispose" -> DisposeDialog(
+            bookTitle = bookTitle,
+            personSuggestions = personNames,
+            onConfirm = { reason, to, date -> viewModel.markDisposed(reason, to, date); loanDialog = null },
+            onDismiss = { loanDialog = null },
+        )
         "returned" -> BorrowedActionsDialog(
             bookTitle = bookTitle,
             onKeep = { viewModel.markBorrowedReturned(keep = true, onDeleted = onBack); loanDialog = null },
@@ -215,6 +243,15 @@ fun BookDetailScreen(
             personName = loan.personName,
             onConfirm = { viewModel.deleteLoan(loan.loanId); loanToDelete = null },
             onDismiss = { loanToDelete = null },
+        )
+    }
+
+    if (editingOwner) {
+        OwnerDialog(
+            current = (state as? BookDetailUiState.Loaded)?.detail?.book?.owner,
+            suggestions = ownerNames,
+            onConfirm = { viewModel.setOwner(it); editingOwner = false },
+            onDismiss = { editingOwner = false },
         )
     }
 
@@ -257,6 +294,7 @@ private fun DetailContent(
     onOpenBook: (Long) -> Unit,
     onOpenLocation: (Long) -> Unit,
     onPickLocation: () -> Unit,
+    onEditOwner: () -> Unit,
     onPhotoCover: () -> Unit,
     refreshing: Boolean,
     onRefresh: () -> Unit,
@@ -305,6 +343,7 @@ private fun DetailContent(
             onOpen = book.locationId?.let { id -> { onOpenLocation(id) } },
             onChange = onPickLocation,
         )
+        OwnerLine(book.owner, onEdit = onEditOwner)
 
         detail.series.forEach { s ->
             Spacer(Modifier.height(16.dp))
@@ -320,7 +359,7 @@ private fun DetailContent(
             Text("Op je leeslijst", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
 
-        loanSection?.let { Section("Uitlenen") { it() } }
+        loanSection?.let { Section("Bezit en uitlenen") { it() } }
 
         detail.works.firstOrNull()?.originalTitle?.takeIf { it != book.title }?.let {
             Section("Oorspronkelijke titel") { Text(it) }
@@ -405,6 +444,29 @@ private fun EditionRow(book: Book, location: String?, onClick: () -> Unit) {
             Text(book.title, style = MaterialTheme.typography.bodyLarge)
             MetaLine(listOfNotNull(book.language?.let(Languages::displayName), book.publishedYear?.toString(), location?.let { "📍 $it" }))
         }
+    }
+}
+
+/** "Weggegeven aan Wilfred · 3 nov. 2026"; null als er niets over bekend is. */
+private fun disposalText(book: Book): String? {
+    if (book.disposalReason == null && book.disposedTo == null && book.disposedAt == null) return null
+    val what = (book.disposalReason?.verb ?: "Weg") + (book.disposedTo?.let { " aan $it" } ?: "")
+    return listOfNotNull(what, book.disposedAt?.let { LoanDates.format(it, LocalDate.now()) }).joinToString(" · ")
+}
+
+/** Van wie het boek is (gedeelde collectie). */
+@Composable
+private fun OwnerLine(owner: String?, onEdit: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Person, contentDescription = "Eigenaar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            owner ?: "Eigenaar niet ingevuld",
+            Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (owner != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TextButton(onClick = onEdit) { Text(if (owner != null) "Wijzigen" else "Kiezen") }
     }
 }
 
