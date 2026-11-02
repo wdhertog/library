@@ -22,6 +22,14 @@ enum class EnrichStatus {
     MANUAL,
 }
 
+/** Hoe een boek uit je bezit is gegaan. */
+enum class DisposalReason(val label: String, val verb: String) {
+    GIVEN_AWAY("Weggegeven", "Weggegeven"),
+    SOLD("Verkocht", "Verkocht"),
+    LOST("Kwijt", "Kwijtgeraakt"),
+    OTHER("Anders", "Weg"),
+}
+
 enum class LocationType(val label: String) {
     ROOM("Kamer"),
     BOOKCASE("Kast"),

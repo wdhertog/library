@@ -14,14 +14,37 @@ android {
         applicationId = "nl.wdhertog.library"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 8
+        versionName = "0.8"
+    }
+
+    // Releasesleutel staat buiten de repo; zet de gegevens in ~/.gradle/gradle.properties.
+    // Alle releases moeten met dezelfde sleutel, anders installeert een update niet over de vorige heen.
+    val releaseStore = providers.gradleProperty("libraryReleaseStoreFile").orNull
+    signingConfigs {
+        if (releaseStore != null) {
+            create("release") {
+                storeFile = file(releaseStore)
+                storePassword = providers.gradleProperty("libraryReleaseStorePassword").get()
+                keyAlias = providers.gradleProperty("libraryReleaseKeyAlias").get()
+                keyPassword = providers.gradleProperty("libraryReleaseKeyPassword").get()
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
+        }
+        // Releasecode (met R8) naast de gewone app op een toestel testen.
+        create("staging") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
         }
     }
 
@@ -32,6 +55,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
