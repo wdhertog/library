@@ -467,4 +467,41 @@ Besloten:
 - ~~Ebooks / luisterboeken~~ → niet importeren.
 - ~~Datums op 1 januari~~ → precisie "alleen jaar".
 
-Geen open vragen meer. Wacht nog op: voorbeeld van het Excel/CSV-bestand met de collectie (fase 4).
+Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met de collectie (fase 4).~~ Ontvangen en verwerkt.
+
+## 10. Nog te doen (na v1.0)
+
+Stand 2 november 2026. Fase 1–6 zijn af en uitgebracht als v1.0.
+
+### Gepland
+- **Fase 7: volledige Have I Read That-import** (zie §8). Details vragen bij de start.
+
+### Uit het ontwerp, nog niet gebouwd
+- **Werken handmatig samenvoegen en splitsen** (§5). Nu gaat dat alleen automatisch via Wikidata of Open Library. Edities die niet herkend worden, kun je nog niet zelf aan elkaar koppelen.
+- **Series: ontbrekend deel zelf toevoegen of uit Wikidata halen** (§6.8). Nu verschijnt alleen een gat tussen de genummerde delen die je hebt.
+- **Instellingen** (§6.12):
+  - databronnen aan/uit en volgorde;
+  - gedrag in plank-modus bij een boek dat er al is (verplaatsen of eerst vragen).
+- **Taalcontrole bij import** (§6.11): boeken markeren waarvan de taal niet bij het ISBN past.
+
+### Eigenaar voor meerdere boeken tegelijk
+Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijkheden:
+
+| Optie | Hoe | Voor | Tegen |
+|-------|-----|------|-------|
+| **A. Meervoudige selectie** (voorkeur) | Lang drukken in een boekenlijst start de selectie; daarna acties voor alle gekozen boeken: eigenaar, locatie, favoriet, wil ik lezen, tags, verwijderen. Op de locatiepagina staat "Alles selecteren" | Ook nuttig voor andere velden; "alles op deze plank" is gewoon alles selecteren en dan de uitzonderingen uitvinken | Meeste werk |
+| B. Eigenaar per plank | Op de locatiepagina: "Eigenaar voor alle boeken hier", daarna afwijkende boeken los aanpassen | Snel en eenvoudig | Alleen voor eigenaar; met A is dit "alles selecteren" |
+| C. Eigenaar-modus bij scannen | Net als plank-modus: kies een eigenaar en scan; elk gescand boek krijgt die eigenaar | Handig bij het fysiek doorlopen van een gemengde kast | Alleen met boeken met barcode; aanvulling op A, geen vervanging |
+
+Voorstel: A bouwen, en C toevoegen als het bij het gebruik gemist wordt.
+
+### Later, misschien
+- **Synchronisatie tussen telefoons.** Records hebben al een UUID en een `updatedAt` (§6.12).
+- **F-Droid-variant zonder ML Kit** (§2).
+
+### Losse eindjes
+- **Dubbele series samenvoegen** in de app (via Series → ⋮ → Samenvoegen met…):
+  - "Arsène Lupin" met "Arsène Lupin literary series";
+  - "In de ban van de ring" met "The Lord of the Rings".
+- **Opruimen:** `samples/repo-voor-herschrijven.bundle` (oude geschiedenis) verwijderen zodra de herschreven repo in orde blijkt.
+- **Pull request #4** toont op GitHub nog de oude namen in de diff. Opruimen kan alleen via GitHub Support ("Remove sensitive data").
