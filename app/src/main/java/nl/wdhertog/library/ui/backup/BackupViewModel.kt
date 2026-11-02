@@ -1,6 +1,12 @@
 package nl.wdhertog.library.ui.backup
 
+import android.app.Application
 import android.content.ContentResolver
+import android.content.Intent
+import android.provider.DocumentsContract
+import androidx.work.WorkManager
+import nl.wdhertog.library.data.backup.AutoBackupSettings
+import nl.wdhertog.library.data.backup.AutoBackupWorker
 import android.content.SharedPreferences
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -25,6 +31,8 @@ import nl.wdhertog.library.lookup.EnrichScheduler
 import java.io.File
 import java.time.Instant
 
+data class AutoBackupState(val folderName: String?, val lastAuto: Instant?, val error: String?, val running: Boolean)
+
 sealed interface BackupUiState {
     data object Idle : BackupUiState
     data class Busy(val message: String) : BackupUiState
@@ -39,7 +47,63 @@ class BackupViewModel(
     private val loans: LoanRepository,
     private val scheduler: EnrichScheduler,
     private val prefs: SharedPreferences,
+    private val app: Application,
 ) : ViewModel() {
+
+    private val auto = AutoBackupSettings(app)
+    private val running = MutableStateFlow(false)
+    val autoState = MutableStateFlow(readAuto())
+
+    init {
+        // Klaar met "nu een back-up": status opnieuw lezen.
+        viewModelScope.launch {
+            WorkManager.getInstance(app).getWorkInfosForUniqueWorkFlow(AutoBackupWorker.NOW_WORK_NAME).collect { infos ->
+                running.value = infos.any { !it.state.isFinished }
+                refresh()
+            }
+        }
+    }
+
+    fun refresh() {
+        autoState.value = readAuto()
+        lastBackup.value = prefs.getLong(AutoBackupSettings.KEY_LAST, 0L).takeIf { it > 0 }?.let(Instant::ofEpochMilli)
+    }
+
+    private fun readAuto() = AutoBackupState(
+        folderName = auto.folder?.let(::folderName),
+        lastAuto = if (auto.folder != null) auto.lastBackup else null,
+        error = auto.lastError.takeIf { auto.folder != null },
+        running = running.value,
+    )
+
+    /** Map gekozen: toegang onthouden, wekelijks plannen en meteen de eerste back-up maken. */
+    fun chooseFolder(uri: Uri) {
+        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        auto.folder?.let { old -> if (old != uri) runCatching { app.contentResolver.releasePersistableUriPermission(old, flags) } }
+        app.contentResolver.takePersistableUriPermission(uri, flags)
+        auto.folder = uri
+        auto.lastError = null
+        AutoBackupWorker.schedule(app, replace = true)
+        AutoBackupWorker.runNow(app)
+        refresh()
+    }
+
+    fun backupNow() = AutoBackupWorker.runNow(app)
+
+    fun disableAuto() {
+        auto.folder?.let { runCatching { app.contentResolver.releasePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) } }
+        auto.folder = null
+        auto.lastError = null
+        AutoBackupWorker.cancel(app)
+        refresh()
+    }
+
+    private fun folderName(tree: Uri): String = runCatching {
+        val doc = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+        app.contentResolver.query(doc, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use {
+            if (it.moveToFirst()) it.getString(0) else null
+        }
+    }.getOrNull() ?: DocumentsContract.getTreeDocumentId(tree).substringAfterLast(':').ifEmpty { "gekozen map" }
 
     val state = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
     val lastBackup = MutableStateFlow(prefs.getLong(KEY_LAST, 0L).takeIf { it > 0 }?.let(Instant::ofEpochMilli))
@@ -121,7 +185,7 @@ class BackupViewModel(
     }
 
     companion object {
-        const val PREFS = "backup"
-        private const val KEY_LAST = "last-backup"
+        const val PREFS = AutoBackupSettings.PREFS
+        private const val KEY_LAST = AutoBackupSettings.KEY_LAST
     }
 }

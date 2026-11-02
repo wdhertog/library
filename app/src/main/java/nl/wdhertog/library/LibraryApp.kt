@@ -5,6 +5,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import nl.wdhertog.library.covers.CoverStore
+import nl.wdhertog.library.data.backup.AutoBackupSettings
+import nl.wdhertog.library.data.backup.AutoBackupWorker
 import nl.wdhertog.library.data.backup.BackupService
 import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.repository.BookRepository
@@ -65,5 +67,6 @@ class LibraryApp : Application() {
         // Pak eventueel onderbroken werk weer op; doet niets als de wachtrij leeg is.
         container.enrichScheduler.schedule()
         LoanReminderWorker.schedule(this)
+        if (AutoBackupSettings(this).folder != null) AutoBackupWorker.schedule(this)
     }
 }
