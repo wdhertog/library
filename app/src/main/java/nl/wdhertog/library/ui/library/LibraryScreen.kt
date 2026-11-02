@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -67,6 +68,7 @@ fun LibraryScreen(
     onAddBook: () -> Unit,
     onScan: () -> Unit,
     onImport: () -> Unit,
+    onSeries: () -> Unit,
     viewModel: LibraryViewModel = appViewModel { container, _ ->
         LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler)
     },
@@ -84,7 +86,7 @@ fun LibraryScreen(
                 title = { Text("Bibliotheek") },
                 actions = {
                     SortMenu(state.sort, viewModel::setSort)
-                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport)
+                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport, onSeries = onSeries)
                 },
             )
         },
@@ -198,7 +200,7 @@ private fun countLabel(state: LibraryUiState): String {
 }
 
 @Composable
-private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onImport: () -> Unit) {
+private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onImport: () -> Unit, onSeries: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Meer") }
@@ -212,6 +214,11 @@ private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onI
                 text = { Text("Bibliotheek bijwerken") },
                 leadingIcon = { Icon(Icons.Default.Sync, contentDescription = null) },
                 onClick = { open = false; onUpdateLibrary() },
+            )
+            DropdownMenuItem(
+                text = { Text("Series") },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = null) },
+                onClick = { open = false; onSeries() },
             )
             DropdownMenuItem(
                 text = { Text("Importeren…") },

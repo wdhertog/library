@@ -342,7 +342,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
     }
 
     /** Zoektekst opnieuw opbouwen uit boek, werk, auteurs en serie. */
-    private suspend fun refreshSearchText(bookId: Long) {
+    internal suspend fun refreshSearchText(bookId: Long) {
         val book = dao.getBook(bookId) ?: return
         val work = dao.getPrimaryWork(bookId)
         val authors = work?.let { dao.getAuthorNames(it.id) }.orEmpty()

@@ -60,6 +60,10 @@ import nl.wdhertog.library.ui.loans.BorrowedActionsDialog
 import nl.wdhertog.library.ui.loans.DeleteLoanDialog
 import nl.wdhertog.library.ui.loans.DisposeDialog
 import nl.wdhertog.library.ui.loans.OwnerDialog
+import nl.wdhertog.library.ui.reading.ProgressDialog
+import nl.wdhertog.library.ui.reading.SessionDialog
+import nl.wdhertog.library.data.db.ReadingSession
+import nl.wdhertog.library.data.db.ReadingStatus
 import nl.wdhertog.library.util.LoanDates
 import java.time.LocalDate
 import nl.wdhertog.library.ui.loans.LoanDialog
@@ -84,8 +88,16 @@ fun BookDetailScreen(
     onOpenBook: (Long) -> Unit,
     onOpenLocation: (Long) -> Unit,
     onPhotoCover: (Long) -> Unit,
+    onOpenSeries: (Long) -> Unit,
     viewModel: BookDetailViewModel = appViewModel { container, handle ->
-        BookDetailViewModel(handle, container.bookRepository, container.enrichmentService, container.locationRepository, container.loanRepository)
+        BookDetailViewModel(
+            handle,
+            container.bookRepository,
+            container.enrichmentService,
+            container.locationRepository,
+            container.loanRepository,
+            container.readingRepository,
+        )
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -97,6 +109,9 @@ fun BookDetailScreen(
     val personNames by viewModel.personNames.collectAsStateWithLifecycle()
     val ownerNames by viewModel.ownerNames.collectAsStateWithLifecycle()
     var editingOwner by remember { mutableStateOf(false) }
+    val sessions by viewModel.sessions.collectAsStateWithLifecycle()
+    var sessionDialog by remember { mutableStateOf<Pair<String, ReadingSession>?>(null) }
+    var progressFor by remember { mutableStateOf<ReadingSession?>(null) }
     var loanDialog by remember { mutableStateOf<String?>(null) }
     var loanToDelete by remember { mutableStateOf<nl.wdhertog.library.data.db.LoanRow?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
@@ -179,10 +194,31 @@ fun BookDetailScreen(
                     onOpenLocation = onOpenLocation,
                     onPickLocation = { pickingLocation = true },
                     onEditOwner = { editingOwner = true },
+                    onOpenSeries = onOpenSeries,
                     onPhotoCover = { onPhotoCover(viewModel.bookId) },
                     refreshing = refreshing,
                     onRefresh = viewModel::refresh,
                     banner = { borrowed?.let { BorrowedBanner(it, onReturned = { loanDialog = "returned" }) } },
+                    readingSection = {
+                        ReadingSection(
+                            bookId = s.detail.book.id,
+                            pages = s.detail.book.pages,
+                            wantToRead = s.detail.book.wantToRead,
+                            sessions = sessions,
+                            onStart = viewModel::startReading,
+                            onProgress = { progressFor = it },
+                            onFinish = { session, status ->
+                                sessionDialog = (if (status == ReadingStatus.FINISHED) "Uitgelezen" else "Gestopt") to
+                                    session.copy(status = status, finishedAt = LocalDate.now())
+                            },
+                            onAddPast = {
+                                sessionDialog = "Al gelezen" to
+                                    ReadingSession(bookId = s.detail.book.id, status = ReadingStatus.FINISHED, finishedAt = LocalDate.now())
+                            },
+                            onEdit = { sessionDialog = "Leessessie" to it },
+                            onToggleWantToRead = viewModel::toggleWantToRead,
+                        )
+                    },
                     // Een geleend boek leen je niet uit; zonder geschiedenis valt er dan niets te tonen.
                     loanSection = if (s.detail.book.ownership == Ownership.BORROWED && bookLoans.isEmpty()) {
                         null
@@ -246,6 +282,24 @@ fun BookDetailScreen(
         )
     }
 
+    sessionDialog?.let { (title, session) ->
+        SessionDialog(
+            title = title,
+            initial = session,
+            onSave = { viewModel.saveSession(it); sessionDialog = null },
+            onDismiss = { sessionDialog = null },
+            onDelete = if (session.id != 0L) ({ viewModel.deleteSession(session.id); sessionDialog = null }) else null,
+        )
+    }
+    progressFor?.let { session ->
+        ProgressDialog(
+            session = session,
+            pages = (state as? BookDetailUiState.Loaded)?.detail?.book?.pages,
+            onSave = { page, percent -> viewModel.updateProgress(session.id, page, percent); progressFor = null },
+            onDismiss = { progressFor = null },
+        )
+    }
+
     if (editingOwner) {
         OwnerDialog(
             current = (state as? BookDetailUiState.Loaded)?.detail?.book?.owner,
@@ -295,10 +349,12 @@ private fun DetailContent(
     onOpenLocation: (Long) -> Unit,
     onPickLocation: () -> Unit,
     onEditOwner: () -> Unit,
+    onOpenSeries: (Long) -> Unit,
     onPhotoCover: () -> Unit,
     refreshing: Boolean,
     onRefresh: () -> Unit,
     banner: @Composable () -> Unit,
+    readingSection: @Composable () -> Unit,
     loanSection: (@Composable () -> Unit)?,
 ) {
     val book = detail.book
@@ -348,16 +404,13 @@ private fun DetailContent(
         detail.series.forEach { s ->
             Spacer(Modifier.height(16.dp))
             AssistChip(
-                onClick = {},
+                onClick = { onOpenSeries(s.seriesId) },
                 label = { Text("Serie: ${s.seriesName}" + (s.seriesIndex?.let { " · deel $it" } ?: "")) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = null) },
             )
         }
 
-        if (book.wantToRead) {
-            Spacer(Modifier.height(8.dp))
-            Text("Op je leeslijst", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        }
+        Section("Lezen") { readingSection() }
 
         loanSection?.let { Section("Bezit en uitlenen") { it() } }
 

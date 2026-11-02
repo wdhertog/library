@@ -36,6 +36,10 @@ abstract class LibraryDatabase : RoomDatabase() {
 
     abstract fun importDao(): ImportDao
 
+    abstract fun readingDao(): ReadingDao
+
+    abstract fun seriesDao(): SeriesDao
+
     companion object {
         fun create(context: Context): LibraryDatabase =
             Room.databaseBuilder(context, LibraryDatabase::class.java, "library.db").build()
