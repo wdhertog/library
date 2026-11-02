@@ -448,7 +448,7 @@ Tests: unittests voor ISBN-logica, bron-parsers (met opgeslagen voorbeeldantwoor
 | 2 | Barcodescanner (doorlopend), snelle lookup, achtergrond-verrijking, "Bibliotheek bijwerken", bronnen OL/DNB/BnF/Wikidata | Snel boeken scannen |
 | 3 | Locaties + plank-modus, uitleen in beide richtingen + herinneringen, cover fotograferen (direct na scan en vanuit boekdetail) | Weten waar elk boek is; covers voor Nederlandse boeken (geen open bron heeft die) |
 | 4 | Import Have I Read That (JSON) en CSV/Excel met kolomtoewijzing, controle per boek en ongedaan maken. Erbij: favoriet, eigenaar (gedeelde collectie), weggedaan (hoe, aan wie, wanneer), leesvoortgang | Bestaande collectie erin |
-| 5 | Lezen (sessies, statistiek), series-schermen | Have I Read That-functies |
+| 5 | Lezen (sessies, statistiek), series-schermen. Gebouwd: tab Lezen (nu bezig met voortgang, leeslijst, leesdoel, per jaar: maandgrafiek, pagina's, gemiddelde, talen); leessectie op de boekpagina (beginnen, voortgang, uitgelezen/gestopt, halve sterren, recensie, herlezen, sessies van andere edities); series-lijst en -detail (delen op volgorde, edities per deel, ontbrekende nummers tot 100, naam wijzigen/samenvoegen, aantal delen, deelnummer) | Have I Read That-functies |
 | 6 | Cover-herkenning, export/back-up, afwerking | Compleet |
 
 ## 9. Open vragen

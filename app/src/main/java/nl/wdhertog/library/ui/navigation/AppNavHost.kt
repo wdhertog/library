@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Badge
@@ -50,6 +51,9 @@ import nl.wdhertog.library.ui.bookdetail.BookDetailScreen
 import nl.wdhertog.library.ui.bookedit.BookEditScreen
 import nl.wdhertog.library.ui.cover.CoverScreen
 import nl.wdhertog.library.ui.importer.ImportScreen
+import nl.wdhertog.library.ui.reading.ReadingScreen
+import nl.wdhertog.library.ui.series.SeriesDetailScreen
+import nl.wdhertog.library.ui.series.SeriesListScreen
 import nl.wdhertog.library.ui.library.LibraryScreen
 import nl.wdhertog.library.ui.locations.LocationDetailScreen
 import nl.wdhertog.library.ui.locations.LocationsScreen
@@ -85,10 +89,20 @@ data class CoverRoute(val bookId: Long)
 @Serializable
 object ImportRoute
 
+@Serializable
+object ReadingRoute
+
+@Serializable
+object SeriesListRoute
+
+@Serializable
+data class SeriesDetailRoute(val seriesId: Long)
+
 private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector)
 
 private val topLevel = listOf(
     TopLevel(LibraryRoute, LibraryRoute::class, "Bibliotheek", Icons.AutoMirrored.Filled.LibraryBooks),
+    TopLevel(ReadingRoute, ReadingRoute::class, "Lezen", Icons.AutoMirrored.Filled.MenuBook),
     TopLevel(LocationsRoute, LocationsRoute::class, "Locaties", Icons.Default.Place),
     TopLevel(LoansRoute, LoansRoute::class, "Uitleen", Icons.Default.SwapHoriz),
 )
@@ -179,6 +193,22 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onAddBook = { navController.navigate(BookEditRoute()) },
                     onScan = { navController.navigate(ScanRoute()) },
                     onImport = { navController.navigate(ImportRoute) },
+                    onSeries = { navController.navigate(SeriesListRoute) },
+                )
+            }
+            composable<ReadingRoute> {
+                ReadingScreen(onOpenBook = { navController.navigate(BookDetailRoute(it)) })
+            }
+            composable<SeriesListRoute> { entry ->
+                SeriesListScreen(
+                    onBack = { navController.popFrom(entry) },
+                    onOpenSeries = { navController.navigate(SeriesDetailRoute(it)) },
+                )
+            }
+            composable<SeriesDetailRoute> { entry ->
+                SeriesDetailScreen(
+                    onBack = { navController.popFrom(entry) },
+                    onOpenBook = { navController.navigate(BookDetailRoute(it)) },
                 )
             }
             composable<LocationsRoute> {
@@ -210,6 +240,7 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onOpenBook = { navController.navigate(BookDetailRoute(it)) },
                     onOpenLocation = { navController.navigate(LocationDetailRoute(it)) },
                     onPhotoCover = { navController.navigate(CoverRoute(it)) },
+                    onOpenSeries = { navController.navigate(SeriesDetailRoute(it)) },
                 )
             }
             composable<ImportRoute> { entry ->
