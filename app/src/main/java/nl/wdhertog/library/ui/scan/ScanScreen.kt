@@ -257,8 +257,8 @@ private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> U
             val status = when (row.entry.outcome) {
                 ScanOutcome.ALREADY_PRESENT -> "Staat al in je collectie"
                 ScanOutcome.ALREADY_HERE -> "Stond al op deze plek"
-                ScanOutcome.MOVED -> "Verplaatst" + (row.previousLocation?.let { " van $it" } ?: "")
-                ScanOutcome.UNDONE -> "Teruggezet" + (row.previousLocation?.let { " naar $it" } ?: "")
+                ScanOutcome.MOVED -> row.previousLocation?.let { "Verplaatst van $it" } ?: "Op deze plek gezet (had nog geen plek)"
+                ScanOutcome.UNDONE -> row.previousLocation?.let { "Teruggezet naar $it" } ?: "Teruggezet: weer zonder plek"
                 ScanOutcome.ADDED -> when {
                     book == null -> ""
                     book.enrichStatus == EnrichStatus.NEW -> "Zoeken…"
