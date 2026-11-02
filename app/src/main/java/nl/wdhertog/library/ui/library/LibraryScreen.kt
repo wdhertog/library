@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Clear
@@ -69,6 +70,7 @@ fun LibraryScreen(
     onScan: () -> Unit,
     onImport: () -> Unit,
     onSeries: () -> Unit,
+    onBackup: () -> Unit,
     viewModel: LibraryViewModel = appViewModel { container, _ ->
         LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler)
     },
@@ -86,7 +88,7 @@ fun LibraryScreen(
                 title = { Text("Bibliotheek") },
                 actions = {
                     SortMenu(state.sort, viewModel::setSort)
-                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport, onSeries = onSeries)
+                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport, onSeries = onSeries, onBackup = onBackup)
                 },
             )
         },
@@ -200,7 +202,7 @@ private fun countLabel(state: LibraryUiState): String {
 }
 
 @Composable
-private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onImport: () -> Unit, onSeries: () -> Unit) {
+private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onImport: () -> Unit, onSeries: () -> Unit, onBackup: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Meer") }
@@ -224,6 +226,11 @@ private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onI
                 text = { Text("Importeren…") },
                 leadingIcon = { Icon(Icons.Default.FileOpen, contentDescription = null) },
                 onClick = { open = false; onImport() },
+            )
+            DropdownMenuItem(
+                text = { Text("Back-up en export…") },
+                leadingIcon = { Icon(Icons.Default.Backup, contentDescription = null) },
+                onClick = { open = false; onBackup() },
             )
         }
     }

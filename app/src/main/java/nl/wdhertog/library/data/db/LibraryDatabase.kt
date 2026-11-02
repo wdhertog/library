@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import nl.wdhertog.library.data.backup.BackupService
 
 @Database(
     entities = [
@@ -42,6 +43,6 @@ abstract class LibraryDatabase : RoomDatabase() {
 
     companion object {
         fun create(context: Context): LibraryDatabase =
-            Room.databaseBuilder(context, LibraryDatabase::class.java, "library.db").build()
+            Room.databaseBuilder(context, LibraryDatabase::class.java, BackupService.DB_NAME).build()
     }
 }

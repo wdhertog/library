@@ -48,6 +48,7 @@ import kotlinx.serialization.Serializable
 import nl.wdhertog.library.AppContainer
 import nl.wdhertog.library.LibraryApp
 import nl.wdhertog.library.ui.bookdetail.BookDetailScreen
+import nl.wdhertog.library.ui.backup.BackupScreen
 import nl.wdhertog.library.ui.bookedit.BookEditScreen
 import nl.wdhertog.library.ui.cover.CoverScreen
 import nl.wdhertog.library.ui.importer.ImportScreen
@@ -91,6 +92,9 @@ object ImportRoute
 
 @Serializable
 object ReadingRoute
+
+@Serializable
+object BackupRoute
 
 @Serializable
 object SeriesListRoute
@@ -194,7 +198,11 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onScan = { navController.navigate(ScanRoute()) },
                     onImport = { navController.navigate(ImportRoute) },
                     onSeries = { navController.navigate(SeriesListRoute) },
+                    onBackup = { navController.navigate(BackupRoute) },
                 )
+            }
+            composable<BackupRoute> { entry ->
+                BackupScreen(onBack = { navController.popFrom(entry) })
             }
             composable<ReadingRoute> {
                 ReadingScreen(onOpenBook = { navController.navigate(BookDetailRoute(it)) })

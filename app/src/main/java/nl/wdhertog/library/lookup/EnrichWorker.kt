@@ -47,6 +47,11 @@ class EnrichScheduler(private val context: Context) {
         WorkManager.getInstance(context).enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
     }
 
+    /** Stoppen, bijv. vlak voor het terugzetten van een back-up. */
+    fun cancel() {
+        WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+    }
+
     private companion object {
         const val WORK_NAME = "enrich-library"
     }
