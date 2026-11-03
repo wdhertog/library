@@ -521,83 +521,80 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 
 ## 11. Synchronisatie tussen telefoons (plan)
 
-Stand 3 november 2026: plan, nog niet gebouwd. De open vragen staan onderaan; die worden eerst beantwoord.
+Stand 3 november 2026: plan met de gemaakte keuzes; nog niet gebouwd.
+
+### Besloten (3 november 2026)
+
+| Vraag | Keuze |
+|-------|-------|
+| Transport | **Alleen via de wifi thuis**: de telefoons praten rechtstreeks met elkaar, zonder cloud of server |
+| Wat is gedeeld | **De collectie** (boeken, werken, auteurs, series, plekken, eigenaar, uitlenen, covers). **Persoonlijk** en dus niet gesynchroniseerd: leessessies, beoordelingen, recensies, leesdoel, favoriet, "wil ik lezen" |
+| Startsituatie | **Beide telefoons hebben al boeken**: bij de eerste keer samenvoegen, met een controlescherm |
+| Snelheid | **Binnen enkele minuten** is goed genoeg |
+| Op de achtergrond | **Ja**: thuis luistert een achtergronddienst met een stille, vaste melding; uit te zetten in Instellingen |
+| Koppelen | **QR-code scannen** met de eigen scanner |
 
 ### Doel
-Twee (of meer) telefoons in één huishouden houden dezelfde bibliotheek bij, bijvoorbeeld de collectie die je met je partner deelt. Iedereen kan scannen, verplaatsen, uitlenen en wijzigen, ook offline. Zodra er verbinding is, komen de wijzigingen bij de ander.
+Twee telefoons in één huishouden houden dezelfde collectie bij. Iedereen kan scannen, verplaatsen, uitlenen en wijzigen, ook als de ander niet thuis is. Zodra beide telefoons op de wifi thuis zijn, worden de wijzigingen uitgewisseld. Ieder houdt zijn eigen leesgeschiedenis.
 
-### Uitgangspunten
-- **Geen eigen server en geen Google.** Synchroniseren gaat via iets wat je al hebt (een map in Nextcloud of Syncthing, of je eigen netwerk).
-- **Offline eerst.** Elke telefoon heeft zijn eigen volledige database, net als nu. Synchroniseren wisselt alleen wijzigingen uit.
-- **Wijzigingen gaan niet verloren.** Als jij de eigenaar van een boek wijzigt en de andere telefoon tegelijk de uitgever aanvult, blijven beide staan. Dat vraagt om samenvoegen per veld, niet per boek.
-- **Back-ups blijven** zoals ze zijn. Synchroniseren is geen back-up: een vergissing verspreidt zich ook.
+### Hoe het werkt
 
-### Transport: hoe komen wijzigingen bij de ander?
+**Koppelen (eenmalig)**
+1. Telefoon A: **Instellingen → Synchroniseren → Telefoon koppelen**. A toont een QR-code met daarin zijn telefoon-id, een vingerafdruk van zijn sleutel en een eenmalig koppelgeheim.
+2. Telefoon B scant de code. Beide telefoons wisselen hun publieke sleutels uit en bewaren die van de ander: vanaf dan vertrouwen ze alleen elkaar.
+3. Daarna volgt het samenvoegen van beide bibliotheken (zie hieronder).
 
-| Optie | Hoe | Voor | Tegen |
-|-------|-----|------|-------|
-| **A. Gedeelde map** (voorkeur) | Elke telefoon schrijft zijn wijzigingen als bestanden in een map die via **Syncthing** of de **Nextcloud-app** gedeeld wordt; dezelfde mapkiezer als de automatische back-up | Geen server, geen wachtwoorden in de app; werkt met wat je al gebruikt | Afhankelijk van een andere app; de Nextcloud-app synchroniseert een map niet altijd direct |
-| B. Nextcloud rechtstreeks (WebDAV) | De app praat zelf met je Nextcloud (adres + app-wachtwoord) | Betrouwbaar en snel; geen extra app nodig | Alleen Nextcloud/WebDAV; wachtwoord in de app bewaren |
-| C. Rechtstreeks via wifi thuis | Telefoons vinden elkaar op het thuisnetwerk en wisselen uit | Geen cloud nodig | Alleen als beide apps tegelijk open zijn en thuis |
+**Elkaar vinden**
+- Thuis meldt elke telefoon zich op het netwerk aan als `_bibliotheek._tcp` (Android NSD/mDNS) en luistert op een poort.
+- Een gekoppelde telefoon die hem ziet, maakt verbinding.
 
-Het gegevensformaat hieronder is voor alle drie hetzelfde. Voorstel: eerst A, daarna eventueel B als de map via de Nextcloud-app te traag blijkt.
+**Beveiliging**
+- De verbinding is versleuteld met TLS. Elke telefoon controleert de sleutel van de ander tegen de bij het koppelen bewaarde vingerafdruk.
+- Andere apparaten op het netwerk kunnen de telefoon wel zien, maar niets opvragen.
+- Gekoppelde telefoons zijn te ontkoppelen.
 
-### Gegevens: wat wordt uitgewisseld?
-- **Wijzigingenlogboek per telefoon.** Elke telefoon heeft een eigen id en schrijft alleen in zijn eigen submap. In de gedeelde map:
+**Op de achtergrond**
+- Op een netwerk waar al eens met de andere telefoon is gesynchroniseerd, draait een *foreground service*. Android vereist daarvoor een vaste melding: stil en klein, "Bibliotheek: klaar om te synchroniseren".
+- Buiten dat netwerk stopt de dienst vanzelf.
+- In Instellingen is dit uit te zetten. Dan synchroniseert de app alleen als hij open staat (en via **Nu synchroniseren**).
 
-  ```
-  bibliotheek-sync/
-    devices/<telefoon-id>/changes-000001.jsonl   (alleen deze telefoon schrijft hier)
-    devices/<telefoon-id>/changes-000002.jsonl
-    covers/<naam>.jpg                             (eigen cover-foto's)
-    snapshot/…                                    (volledige stand, voor een nieuwe telefoon)
-  ```
+**Wanneer**
+- Bij het openen en sluiten van de app, na een scansessie of bulkactie, en elke paar minuten zolang beide telefoons thuis zijn.
 
-  Omdat niemand in elkaars bestanden schrijft, kunnen er geen schrijfconflicten op bestandsniveau ontstaan. Dat is belangrijk bij Syncthing en Nextcloud.
-- **Eén regel per wijziging:** soort record, uuid, de gewijzigde velden met hun nieuwe waarde, en een tijdstempel. Een verwijdering wordt een "grafsteen" (uuid + tijdstip), zodat de ander het record ook weghaalt.
-- **Samenvoegen per veld, laatste wijziging wint.** Per veld onthoudt de app wanneer het voor het laatst gewijzigd is. Een binnenkomende wijziging wint alleen als die nieuwer is.
-- **Tijdstempels:** een hybride logische klok (tijd + teller + telefoon-id). Een telefoon met een verkeerd ingestelde klok kan zo geen nieuwere wijzigingen overschrijven, en twee wijzigingen op exact hetzelfde moment hebben toch een vaste volgorde.
-- **Wijzigingen vastleggen:** in de database (SQLite-triggers op elke tabel), zodat ook bulkacties en de achtergrondverrijking automatisch meegaan. Bij het synchroniseren vergelijkt de app elk gewijzigd record met de laatst uitgewisselde versie (een "schaduwkopie") en stuurt alleen de velden die echt anders zijn.
-- **Id's:** de lokale nummers (id 1, 2, 3, …) verschillen per telefoon. Uitwisselen gebeurt op uuid; elke telefoon houdt zelf bij welk uuid bij welk lokaal id hoort.
-- **Achtergrondverrijking:** beide telefoons zoeken boeken op. Dat levert meestal dezelfde gegevens op; samenvoegen per veld maakt dubbel werk onschuldig. Later kan de verrijking op een boek dat al verrijkt binnenkomt, worden overgeslagen.
+### Gegevens
+- **Wijzigingenlogboek per telefoon** met oplopende volgnummers. Bij een verbinding vraagt elke telefoon aan de ander: "geef me alles na nummer N". Per gekoppelde telefoon wordt N bijgehouden.
+- **Eén wijziging** bevat: soort record, uuid, de gewijzigde velden met hun nieuwe waarde, en een tijdstempel. Een verwijdering wordt een *grafsteen* (uuid + tijdstip).
+- **Samenvoegen per veld; de laatste wijziging wint.** Per veld onthoudt de app wanneer het voor het laatst gewijzigd is. Wijzig jij de eigenaar en vult de andere telefoon tegelijk de uitgever aan, dan blijven beide staan.
+- **Tijdstempels:** een hybride logische klok (tijd + teller + telefoon-id). Een telefoon met een verkeerd ingestelde klok kan zo geen nieuwere wijzigingen overschrijven.
+- **Vastleggen:** wijzigingen worden in de database zelf vastgelegd (SQLite-triggers op de gedeelde tabellen), zodat ook bulkacties en de achtergrondverrijking automatisch meegaan. Bij het uitwisselen vergelijkt de app met de laatst uitgewisselde versie (een *schaduwkopie*) en stuurt alleen de velden die echt anders zijn.
+- **Id's:** de lokale nummers verschillen per telefoon. Uitwisselen gaat op uuid.
+- **Covers:** een eigen cover-foto gaat als bestand mee wanneer de ander hem nog niet heeft. De naam staat al in het boek.
 
-### Nodig in het datamodel
+### Wat is persoonlijk
 
-| Tabel | Nu | Nodig |
-|-------|----|-------|
-| Book, Work, Series, Location, Person, Loan, ReadingSession | uuid + updatedAt | per-veld-klok (aparte tabel) |
-| Author | alleen naam | uuid, of de naam als sleutel (namen zijn al uniek) |
-| WorkAuthor, BookWork | koppeltabellen met lokale id's | uitwisselen als lijst van uuid's in het werk- en boekrecord |
-| ReadingGoal | jaartal als sleutel | jaartal + (zie vraag 2) persoon |
-| ImportRun, instellingen | — | niet synchroniseren (horen bij één telefoon) |
-| Eigen covers | bestand per boek | bestand mee in `covers/`; de naam staat al in het boek |
-| Nieuw: tombstone, field_clock, sync_state, uuid ↔ id | — | voor verwijderingen, de klokken en "tot waar gelezen per telefoon" |
+| Gedeeld | Persoonlijk (blijft op de telefoon) |
+|---------|-------------------------------------|
+| Boek (alle velden behalve favoriet en "wil ik lezen"), werk, auteurs, serie, locaties, eigenaar, personen, uitleningen, geleend van, weggedaan, eigen covers | Leessessies, beoordeling, recensie, voortgang, leesdoel, favoriet, "wil ik lezen", instellingen, imports |
 
-### Een telefoon toevoegen
-1. Op de eerste telefoon: **Synchroniseren → Map kiezen**. De app schrijft een volledige stand (snapshot) en daarna wijzigingen.
-2. Op de tweede telefoon: **Synchroniseren → Bestaande bibliotheek gebruiken → dezelfde map**. De app maakt eerst een back-up van wat er op die telefoon staat, neemt dan de snapshot over en leest de wijzigingen die erna kwamen.
-3. **Opruimen:** af en toe schrijft een telefoon een nieuwe snapshot, en wijzigingen die iedereen al heeft, worden verwijderd.
+Eén randgeval: de ander verwijdert een boek uit de gedeelde collectie waar jij leesgeschiedenis bij hebt. Dan blijft het boek bij jou als "niet in bezit", zodat je leesgeschiedenis niet verdwijnt.
 
-Twee telefoons die allebei al een eigen bibliotheek hebben samenvoegen (op ISBN, zoals de import) is mogelijk, maar komt pas als het nodig blijkt.
-
-### Wanneer wordt er gesynchroniseerd?
-- Bij het openen en sluiten van de app.
-- Na een scansessie of bulkactie.
-- Periodiek op de achtergrond (WorkManager, bijv. elk kwartier als er netwerk is).
-- Een knop **Nu synchroniseren** met de tijd van de laatste uitwisseling en eventuele fouten, net als bij de automatische back-up.
+### Eerste keer: twee bibliotheken samenvoegen
+- Na het koppelen stuurt elke telefoon een overzicht van zijn boeken.
+- **Herkennen:** zoals bij de import (`ImportMatcher`): eerst ISBN, dan titel + eerste auteur als een van beide geen ISBN heeft. Zelfde titel met een ander ISBN wordt een twijfelgeval.
+- **Controlescherm:** "op beide telefoons / alleen bij jou / alleen bij de ander / twijfelgevallen", met per boek de keuze **hetzelfde boek** of **apart houden**. Apart houden is bijvoorbeeld nodig als jullie elk echt een exemplaar hebben.
+- **Hetzelfde boek:** de records worden één, met één uuid. Velden die maar op één telefoon zijn ingevuld, worden aangevuld. Verschillen beide waarden, dan wint de meest recente; plek en eigenaar laten zien welke het werd.
+- **Locaties:** de locatieboom wordt samengevoegd op naam, met hetzelfde pad. "Woonkamer › Kast 2" op beide telefoons wordt dus één plek.
+- **Vooraf** maakt elke telefoon automatisch een back-up.
 
 ### Bouwstappen
 
 | Stap | Inhoud |
 |------|--------|
-| S1 | Datamodel: tombstones, per-veld-klokken, telefoon-id, hybride klok, triggers en schaduwkopie; migratie met behoud van alle gegevens |
-| S2 | Wijzigingen schrijven en lezen (JSONL), samenvoegen per veld, met unit-tests voor gelijktijdige wijzigingen, verwijderingen en klokverschillen |
-| S3 | Transport via een gedeelde map (optie A), scherm Synchroniseren, snapshot en een telefoon toevoegen |
-| S4 | Covers meesturen; opruimen van oude wijzigingen; test met twee telefoons |
-| S5 | Eventueel: Nextcloud rechtstreeks (optie B) |
+| S1 | **Datamodel**: telefoon-id, hybride klok, per-veld-klokken, grafstenen, triggers en schaduwkopie; uuid voor auteurs (of de naam als sleutel); migratie met behoud van alle gegevens |
+| S2 | **Wijzigingen** opbouwen, verzenden en samenvoegen per veld, met de scheiding gedeeld/persoonlijk. Uitgebreide unit-tests: gelijktijdige wijzigingen, verwijderingen, klokverschillen, de leesgeschiedenis-regel |
+| S3 | **Koppelen en verbinden**: QR-code, sleutels, TLS met vastgepinde sleutel, NSD, het scherm Synchroniseren en de knop "Nu synchroniseren" |
+| S4 | **Eerste keer samenvoegen**: overzicht uitwisselen, herkennen, controlescherm, locaties samenvoegen |
+| S5 | **Achtergronddienst** met melding, starten en stoppen op het thuisnetwerk, covers meesturen |
+| S6 | **Test met twee telefoons** (jouw toestel en dat van je partner), daarna uitbrengen |
 
-### Open vragen
-1. **Transport:** synchroniseren via Syncthing, via een map van de Nextcloud-app, of rechtstreeks met Nextcloud (WebDAV)?
-2. **Wat is persoonlijk?** Leesgeschiedenis, beoordelingen, leesdoel, favorieten en leeslijst: gedeeld, of per persoon? Voorstel: de collectie (boeken, plekken, eigenaar, uitlenen) is gedeeld; lezen, favorieten en leeslijst zijn per persoon. Dan krijgt elke leessessie een lezer en telt het tabblad Lezen alleen die van jezelf.
-3. **Startsituatie:** begint de tweede telefoon leeg en neemt hij jouw bibliotheek over, of hebben beide telefoons al boeken die samengevoegd moeten worden?
-4. **Hoe snel?** Is "binnen een paar minuten, of zodra de app opent" goed genoeg?
+Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de staging-app en een kopie van de gegevens, net als bij de import.
