@@ -1,5 +1,6 @@
 package nl.wdhertog.library.ui.series
 
+import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,17 +8,40 @@ import androidx.navigation.toRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nl.wdhertog.library.data.db.SeriesSummary
 import nl.wdhertog.library.data.repository.SeriesDetail
+import nl.wdhertog.library.data.repository.SeriesDuplicate
+import nl.wdhertog.library.data.repository.SeriesDuplicates
 import nl.wdhertog.library.data.repository.SeriesRepository
 import nl.wdhertog.library.ui.navigation.SeriesDetailRoute
 
-class SeriesListViewModel(series: SeriesRepository) : ViewModel() {
+class SeriesListViewModel(private val series: SeriesRepository, private val prefs: SharedPreferences) : ViewModel() {
     val summaries: StateFlow<List<SeriesSummary>?> = series.observeSummaries()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val ignored = MutableStateFlow(prefs.getStringSet(KEY_IGNORED, emptySet()).orEmpty())
+
+    /** Series die waarschijnlijk dubbel zijn (bijv. dezelfde serie uit twee bronnen). */
+    val duplicates: StateFlow<List<SeriesDuplicate>> = combine(summaries, ignored) { list, skip ->
+        list?.let { SeriesDuplicates.find(it, skip) }.orEmpty()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun merge(duplicate: SeriesDuplicate) {
+        viewModelScope.launch { series.merge(duplicate.other.id, duplicate.keep.id) }
+    }
+
+    fun ignore(duplicate: SeriesDuplicate) {
+        ignored.value = ignored.value + duplicate.key
+        prefs.edit().putStringSet(KEY_IGNORED, ignored.value).apply()
+    }
+
+    private companion object {
+        const val KEY_IGNORED = "ignored-duplicate-series"
+    }
 }
 
 class SeriesDetailViewModel(savedStateHandle: SavedStateHandle, private val series: SeriesRepository) : ViewModel() {
