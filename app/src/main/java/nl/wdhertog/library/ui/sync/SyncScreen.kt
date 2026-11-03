@@ -115,7 +115,7 @@ fun SyncScreen(onBack: () -> Unit) {
         scope.launch {
             pairMessage = manager.pairWith(code).fold(
                 // null: het controlescherm staat open.
-                onSuccess = { it?.let { r -> "Gekoppeld met ${r.peerName}: ${r.received} ontvangen, ${r.sent} verstuurd." } },
+                onSuccess = { it?.let { r -> "Gekoppeld met ${r.peerName}: ${r.received} ontvangen, ${r.sent} verstuurd" + covers(r) + "." } },
                 onFailure = { "Koppelen mislukt: ${it.message ?: "onbekende fout"}" },
             )
         }
@@ -217,7 +217,7 @@ fun SyncScreen(onBack: () -> Unit) {
             onConfirm = { accepted ->
                 scope.launch {
                     pairMessage = manager.confirmMerge(accepted).fold(
-                        onSuccess = { "Samengevoegd met ${it.peerName}: ${it.received} ontvangen, ${it.sent} verstuurd." },
+                        onSuccess = { "Samengevoegd met ${it.peerName}: ${it.received} ontvangen, ${it.sent} verstuurd" + covers(it) + "." },
                         onFailure = { "Samenvoegen mislukt: ${it.message ?: "onbekende fout"}" },
                     )
                 }
@@ -471,6 +471,9 @@ private fun PairRow(pair: MergePair, peerName: String, checked: Boolean, onChang
         }
     }
 }
+
+private fun covers(result: nl.wdhertog.library.sync.SyncResult) =
+    if (result.coversReceived > 0) ", ${result.coversReceived} covers" else ""
 
 private val timeFormat = DateTimeFormatter.ofPattern("d MMM HH:mm", Locale.forLanguageTag("nl"))
 

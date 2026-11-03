@@ -10,6 +10,7 @@ import nl.wdhertog.library.data.sync.SnapshotRecord
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.security.MessageDigest
+import java.util.Base64
 
 /** Een gekoppelde telefoon zoals de sessie die nodig heeft. */
 data class KnownPeer(val deviceId: String, val name: String, val fingerprint: String, val receivedUpTo: Long)
@@ -20,6 +21,32 @@ interface PeerStore {
     suspend fun find(deviceId: String): KnownPeer?
     suspend fun save(peer: KnownPeer)
     suspend fun markReceived(deviceId: String, upTo: Long, at: Long)
+}
+
+/**
+ * Eigen cover-foto's: de naam staat in het boek (en gaat met de gewone uitwisseling mee), het bestand
+ * gaat aan het eind van een sessie mee als de ander het nog niet heeft.
+ */
+interface CoverFiles {
+    /** Namen die in boeken staan, maar waarvan het bestand hier ontbreekt. */
+    suspend fun missing(): List<String>
+    suspend fun read(name: String): ByteArray?
+    suspend fun write(name: String, data: ByteArray)
+
+    companion object {
+        private val validName = Regex("[A-Za-z0-9-]{1,64}\\.jpg")
+
+        /** Alleen gewone namen: nooit een pad, zodat de ander niet buiten de covermap kan schrijven. */
+        fun isValidName(name: String) = validName.matches(name)
+
+        const val MAX_BYTES = 8 shl 20
+
+        val NONE = object : CoverFiles {
+            override suspend fun missing() = emptyList<String>()
+            override suspend fun read(name: String): ByteArray? = null
+            override suspend fun write(name: String, data: ByteArray) = Unit
+        }
+    }
 }
 
 /** Een lopende koppeling op deze telefoon: welk geheim de ander moet bewijzen, en hoe lang nog. */
@@ -35,6 +62,7 @@ data class SyncResult(
     val paired: Boolean = false,
     /** Alleen het overzicht voor het eerste samenvoegen is verstuurd. */
     val snapshot: Boolean = false,
+    val coversReceived: Int = 0,
 )
 
 /** De bibliotheek van de andere telefoon, voor het eerste samenvoegen (FirstMerge). */
@@ -66,6 +94,7 @@ class SyncSession(
     private val deviceId: String,
     private val deviceName: String,
     private val now: () -> Long = System::currentTimeMillis,
+    private val covers: CoverFiles = CoverFiles.NONE,
 ) {
     @Serializable
     private data class Message(
@@ -80,6 +109,10 @@ class SyncSession(
         /** "snapshot": alleen het overzicht ophalen, voor het eerste samenvoegen. */
         val mode: String? = null,
         val snapshot: RemoteSnapshot? = null,
+        /** Covers: gevraagde namen, of één bestand (naam en Base64). */
+        val files: List<String>? = null,
+        val file: String? = null,
+        val data: String? = null,
     )
 
     @Serializable
@@ -126,7 +159,9 @@ class SyncSession(
         send(writer, Message("changes", items = outgoing.map { it.toItem() }))
         val done = receive(reader)
         if (done.type != "done") throw SyncRefused(done.message ?: "Onverwacht antwoord")
-        return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size, paired = known != null)
+        val coversReceived = requestCovers(reader, writer)
+        serveCovers(reader, writer)
+        return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size, paired = known != null, coversReceived = coversReceived)
     }
 
     /**
@@ -181,12 +216,42 @@ class SyncSession(
         engine.applyIncoming(incoming)
         peers.markReceived(clientId, incoming.maxOfOrNull { it.seq } ?: peer.receivedUpTo, now())
         send(writer, Message("done"))
-        return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size, paired = paired)
+        serveCovers(reader, writer)
+        val coversReceived = requestCovers(reader, writer)
+        return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size, paired = paired, coversReceived = coversReceived)
     }
 
     /** Wat de ander nog niet heeft; wat van hemzelf komt (doorgegeven via een derde) hoeft niet terug. */
     private suspend fun changesFor(peerId: String, since: Long) =
         engine.changesAfter(since).filter { HybridClock.Timestamp.parse(it.hlc).deviceId != peerId }
+
+    /** Vraagt de ontbrekende covers; geeft het aantal ontvangen bestanden. */
+    private suspend fun requestCovers(reader: BufferedReader, writer: BufferedWriter): Int {
+        val wanted = covers.missing().filter(CoverFiles::isValidName).toSet()
+        send(writer, Message("need", files = wanted.toList()))
+        var count = 0
+        while (true) {
+            val message = receive(reader)
+            if (message.type == "end") return count
+            val name = message.file ?: continue
+            if (message.type != "file" || name !in wanted) continue
+            val bytes = runCatching { Base64.getDecoder().decode(message.data.orEmpty()) }.getOrNull() ?: continue
+            if (bytes.isEmpty() || bytes.size > CoverFiles.MAX_BYTES) continue
+            covers.write(name, bytes)
+            count++
+        }
+    }
+
+    /** Stuurt de covers die de ander vraagt en die hier zijn. */
+    private suspend fun serveCovers(reader: BufferedReader, writer: BufferedWriter) {
+        val need = receive(reader)
+        need.files.orEmpty().filter(CoverFiles::isValidName).distinct().forEach { name ->
+            covers.read(name)?.takeIf { it.size <= CoverFiles.MAX_BYTES }?.let {
+                send(writer, Message("file", file = name, data = Base64.getEncoder().encodeToString(it)))
+            }
+        }
+        send(writer, Message("end"))
+    }
 
     /** Deze telefoon is al met een andere bezig; de verbinder probeert het later opnieuw. */
     fun refuseBusy(writer: BufferedWriter) = send(writer, Message("error", message = "Even bezig met een andere telefoon, probeer het zo opnieuw"))
