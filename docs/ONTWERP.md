@@ -72,9 +72,12 @@ De bronvolgorde wordt bepaald door het ISBN-prefix, dat de taal/regio van de uit
 
 | ISBN-prefix | Taal (meestal) | Bronvolgorde |
 |-------------|----------------|--------------|
-| 978-90, 978-94 | Nederlands | Open Library → KB / data.bibliotheken.nl → Wikidata |
+| 978-90, 978-94 | Nederlands | KB / data.bibliotheken.nl → Open Library → Wikidata |
 | 978-3 | Duits | DNB → Open Library → Wikidata |
 | 978-2, 979-10 | Frans | BnF → Open Library → Wikidata |
+| 978-84 | Spaans (Spanje) | BNE → Open Library → Wikidata |
+| 978-950, 987, 956, 958, 959, 968, 970, 607, 9972, 612, 9974, 980 | Spaans (Latijns-Amerika) | Open Library → BNE → Wikidata |
+| 978-88, 979-12 | Italiaans | SBN → Open Library → Wikidata |
 | 978-0, 978-1, 979-8 | Engels | Open Library → Wikidata |
 | overig | — | Open Library → Wikidata → handmatig formulier |
 
@@ -84,14 +87,16 @@ De bronvolgorde wordt bepaald door het ISBN-prefix, dat de taal/regio van de uit
 | **Open Library Covers** | Coverafbeeldingen per ISBN | Nee | |
 | **DNB** (Deutsche Nationalbibliothek, SRU) | Zeer complete Duitse metadata incl. **reeks + deelnummer** | Nee | Metadata is CC0 |
 | **BnF** (Bibliothèque nationale de France, SRU) | Franse metadata incl. collectie/serie | Nee | |
-| **KB / data.bibliotheken.nl** (SPARQL) | Nederlandse Bibliografie | Nee | Dekking nog te valideren in fase 2 |
+| **BNE** (Biblioteca Nacional de España, SRU van de Alma-catalogus) | Spaanse metadata (MARC21) incl. vertaler, oorspronkelijke titel en taal | Nee | Uitgeversreeksen (zelfde naam als de uitgever) tellen niet als serie; de oude SPARQL-dienst (datos.bne.es) geeft 403 |
+| **SBN** (Servizio Bibliotecario Nazionale, OPAC-JSON) | Italiaanse metadata: auteurs, vertalers, uitgever, jaar, pagina's, taal | Nee | Eerst zoeken op ISBN, dan het volledige record; "collezione" is meestal een uitgeversreeks en wordt genegeerd |
+| **KB / data.bibliotheken.nl** (SPARQL) | Nederlandse Bibliografie | Nee | Ook gebruikt voor zoeken op titel bij cover-herkenning |
 | **Wikidata** (SPARQL) | Serie (P179) + volgnummer (P1545), originele titel, vertaler, werk-koppeling | Nee | Vooral sterk voor bekende series |
 
 Google Books wordt bewust **niet** gebruikt (geen open data).
 
 Gegevens van meerdere bronnen worden samengevoegd: per veld wint de eerste bron die het heeft, behalve als jij het veld hebt aangepast. Van elk boek wordt bijgehouden welke bronnen zijn geraadpleegd.
 
-**Cover-modus**: foto → tekstherkenning → grootste tekstregels als titel/auteur → zoeken in Open Library (en DNB/BnF afhankelijk van gedetecteerde taal) → kandidatenlijst → jij kiest. Lukt het niet: formulier, vooringevuld met de herkende tekst.
+**Cover-modus**: foto → tekstherkenning → grootste tekstregels als titel/auteur → zoeken in de KB en Open Library → kandidatenlijst → jij kiest. Lukt het niet: formulier, vooringevuld met de herkende tekst.
 
 ## 5. Datamodel
 
@@ -494,6 +499,9 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 | C. Eigenaar-modus bij scannen | Net als plank-modus: kies een eigenaar en scan; elk gescand boek krijgt die eigenaar | Handig bij het fysiek doorlopen van een gemengde kast | Alleen met boeken met barcode; aanvulling op A, geen vervanging |
 
 **Besloten (2 november 2026): optie A.** C komt er alleen bij als het bij het gebruik gemist wordt.
+
+### Bronnen voor meer talen
+- **Roemeens** (geparkeerd, 3 november 2026): de Biblioteca Națională a României heeft alleen Z39.50 (UNIMARC) en een Aleph-webcatalogus op aleph.bibnat.ro, die vanaf hier niet bereikbaar was. Tot er een open HTTP-dienst gevonden is: Open Library en Wikidata.
 
 ### Later, misschien
 - **Synchronisatie tussen telefoons.** Records hebben al een UUID en een `updatedAt` (§6.12).

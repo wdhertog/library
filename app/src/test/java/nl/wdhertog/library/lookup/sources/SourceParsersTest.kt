@@ -100,6 +100,61 @@ class SourceParsersTest {
     }
 
     @Test
+    fun `BNE - taal uit veld 008, uitgeversreeks zonder nummer telt niet`() {
+        val book = BneSource.parse(resource("bne_sombra.xml"))!!
+        assertEquals("La sombra del viento", book.title)
+        assertEquals(listOf("Carlos Ruiz Zafón"), book.authors)
+        assertEquals("es", book.language)
+        assertEquals("Booket", book.publisher)
+        assertEquals(2016, book.publishedYear)
+        assertEquals(575, book.pages)
+        assertNull(book.seriesName)
+        assertNull(book.originalTitle) // 240 is hier de eigen titel, geen vertaling
+    }
+
+    @Test
+    fun `BNE - vertaling, serie tussen haken, uitgeversreeks met de naam van de uitgever niet`() {
+        val book = BneSource.parse(resource("bne_harry_potter.xml"))!!
+        assertEquals("Harry Potter y la piedra filosofal", book.title)
+        assertEquals(listOf("J. K. Rowling"), book.authors)
+        assertEquals(listOf("Alicia Dellepiane Rawson"), book.translators)
+        assertEquals("es", book.language)
+        assertEquals("en", book.originalLanguage)
+        assertEquals("Harry Potter and the philosopher's stone", book.originalTitle)
+        assertEquals("Letras de Bolsillo", book.publisher)
+        assertEquals("Harry Potter", book.seriesName)
+        assertEquals("1", book.seriesIndex)
+    }
+
+    @Test
+    fun `SBN - volledig record met vertalers`() {
+        val book = SbnSource.parse(resource("sbn_full_translated.json"))!!
+        assertEquals("Harry Potter e la pietra filosofale", book.title)
+        assertEquals(listOf("J. K. Rowling"), book.authors)
+        assertEquals(listOf("Stefano Bartezzaghi", "Marina Astrologo"), book.translators)
+        assertEquals("it", book.language)
+        assertEquals("Salani", book.publisher)
+        assertEquals(2020, book.publishedYear)
+        assertEquals(310, book.pages)
+    }
+
+    @Test
+    fun `SBN - zoekresultaat en sorteertekens in de titel`() {
+        assertEquals("IT\\ICCU\\TO0\\1968404", SbnSource.recordId("""{"numFound":1,"briefRecords":[{"codiceIdentificativo":"IT\\ICCU\\TO0\\1968404"}]}"""))
+        assertNull(SbnSource.recordId("""{"numFound":0,"briefRecords":[]}"""))
+        val book = SbnSource.parse(
+            """{"titolo":"\u0088Il \u0089signore degli anelli : trilogia / John Ronald Reuel Tolkien","nomi":["[Autore]  Tolkien, J. R. R.","[Traduttore]  Levi, Primo <1919-1987>"],"pubblicazione":"Milano : Bompiani, [2014]","descrizioneFisica":"1253 p., [48] c. di tav.","linguaPubblicazione":"ITALIANO"}""",
+        )!!
+        assertEquals("Il signore degli anelli", book.title)
+        assertEquals("trilogia", book.subtitle)
+        assertEquals(listOf("J. R. R. Tolkien"), book.authors)
+        assertEquals(listOf("Primo Levi"), book.translators) // levensjaren weg
+        assertEquals("Bompiani", book.publisher)
+        assertEquals(2014, book.publishedYear)
+        assertEquals(1253, book.pages)
+    }
+
+    @Test
     fun `BnF - UNIMARC`() {
         val book = BnfSource.parse(resource("bnf_9782081285880.xml"))!!
         assertEquals("Cyrano de Bergerac", book.title)

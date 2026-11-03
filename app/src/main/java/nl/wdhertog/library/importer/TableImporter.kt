@@ -3,11 +3,10 @@ package nl.wdhertog.library.importer
 import nl.wdhertog.library.data.db.ReadingStatus
 import nl.wdhertog.library.lookup.sources.yearIn
 import nl.wdhertog.library.scan.Isbn
-import nl.wdhertog.library.util.LanguageCodes
+import nl.wdhertog.library.util.Languages
 import nl.wdhertog.library.util.TextNormalizer
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /** Waar een kolom uit het bestand terechtkomt. */
 enum class ColumnTarget(val label: String, private val names: List<String> = emptyList()) {
@@ -156,14 +155,7 @@ object TableImporter {
     }
 
     /** "nl", "dut", "Nederlands" of "Dutch" → "nl". */
-    internal fun languageCode(text: String): String? {
-        LanguageCodes.toIso1(text)?.takeIf { it in Locale.getISOLanguages() }?.let { return it }
-        val name = TextNormalizer.normalize(text)
-        return Locale.getISOLanguages().firstOrNull { code ->
-            val locale = Locale.forLanguageTag(code)
-            listOf(Locale.forLanguageTag("nl"), Locale.ENGLISH, locale).any { TextNormalizer.normalize(locale.getDisplayLanguage(it)) == name }
-        }
-    }
+    internal fun languageCode(text: String): String? = Languages.codeForName(text)
 
     /** Datum als tekst, of als Excel-datum (dagen sinds 30-12-1899). */
     internal fun date(text: String): LocalDate? {

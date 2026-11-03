@@ -21,10 +21,12 @@ import nl.wdhertog.library.lookup.EnrichmentService
 import nl.wdhertog.library.lookup.LookupHttp
 import nl.wdhertog.library.lookup.SourceRouter
 import nl.wdhertog.library.lookup.search.BookSearch
+import nl.wdhertog.library.lookup.sources.BneSource
 import nl.wdhertog.library.lookup.sources.BnfSource
 import nl.wdhertog.library.lookup.sources.DnbSource
 import nl.wdhertog.library.lookup.sources.KbSource
 import nl.wdhertog.library.lookup.sources.OpenLibrarySource
+import nl.wdhertog.library.lookup.sources.SbnSource
 import nl.wdhertog.library.lookup.sources.WikidataSource
 import nl.wdhertog.library.reminders.LoanReminderWorker
 import nl.wdhertog.library.util.AppSettings
@@ -52,7 +54,14 @@ class AppContainer(val app: Application) {
     val enrichmentService by lazy {
         EnrichmentService(
             repository = bookRepository,
-            router = SourceRouter(KbSource(http), OpenLibrarySource(http), DnbSource(http), BnfSource(http)),
+            router = SourceRouter(
+                KbSource(http),
+                OpenLibrarySource(http),
+                DnbSource(http),
+                BnfSource(http),
+                BneSource(http),
+                SbnSource(http),
+            ),
             wikidata = WikidataSource(http),
         )
     }
