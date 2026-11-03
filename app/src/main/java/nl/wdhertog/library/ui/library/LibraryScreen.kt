@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.AssistChip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -196,6 +197,12 @@ fun LibraryScreen(
                     onSelect = viewModel::setRead,
                 )
                 FilterChip(
+                    selected = state.multipleEditions,
+                    onClick = { viewModel.setMultipleEditions(!state.multipleEditions) },
+                    label = { Text("Meerdere edities") },
+                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, Modifier.size(18.dp)) },
+                )
+                FilterChip(
                     selected = state.favoritesOnly,
                     onClick = { viewModel.setFavoritesOnly(!state.favoritesOnly) },
                     label = { Text("Favorieten") },
@@ -204,7 +211,7 @@ fun LibraryScreen(
             }
             // Andere filters of sortering: begin weer bovenaan de lijst.
             val listState = rememberLazyListState()
-            LaunchedEffect(state.language, state.location, state.owner, state.favoritesOnly, state.read, state.ownership, state.sort, state.query) {
+            LaunchedEffect(state.language, state.location, state.owner, state.favoritesOnly, state.read, state.ownership, state.multipleEditions, state.sort, state.query) {
                 listState.scrollToItem(0)
             }
             // Eigen regel: in de schuifbare rij met filters zou het aantal buiten beeld kunnen vallen.

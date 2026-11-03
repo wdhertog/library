@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.combine
 import nl.wdhertog.library.data.db.Author
 import nl.wdhertog.library.data.db.Book
 import nl.wdhertog.library.data.db.BookWork
+import nl.wdhertog.library.data.db.BookWorkRow
 import nl.wdhertog.library.data.db.EnrichStatus
 import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.db.Series
@@ -25,6 +26,11 @@ sealed interface ScanAddResult {
 }
 
 class BookRepository(private val db: LibraryDatabase, private val covers: CoverStore) {
+
+    private companion object {
+        /** In lockedFields: zelf van andere edities losgekoppeld. */
+        const val WORK_LOCK = "work"
+    }
 
     private val dao = db.bookDao()
 
@@ -275,7 +281,8 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     updatedAt = Instant.now(),
                 ),
             )
-            linkToExistingWork(bookId, work.id, metadata)
+            // Zelf losgekoppeld: niet automatisch weer aan andere edities hangen.
+            if (WORK_LOCK !in locked) linkToExistingWork(bookId, work.id, metadata)
             refreshSearchText(bookId)
             deleteOrphans()
         }
@@ -296,6 +303,71 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
             dao.updateWork(existing.copy(seriesId = own.seriesId, seriesIndex = own.seriesIndex, updatedAt = Instant.now()))
         }
         if (dao.getAuthorNames(existing.id).isEmpty()) setWorkAuthors(existing.id, dao.getAuthorNames(workId))
+    }
+
+    fun observePrimaryWorks(): Flow<List<BookWorkRow>> = dao.observePrimaryWorks()
+
+    /**
+     * Twee boeken zijn edities van hetzelfde werk: het werk van [bookId] gaat op in dat van [otherBookId].
+     * De gegevens van dat werk blijven; lege velden worden aangevuld uit het andere.
+     */
+    suspend fun linkAsSameWork(bookId: Long, otherBookId: Long) = db.withTransaction {
+        val from = dao.getPrimaryWork(bookId) ?: return@withTransaction
+        val into = dao.getPrimaryWork(otherBookId) ?: return@withTransaction
+        if (from.id == into.id) return@withTransaction
+        val affected = dao.bookIdsOfWork(from.id) + dao.bookIdsOfWork(into.id)
+        dao.updateWork(
+            into.copy(
+                originalTitle = into.originalTitle ?: from.originalTitle,
+                originalLanguage = into.originalLanguage ?: from.originalLanguage,
+                firstPublishedYear = listOfNotNull(into.firstPublishedYear, from.firstPublishedYear).minOrNull(),
+                seriesId = into.seriesId ?: from.seriesId,
+                seriesIndex = if (into.seriesId != null) into.seriesIndex else from.seriesIndex,
+                awards = into.awards ?: from.awards,
+                openLibraryWorkId = into.openLibraryWorkId ?: from.openLibraryWorkId,
+                wikidataId = into.wikidataId ?: from.wikidataId,
+                updatedAt = Instant.now(),
+            ),
+        )
+        if (dao.getAuthorNames(into.id).isEmpty()) setWorkAuthors(into.id, dao.getAuthorNames(from.id))
+        dao.moveBookWorks(from.id, into.id)
+        dao.deleteBookWorksOf(from.id)
+        // Samengevoegd is een bewuste keuze: een eerdere "losgekoppeld"-markering vervalt.
+        affected.distinct().forEach { id ->
+            dao.getBook(id)?.let { book -> setLock(book, WORK_LOCK, false) }
+            refreshSearchText(id)
+        }
+        deleteOrphans()
+    }
+
+    /**
+     * Dit boek hoort niet bij de andere edities (een verkeerde koppeling): het krijgt weer een eigen werk,
+     * met dezelfde auteurs en serie, en wordt niet meer automatisch gekoppeld.
+     */
+    suspend fun splitFromWork(bookId: Long) = db.withTransaction {
+        val book = dao.getBook(bookId) ?: return@withTransaction
+        val work = dao.getPrimaryWork(bookId) ?: return@withTransaction
+        if (dao.countBooksForWork(work.id) < 2) return@withTransaction
+        val newWorkId = dao.insertWork(
+            Work(
+                title = book.title,
+                originalTitle = work.originalTitle,
+                originalLanguage = work.originalLanguage,
+                firstPublishedYear = work.firstPublishedYear,
+                seriesId = work.seriesId,
+                seriesIndex = work.seriesIndex,
+            ),
+        )
+        setWorkAuthors(newWorkId, dao.getAuthorNames(work.id))
+        dao.replaceBookWork(bookId, work.id, newWorkId)
+        setLock(book, WORK_LOCK, true)
+        refreshSearchText(bookId)
+    }
+
+    private suspend fun setLock(book: Book, field: String, locked: Boolean) {
+        val current = book.lockedFields.toFieldSet()
+        val updated = if (locked) current + field else current - field
+        if (updated != current) dao.updateBook(book.copy(lockedFields = updated.sorted().joinToString(",").ifEmpty { null }, updatedAt = Instant.now()))
     }
 
     suspend fun delete(bookId: Long) {
