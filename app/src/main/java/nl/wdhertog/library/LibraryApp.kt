@@ -14,6 +14,7 @@ import nl.wdhertog.library.data.repository.LoanRepository
 import nl.wdhertog.library.data.repository.LocationRepository
 import nl.wdhertog.library.data.repository.ReadingRepository
 import nl.wdhertog.library.data.repository.SeriesRepository
+import nl.wdhertog.library.data.sync.SyncRepository
 import nl.wdhertog.library.importer.ImportProfiles
 import nl.wdhertog.library.importer.ImportService
 import nl.wdhertog.library.lookup.EnrichScheduler
@@ -44,6 +45,7 @@ class AppContainer(val app: Application) {
     val loanRepository by lazy { LoanRepository(database, bookRepository) }
     val readingRepository by lazy { ReadingRepository(database) }
     val seriesRepository by lazy { SeriesRepository(database, bookRepository) }
+    val syncRepository by lazy { SyncRepository(database) }
     val importProfiles by lazy { ImportProfiles(app) }
     val importService by lazy { ImportService(database, bookRepository, locationRepository) }
 
