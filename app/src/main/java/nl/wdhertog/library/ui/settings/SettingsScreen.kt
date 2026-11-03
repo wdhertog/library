@@ -36,7 +36,7 @@ import nl.wdhertog.library.reminders.LoanReminderWorker
 /** Instellingen en "over de app" (ontwerp §6.12). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit, onSync: () -> Unit) {
     val context = LocalContext.current
     val container = (context.applicationContext as LibraryApp).container
     val settings = container.settings
@@ -87,6 +87,16 @@ fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
+
+            if (BuildConfig.SYNC) {
+                Header("Synchroniseren")
+                Text(
+                    "Telefoons koppelen en synchroniseren",
+                    Modifier.fillMaxWidth().clickable(onClick = onSync).padding(horizontal = 16.dp, vertical = 14.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
 
             Header("Over de app")
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {

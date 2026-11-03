@@ -101,6 +101,9 @@ object BackupRoute
 object SettingsRoute
 
 @Serializable
+object SyncRoute
+
+@Serializable
 object SeriesListRoute
 
 @Serializable
@@ -207,7 +210,14 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                 )
             }
             composable<SettingsRoute> { entry ->
-                SettingsScreen(onBack = { navController.popFrom(entry) }, onBackup = { navController.navigate(BackupRoute) })
+                SettingsScreen(
+                    onBack = { navController.popFrom(entry) },
+                    onBackup = { navController.navigate(BackupRoute) },
+                    onSync = { navController.navigate(SyncRoute) },
+                )
+            }
+            composable<SyncRoute> { entry ->
+                nl.wdhertog.library.ui.sync.SyncScreen(onBack = { navController.popFrom(entry) })
             }
             composable<BackupRoute> { entry ->
                 BackupScreen(onBack = { navController.popFrom(entry) })

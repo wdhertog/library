@@ -30,6 +30,35 @@ interface SyncDao {
     @Query("SELECT * FROM sync_peer ORDER BY pairedAt")
     suspend fun peers(): List<SyncPeer>
 
+    @Query("SELECT * FROM sync_peer ORDER BY pairedAt")
+    fun observePeers(): kotlinx.coroutines.flow.Flow<List<SyncPeer>>
+
+    @Query("SELECT * FROM sync_peer WHERE deviceId = :deviceId")
+    suspend fun peer(deviceId: String): SyncPeer?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun savePeer(peer: SyncPeer)
+
+    @Query("UPDATE sync_peer SET receivedUpTo = :upTo, lastSyncAt = :at WHERE deviceId = :deviceId")
+    suspend fun markReceived(deviceId: String, upTo: Long, at: Long)
+
+    @Query("DELETE FROM sync_peer WHERE deviceId = :deviceId")
+    suspend fun deletePeer(deviceId: String)
+
+    // Alle bestaande records als gewijzigd markeren, bij het aanzetten van synchroniseren.
+    @Query("INSERT INTO sync_dirty (entity, uuid, deleted) SELECT 'book', uuid, 0 FROM book WHERE uuid NOT IN (SELECT uuid FROM sync_dirty WHERE entity = 'book')")
+    suspend fun markAllBook()
+    @Query("INSERT INTO sync_dirty (entity, uuid, deleted) SELECT 'work', uuid, 0 FROM work WHERE uuid NOT IN (SELECT uuid FROM sync_dirty WHERE entity = 'work')")
+    suspend fun markAllWork()
+    @Query("INSERT INTO sync_dirty (entity, uuid, deleted) SELECT 'series', uuid, 0 FROM series WHERE uuid NOT IN (SELECT uuid FROM sync_dirty WHERE entity = 'series')")
+    suspend fun markAllSeries()
+    @Query("INSERT INTO sync_dirty (entity, uuid, deleted) SELECT 'location', uuid, 0 FROM location WHERE uuid NOT IN (SELECT uuid FROM sync_dirty WHERE entity = 'location')")
+    suspend fun markAllLocation()
+    @Query("INSERT INTO sync_dirty (entity, uuid, deleted) SELECT 'person', uuid, 0 FROM person WHERE uuid NOT IN (SELECT uuid FROM sync_dirty WHERE entity = 'person')")
+    suspend fun markAllPerson()
+    @Query("INSERT INTO sync_dirty (entity, uuid, deleted) SELECT 'loan', uuid, 0 FROM loan WHERE uuid NOT IN (SELECT uuid FROM sync_dirty WHERE entity = 'loan')")
+    suspend fun markAllLoan()
+
     // --- Schaduw, klokken en outbox ---
 
     @Query("SELECT data FROM sync_shadow WHERE entity = :entity AND uuid = :uuid")

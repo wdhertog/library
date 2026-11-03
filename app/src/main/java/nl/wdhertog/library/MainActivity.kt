@@ -25,6 +25,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (BuildConfig.SYNC) (application as LibraryApp).container.syncManager.onForeground()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (BuildConfig.SYNC) (application as LibraryApp).container.syncManager.onBackground()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(EXTRA_OPEN_LOANS, false)) openLoans.value = true

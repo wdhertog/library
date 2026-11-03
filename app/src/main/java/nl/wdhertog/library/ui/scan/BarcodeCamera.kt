@@ -21,12 +21,13 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 
-/** Camerabeeld dat doorlopend EAN-13-barcodes (ISBN) herkent, volledig op het toestel. */
+/** Camerabeeld dat doorlopend barcodes herkent (standaard EAN-13, dus ISBN), volledig op het toestel. */
 @Composable
 fun BarcodeCamera(
     onBarcode: (String) -> Unit,
     torchOn: Boolean,
     modifier: Modifier = Modifier,
+    format: Int = Barcode.FORMAT_EAN_13,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -37,7 +38,7 @@ fun BarcodeCamera(
 
     DisposableEffect(lifecycleOwner) {
         val scanner = BarcodeScanning.getClient(
-            BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_EAN_13).build(),
+            BarcodeScannerOptions.Builder().setBarcodeFormats(format).build(),
         )
         val executor = ContextCompat.getMainExecutor(context)
         controller.imageAnalysisBackpressureStrategy = ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST

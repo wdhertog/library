@@ -15,6 +15,7 @@ class AppSettings(private val context: Context) {
     private val _scanSound = flag(KEY_SCAN_SOUND, true)
     private val _scanVibrate = flag(KEY_SCAN_VIBRATE, true)
     private val _loanReminders = flag(KEY_LOAN_REMINDERS, true)
+    private val _syncInBackground = flag(KEY_SYNC_BACKGROUND, true)
 
     /** Gegevens opzoeken alleen via wifi (niet via mobiele data). */
     val wifiOnly: StateFlow<Boolean> = _wifiOnly
@@ -22,10 +23,14 @@ class AppSettings(private val context: Context) {
     val scanVibrate: StateFlow<Boolean> = _scanVibrate
     val loanReminders: StateFlow<Boolean> = _loanReminders
 
+    /** Bereikbaar blijven voor gekoppelde telefoons als de app niet in beeld is (met vaste melding). */
+    val syncInBackground: StateFlow<Boolean> = _syncInBackground
+
     fun setWifiOnly(value: Boolean) = set(KEY_WIFI_ONLY, _wifiOnly, value)
     fun setScanSound(value: Boolean) = set(KEY_SCAN_SOUND, _scanSound, value)
     fun setScanVibrate(value: Boolean) = set(KEY_SCAN_VIBRATE, _scanVibrate, value)
     fun setLoanReminders(value: Boolean) = set(KEY_LOAN_REMINDERS, _loanReminders, value)
+    fun setSyncInBackground(value: Boolean) = set(KEY_SYNC_BACKGROUND, _syncInBackground, value)
 
     /** Mag er nu meteen worden opgezocht (bijv. de snelle lookup na een scan)? */
     fun mayLookUpNow(): Boolean {
@@ -44,5 +49,6 @@ class AppSettings(private val context: Context) {
         const val KEY_SCAN_SOUND = "scan-sound"
         const val KEY_SCAN_VIBRATE = "scan-vibrate"
         const val KEY_LOAN_REMINDERS = "loan-reminders"
+        const val KEY_SYNC_BACKGROUND = "sync-background"
     }
 }

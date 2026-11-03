@@ -564,6 +564,7 @@ Twee telefoons in één huishouden houden dezelfde collectie bij. Iedereen kan s
 ### Gegevens
 - **Wijzigingenlogboek per telefoon** met oplopende volgnummers. Bij een verbinding vraagt elke telefoon aan de ander: "geef me alles na nummer N". Per gekoppelde telefoon wordt N bijgehouden.
 - **Eén wijziging** bevat: soort record, uuid, de gewijzigde velden met hun nieuwe waarde, en een tijdstempel. Een verwijdering wordt een *grafsteen* (uuid + tijdstip).
+- **Meer dan twee telefoons:** een telefoon kan met meerdere telefoons gekoppeld zijn (bijvoorbeeld ook die van een kind). Wat binnenkomt en wint, geeft hij door aan zijn andere gekoppelde telefoons. Elke nieuwe telefoon hoeft dus maar met één bestaande gekoppeld te worden. Niets gaat terug naar de telefoon waar het vandaan kwam (de tijdstempel bevat het telefoon-id), en wat ergens al bekend is, wint daar niet en gaat niet verder.
 - **Samenvoegen per veld; de laatste wijziging wint.** Per veld onthoudt de app wanneer het voor het laatst gewijzigd is. Wijzig jij de eigenaar en vult de andere telefoon tegelijk de uitgever aan, dan blijven beide staan.
 - **Tijdstempels:** een hybride logische klok (tijd + teller + telefoon-id). Een telefoon met een verkeerd ingestelde klok kan zo geen nieuwere wijzigingen overschrijven.
 - **Vastleggen:** wijzigingen worden in de database zelf vastgelegd (SQLite-triggers op de gedeelde tabellen), zodat ook bulkacties en de achtergrondverrijking automatisch meegaan. Bij het uitwisselen vergelijkt de app met de laatst uitgewisselde versie (een *schaduwkopie*) en stuurt alleen de velden die echt anders zijn.
@@ -594,7 +595,7 @@ Eén randgeval: de ander verwijdert een boek uit de gedeelde collectie waar jij 
 | S2 | **Wijzigingen** opbouwen, verzenden en samenvoegen per veld, met de scheiding gedeeld/persoonlijk. Uitgebreide unit-tests: gelijktijdige wijzigingen, verwijderingen, klokverschillen, de leesgeschiedenis-regel |
 | S3 | **Koppelen en verbinden**: QR-code, sleutels, TLS met vastgepinde sleutel, NSD, het scherm Synchroniseren en de knop "Nu synchroniseren" |
 | S4 | **Eerste keer samenvoegen**: overzicht uitwisselen, herkennen, controlescherm, locaties samenvoegen |
-| S5 | **Achtergronddienst** met melding, starten en stoppen op het thuisnetwerk, covers meesturen |
+| S5 | **Achtergronddienst** met melding (basis al in S3), starten en stoppen op het thuisnetwerk, synchroniseren na wijzigingen, covers meesturen |
 | S6 | **Test met twee telefoons** (jouw toestel en dat van je partner), daarna uitbrengen |
 
 Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de staging-app en een kopie van de gegevens, net als bij de import.
@@ -621,3 +622,15 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
   - **`RoomSyncStore`:** vertaalt tussen tabellen en uitwisselvorm (uuid's, lijsten voor auteurs en werken).
   - **Triggers aangepast:** eerst weghalen, dan invoegen. `INSERT OR REPLACE` in een trigger botst met de `OR ABORT` van Room.
   - **Getest** met twee gesimuleerde telefoons (10 tests) en met twee echte Room-databases via Robolectric (5 tests).
+- **S3 (3 november 2026):** koppelen en verbinden.
+  - **Doorgeven:** de engine zet wat van een andere telefoon binnenkomt en wint, in de eigen outbox (met de oorspronkelijke tijdstempel). Zo werkt A–B–C zonder dat A en C gekoppeld zijn. Niets gaat terug naar de bron.
+  - **`PairingCode`:** de koppelcode (`BIB1:…`) met telefoon-id, naam, vingerafdruk, adres en een eenmalig geheim (10 minuten geldig). De koppelende telefoon bewijst het geheim met een HMAC over zijn id en certificaat.
+  - **`SyncSession`:** het gesprek als JSON-regels (hello, wijzigingen heen en terug, done). Alleen gekoppelde telefoons met het bekende certificaat, of met een geldig koppelbewijs, krijgen iets.
+  - **`SyncIdentity` en `SyncTls`:** een EC-sleutel in de Android Keystore met eigen certificaat; TLS waarbij de verbinder de vingerafdruk van de ander vastpint. Getest met de TLS van Java en met Conscrypt (die van Android).
+  - **`Discovery`:** NSD `_bibliotheek._tcp` met het telefoon-id.
+  - **`SyncManager`:** luistert zolang de app in beeld is en er een gekoppelde telefoon is; automatisch synchroniseren zodra de ander gevonden is (alleen de telefoon met het kleinste id begint); één sessie tegelijk.
+  - **Uit S5 naar voren gehaald:** de achtergronddienst (`SyncService`, type *connectedDevice*) met stille melding, aan/uit in het scherm. Nodig omdat Android apps op de achtergrond bevriest.
+  - **Scherm Synchroniseren:** QR-code tonen, scannen of plakken; gekoppelde telefoons met laatste keer en ontkoppelen; "Nu synchroniseren".
+  - Synchroniseren staat alleen in debug- en staging-builds (`BuildConfig.SYNC`), tot S6 af is. `-PstagingVariant=2` bouwt een tweede testapp (`.staging2`, "Bibliotheek test 2").
+  - **Getest op de Fairphone met twee testapps:** koppelen via plakken; 425 boeken (913 wijzigingen) overgekomen en identiek; favorieten, leeslijst en leessessies bleven op de eigen telefoon; een gewijzigde eigenaar ging met "Nu synchroniseren" over terwijl de andere app op de achtergrond stond. QR-scannen kan pas met twee telefoons getest worden.
+  - **Nog voor S4/S5:** na het terugzetten van een back-up op een andere telefoon moet die een nieuw telefoon-id krijgen; nu gaat het id mee in de back-up.
