@@ -432,7 +432,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
         return dao.findSeries(trimmed) ?: Series(name = trimmed).let { it.copy(id = dao.insertSeries(it)) }
     }
 
-    private suspend fun setWorkAuthors(workId: Long, names: List<String>) {
+    internal suspend fun setWorkAuthors(workId: Long, names: List<String>) {
         dao.clearWorkAuthors(workId)
         dao.insertWorkAuthors(
             names.map(String::trim).filter(String::isNotEmpty).distinctBy(String::lowercase).mapIndexed { index, name ->
@@ -454,7 +454,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
         if (text != book.searchText) dao.updateBook(book.copy(searchText = text))
     }
 
-    private suspend fun deleteOrphans() {
+    internal suspend fun deleteOrphans() {
         dao.deleteOrphanWorks()
         dao.deleteOrphanAuthors()
         dao.deleteOrphanSeries()

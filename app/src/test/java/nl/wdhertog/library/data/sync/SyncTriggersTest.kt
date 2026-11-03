@@ -99,6 +99,19 @@ class SyncTriggersTest {
     }
 
     @Test
+    fun `repeated changes with Room's conflict rule do not fail`() {
+        enable()
+        exec("INSERT OR ABORT INTO book (id, uuid, title, ownership, enrichStatus, searchText, addedAt, updatedAt, favorite, wantToRead) " +
+            "VALUES (1, 'b1', 'Titel', 'OWNED', 'NEW', '', 0, 0, 0, 0)")
+        exec("UPDATE OR ABORT book SET title = 'Een' WHERE id = 1")
+        exec("UPDATE OR ABORT book SET title = 'Twee' WHERE id = 1")
+        insertWork(1, "w1")
+        exec("INSERT OR ABORT INTO book_work (bookId, workId, position) VALUES (1, 1, 0)")
+        exec("UPDATE OR ABORT book_work SET position = 0 WHERE bookId = 1")
+        assertEquals(setOf("book:b1:0", "work:w1:0"), dirty())
+    }
+
+    @Test
     fun `personal data is not recorded`() {
         insertBook(1, "b1")
         enable()

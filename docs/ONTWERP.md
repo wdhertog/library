@@ -611,3 +611,13 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
   - 23 triggers, die alleen vastleggen als synchroniseren aan staat;
   - de hybride klok.
   - Getest met unit-tests op echte SQLite met het Room-schema, en met een upgrade van een echte back-up (425 boeken) in de staging-build.
+- **S2 (3 november 2026):** het hart van de synchronisatie.
+  - **`SyncEngine`:**
+    - uitgaande wijzigingen klaarzetten; alleen echt gewijzigde velden gaan mee, vergeleken met de schaduwkopie;
+    - binnenkomende samenvoegen per veld, met de hybride klok;
+    - verwijderen wint, behalve bij eigen leesgeschiedenis (dan lokaal "niet in bezit" en losgekoppeld);
+    - niets kaatst terug.
+  - **`SyncSchema`:** welke velden gedeeld zijn.
+  - **`RoomSyncStore`:** vertaalt tussen tabellen en uitwisselvorm (uuid's, lijsten voor auteurs en werken).
+  - **Triggers aangepast:** eerst weghalen, dan invoegen. `INSERT OR REPLACE` in een trigger botst met de `OR ABORT` van Room.
+  - **Getest** met twee gesimuleerde telefoons (10 tests) en met twee echte Room-databases via Robolectric (5 tests).
