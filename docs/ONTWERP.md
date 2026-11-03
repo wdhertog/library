@@ -479,7 +479,7 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 Stand 2 november 2026. Fase 1–6 zijn af en uitgebracht als v1.0.
 
 ### Gepland
-- **Meervoudige selectie** (zie hieronder, optie A).
+- **Filter "Meerdere edities"**: alleen boeken waarvan je minstens twee edities of vertalingen hebt (zelfde werk), om dubbelen te vinden. Gevraagd op 3 november 2026, voor later.
 
 ### Uit het ontwerp, nog niet gebouwd
 - **Werken handmatig samenvoegen en splitsen** (§5). Nu gaat dat alleen automatisch via Wikidata of Open Library. Edities die niet herkend worden, kun je nog niet zelf aan elkaar koppelen.
@@ -499,6 +499,8 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 | C. Eigenaar-modus bij scannen | Net als plank-modus: kies een eigenaar en scan; elk gescand boek krijgt die eigenaar | Handig bij het fysiek doorlopen van een gemengde kast | Alleen met boeken met barcode; aanvulling op A, geen vervanging |
 
 **Besloten (2 november 2026): optie A.** C komt er alleen bij als het bij het gebruik gemist wordt.
+
+**Gebouwd (3 november 2026):** lang drukken op een boek in de bibliotheek of op een locatiepagina begint de selectie. Acties: eigenaar, verplaatsen (achteraan, in lijstvolgorde), favoriet aan/uit, leeslijst aan/uit, tags toevoegen, verwijderen. "Alles selecteren" pakt alle boeken in de lijst, of alle boeken op die plek.
 
 ### Bronnen voor meer talen
 - **Roemeens** (geparkeerd, 3 november 2026): de Biblioteca Națională a României heeft alleen Z39.50 (UNIMARC) en een Aleph-webcatalogus op aleph.bibnat.ro, die vanaf hier niet bereikbaar was. Tot er een open HTTP-dienst gevonden is: Open Library en Wikidata.

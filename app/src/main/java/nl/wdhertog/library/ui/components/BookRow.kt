@@ -1,6 +1,11 @@
 package nl.wdhertog.library.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,11 +39,15 @@ fun BookRow(
     locationLabel: String? = null,
     leadingLabel: String? = null,
     trailing: @Composable () -> Unit = {},
+    /** Meervoudige selectie: lang drukken begint, tikken wisselt (zie SelectionTopBar). */
+    selected: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -50,7 +59,17 @@ fun BookRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        CoverImage(item.book.title, item.book.cover, Modifier.size(width = 52.dp, height = 76.dp), showTitle = false)
+        Box {
+            CoverImage(item.book.title, item.book.cover, Modifier.size(width = 52.dp, height = 76.dp), showTitle = false)
+            if (selected) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = "Geselecteerd",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.Center).size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape),
+                )
+            }
+        }
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

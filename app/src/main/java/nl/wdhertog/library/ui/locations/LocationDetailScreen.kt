@@ -49,7 +49,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.repository.LocationNode
 import nl.wdhertog.library.data.repository.LocationTree
+import nl.wdhertog.library.data.db.LocationType
 import nl.wdhertog.library.ui.components.BookRow
+import nl.wdhertog.library.ui.components.SelectionTopBar
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
+import androidx.activity.compose.BackHandler
 import nl.wdhertog.library.ui.navigation.appViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,10 +74,23 @@ fun LocationDetailScreen(
     val node = state.node
     var menuOpen by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<String?>(null) }
+    var selection by remember { mutableStateOf(emptySet<Long>()) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    BackHandler(enabled = selection.isNotEmpty()) { selection = emptySet() }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
+            // "Alles selecteren" = alle boeken op deze plek, in plankvolgorde (bijv. om in één keer de eigenaar te zetten).
+            if (selection.isNotEmpty()) {
+                SelectionTopBar(
+                    selected = state.books.map { it.book.id }.filter { it in selection },
+                    onSelectAll = { selection = state.books.map { it.book.id }.toSet() },
+                    onClear = { selection = emptySet() },
+                    onMessage = { message -> scope.launch { snackbar.showSnackbar(message) } },
+                )
+            } else TopAppBar(
                 title = {
                     Column {
                         Text(node?.location?.name.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -122,7 +142,7 @@ fun LocationDetailScreen(
                         ) {
                             Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Boeken scannen naar deze ${node.location.type.label.lowercase()}")
+                            Text("Boeken scannen naar deze " + if (node.location.type == LocationType.OTHER) "plek" else node.location.type.label.lowercase())
                         }
                     }
                     item { SectionHeader("Binnen ${node.location.name}") }
@@ -144,15 +164,23 @@ fun LocationDetailScreen(
                         )
                     }
                     itemsIndexed(state.books, key = { _, it -> "book-${it.book.id}" }) { index, item ->
+                        val id = item.book.id
                         BookRow(
                             item = item,
-                            onClick = { onOpenBook(item.book.id) },
+                            onClick = {
+                                if (selection.isEmpty()) onOpenBook(id)
+                                else selection = if (id in selection) selection - id else selection + id
+                            },
                             leadingLabel = "${index + 1}",
                             trailing = {
-                                IconButton(onClick = { viewModel.removeBook(item.book.id) }) {
-                                    Icon(Icons.Default.RemoveCircleOutline, contentDescription = "Van deze plek halen")
+                                if (selection.isEmpty()) {
+                                    IconButton(onClick = { viewModel.removeBook(id) }) {
+                                        Icon(Icons.Default.RemoveCircleOutline, contentDescription = "Van deze plek halen")
+                                    }
                                 }
                             },
+                            selected = id in selection,
+                            onLongClick = { selection = selection + id },
                         )
                     }
                 }
