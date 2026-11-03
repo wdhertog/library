@@ -12,7 +12,7 @@ Status: **concept ter review** — nog geen code geschreven.
 | 4 | **Scannen moet snel** | Scan = direct lokaal opslaan. Opzoeken gebeurt los daarvan, op de achtergrond |
 | 5 | Leesactiviteit bijhouden (à la *Have I Read That*) | Leesstatus, leesperiodes (ook herlezen), beoordeling, jaaroverzicht |
 | 6 | Locatie opslaan en opzoeken | Boomstructuur Kamer › Kast › Plank; "plank-modus" bij scannen |
-| 7 | Uitlenen + zelf geleende boeken terugbrengen | Uitleenregistratie in twee richtingen, met herinneringen |
+| 7 | Volledige Have I Read That-import. Gebouwd: schakelaar "Ook boeken die je niet (meer) hebt" bij de import; niet-bezeten boeken als "niet in bezit", met "Geleend" (zelf geleend en teruggebracht) bij de tag `geleend`; formaten E-book en Luisterboek (eigen e-books tellen als bezit); leeslijst-boeken als "wil ik lezen"; bibliotheek toont standaard alleen wat je bezit, met filter Bezit, en zoeken vindt alles | Volledige leesgeschiedenis |
 | 8 | Series | Automatisch uit bronnen, handmatig aan te vullen; overzicht met ontbrekende delen |
 | 9 | NL / EN / DE / FR + enkele andere talen | Bron per taal; handmatig formulier voor de rest |
 | 10 | Open data, geen API-sleutels | Alle standaardbronnen werken zonder sleutel (zie §4) |
@@ -479,7 +479,7 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 Stand 2 november 2026. Fase 1–6 zijn af en uitgebracht als v1.0.
 
 ### Gepland
-- **Fase 7: volledige Have I Read That-import** (zie §8). Details vragen bij de start.
+- **Meervoudige selectie** (zie hieronder, optie A).
 
 ### Uit het ontwerp, nog niet gebouwd
 - **Werken handmatig samenvoegen en splitsen** (§5). Nu gaat dat alleen automatisch via Wikidata of Open Library. Edities die niet herkend worden, kun je nog niet zelf aan elkaar koppelen.

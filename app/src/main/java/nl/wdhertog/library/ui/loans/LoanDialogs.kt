@@ -212,7 +212,8 @@ fun DisposeDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(bookTitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DisposalReason.entries.forEach { option ->
+                    // "Geleend" is geen manier om een eigen boek weg te doen.
+                    DisposalReason.entries.filter { it != DisposalReason.BORROWED }.forEach { option ->
                         FilterChip(selected = reason == option, onClick = { reason = option }, label = { Text(option.label) })
                     }
                 }

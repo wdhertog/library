@@ -14,8 +14,8 @@ android {
         applicationId = "nl.wdhertog.library"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.0"
+        versionCode = 11
+        versionName = "1.1"
 
         // Alleen ARM (alle gangbare telefoons); x86 is voor emulators en scheelt ~35 MB aan ML Kit-bibliotheken.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }

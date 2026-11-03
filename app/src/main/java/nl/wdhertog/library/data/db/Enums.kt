@@ -4,6 +4,8 @@ enum class BookFormat(val label: String) {
     PAPERBACK("Paperback"),
     HARDCOVER("Gebonden"),
     POCKET("Pocket"),
+    EBOOK("E-book"),
+    AUDIO("Luisterboek"),
     OTHER("Anders"),
 }
 
@@ -27,6 +29,8 @@ enum class DisposalReason(val label: String, val verb: String) {
     GIVEN_AWAY("Weggegeven", "Weggegeven"),
     SOLD("Verkocht", "Verkocht"),
     LOST("Kwijt", "Kwijtgeraakt"),
+    /** Nooit van jou geweest: geleend (bibliotheek, vrienden) en teruggebracht. */
+    BORROWED("Geleend", "Geleend gelezen"),
     OTHER("Anders", "Weg"),
 }
 

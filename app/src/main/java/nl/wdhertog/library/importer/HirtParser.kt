@@ -9,6 +9,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import nl.wdhertog.library.data.db.BookFormat
 import nl.wdhertog.library.data.db.DatePrecision
+import nl.wdhertog.library.data.db.DisposalReason
 import nl.wdhertog.library.data.db.ReadingStatus
 import nl.wdhertog.library.lookup.sources.arr
 import nl.wdhertog.library.lookup.sources.int
@@ -40,12 +41,16 @@ object HirtParser {
 
     class FormatException(message: String) : Exception(message)
 
-    fun parse(text: String): HirtExport {
+    /**
+     * Met [includeAll] ook boeken die je niet (meer) hebt, plus e-books en luisterboeken (fase 7):
+     * dan blijft de hele leesgeschiedenis bewaard.
+     */
+    fun parse(text: String, includeAll: Boolean = false): HirtExport {
         val root = runCatching { Json.parseToJsonElement(text) }.getOrNull() as? JsonObject
             ?: throw FormatException("Geen geldig JSON-bestand")
         val items = root["books"] as? JsonArray ?: throw FormatException("Geen Have I Read That-export (\"books\" ontbreekt)")
         val all = items.filterIsInstance<JsonObject>()
-        val books = all.filter(::isOwnedPrintBook).mapNotNull(::toBook)
+        val books = all.filter { includeAll || isOwnedPrintBook(it) }.mapNotNull(::toBook)
         val goals = (root["goals"] as? JsonObject).orEmpty().mapNotNull { (year, target) ->
             val y = year.toIntOrNull()
             val t = (target as? JsonPrimitive)?.intOrNull
@@ -54,10 +59,9 @@ object HirtParser {
         return HirtExport(books, goals, skipped = all.size - books.size)
     }
 
-    private fun isOwnedPrintBook(json: JsonObject): Boolean {
-        val owned = json.str("owned") == "true" || OWN_TAG in tagsOf(json)
-        return owned && json.str("format") !in setOf("ebook", "audio")
-    }
+    private fun isOwned(json: JsonObject): Boolean = json.str("owned") == "true" || OWN_TAG in tagsOf(json)
+
+    private fun isOwnedPrintBook(json: JsonObject): Boolean = isOwned(json) && json.str("format") !in setOf("ebook", "audio")
 
     private fun toBook(json: JsonObject): ImportedBook? {
         var title = json.str("title") ?: return null
@@ -86,6 +90,8 @@ object HirtParser {
             format = when (json.str("format")) {
                 "paperback" -> BookFormat.PAPERBACK
                 "hardcover" -> BookFormat.HARDCOVER
+                "ebook" -> BookFormat.EBOOK
+                "audio" -> BookFormat.AUDIO
                 else -> null
             },
             language = json.str("language"),
@@ -102,7 +108,10 @@ object HirtParser {
             favorite = FAVORITE_TAG in tagsOf(json),
             awards = json.str("awards"),
             wantToRead = status == "to-read",
-            lentTo = if (LENT_TAG in tagsOf(json)) "" else null,
+            // "geleend" bij je eigen boek: uitgeleend. Bij een boek dat je niet hebt: zelf geleend en teruggebracht.
+            lentTo = if (LENT_TAG in tagsOf(json) && isOwned(json)) "" else null,
+            owned = isOwned(json),
+            disposalReason = if (LENT_TAG in tagsOf(json) && !isOwned(json)) DisposalReason.BORROWED else null,
             addedAt = json.str("date_added")?.let(::date),
             readings = readings(json, status),
             hirtId = json.str("id")?.toLongOrNull(),

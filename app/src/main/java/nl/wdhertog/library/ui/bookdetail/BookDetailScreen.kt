@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.db.Book
+import nl.wdhertog.library.data.db.DisposalReason
 import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.repository.BookDetail
 import nl.wdhertog.library.data.repository.LocationTree
@@ -503,7 +504,8 @@ private fun EditionRow(book: Book, location: String?, onClick: () -> Unit) {
 /** "Weggegeven aan Wilfred · 3 nov. 2026"; null als er niets over bekend is. */
 private fun disposalText(book: Book): String? {
     if (book.disposalReason == null && book.disposedTo == null && book.disposedAt == null) return null
-    val what = (book.disposalReason?.verb ?: "Weg") + (book.disposedTo?.let { " aan $it" } ?: "")
+    val preposition = if (book.disposalReason == DisposalReason.BORROWED) "van" else "aan"
+    val what = (book.disposalReason?.verb ?: "Weg") + (book.disposedTo?.let { " $preposition $it" } ?: "")
     return listOfNotNull(what, book.disposedAt?.let { LoanDates.format(it, LocalDate.now()) }).joinToString(" · ")
 }
 

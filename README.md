@@ -84,8 +84,10 @@ Het ontwerp staat in [`docs/ONTWERP.md`](docs/ONTWERP.md), met de keuzes, het da
 
 ## Status
 
-**Versie 1.0** is uitgebracht. Daarna gepland:
-- de volledige Have I Read That-import, met ook gelezen boeken die je niet (meer) bezit;
-- meerdere boeken tegelijk bewerken.
+**Versie 1.1** is uitgebracht, met de volledige Have I Read That-import: ook gelezen boeken die je niet (meer) bezit, en e-books en luisterboeken. Gepland: meerdere boeken tegelijk bewerken.
 
 Fouten of ideeën zijn welkom als [issue](https://github.com/wdhertog/library/issues).
+
+## Licentie
+
+[MIT](LICENSE). De boekgegevens zelf komen uit de genoemde bronnen en vallen onder hun eigen voorwaarden.

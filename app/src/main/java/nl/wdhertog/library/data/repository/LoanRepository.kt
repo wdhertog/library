@@ -3,6 +3,7 @@ package nl.wdhertog.library.data.repository
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import nl.wdhertog.library.data.db.BorrowedRow
 import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.db.Loan
@@ -65,8 +66,13 @@ class LoanRepository(private val db: LibraryDatabase, private val books: BookRep
      * zodat de leesgeschiedenis bewaard blijft; anders wordt het verwijderd.
      */
     suspend fun markBorrowedReturned(bookId: Long, keep: Boolean) {
-        if (keep) dao.setOwnership(bookId, Ownership.NOT_OWNED, null, null, Instant.now())
-        else books.delete(bookId)
+        if (keep) {
+            // "Geleend gelezen", met van wie (de persoon zelf wordt daarna mogelijk opgeruimd).
+            val from = dao.observeBorrowedBooks().first().firstOrNull { it.bookId == bookId }?.personName
+            dao.setDisposed(bookId, DisposalReason.BORROWED, from, LocalDate.now(), Instant.now())
+        } else {
+            books.delete(bookId)
+        }
         dao.deleteUnusedPersons()
     }
 
