@@ -66,6 +66,12 @@ abstract class LibraryDatabase : RoomDatabase() {
                         // Triggers horen niet bij Room's schema; bij elke start (ook na terugzetten) controleren.
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             SyncTriggers.statements.forEach(db::execSQL)
+                            // Na terugzetten: nieuw telefoon-id, geen koppelingen, opnieuw beginnen met bijhouden.
+                            val marker = BackupService.syncResetMarker(context)
+                            if (marker.exists()) {
+                                SyncTriggers.resetStatements.forEach(db::execSQL)
+                                marker.delete()
+                            }
                         }
                     },
                 )

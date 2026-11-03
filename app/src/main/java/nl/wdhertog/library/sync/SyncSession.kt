@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import nl.wdhertog.library.data.sync.HybridClock
 import nl.wdhertog.library.data.sync.SyncChange
 import nl.wdhertog.library.data.sync.SyncEngine
+import nl.wdhertog.library.data.sync.SnapshotRecord
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.security.MessageDigest
@@ -15,6 +16,7 @@ data class KnownPeer(val deviceId: String, val name: String, val fingerprint: St
 
 /** Opslag van gekoppelde telefoons (sync_peer in de app, in het geheugen in tests). */
 interface PeerStore {
+    suspend fun all(): List<KnownPeer>
     suspend fun find(deviceId: String): KnownPeer?
     suspend fun save(peer: KnownPeer)
     suspend fun markReceived(deviceId: String, upTo: Long, at: Long)
@@ -31,6 +33,20 @@ data class SyncResult(
     val sent: Int,
     /** Deze sessie was de koppeling zelf. */
     val paired: Boolean = false,
+    /** Alleen het overzicht voor het eerste samenvoegen is verstuurd. */
+    val snapshot: Boolean = false,
+)
+
+/** De bibliotheek van de andere telefoon, voor het eerste samenvoegen (FirstMerge). */
+@Serializable
+data class RemoteSnapshot(
+    val deviceId: String,
+    val name: String,
+    /** Klokstand na het klaarzetten van al zijn wijzigingen. */
+    val clock: String,
+    /** Is de ander al met andere telefoons gekoppeld (dan hoort hij bij een groep)? */
+    val hasOtherPeers: Boolean,
+    val records: List<SnapshotRecord>,
 )
 
 /**
@@ -61,12 +77,19 @@ class SyncSession(
         val proof: String? = null,
         val items: List<Item>? = null,
         val message: String? = null,
+        /** "snapshot": alleen het overzicht ophalen, voor het eerste samenvoegen. */
+        val mode: String? = null,
+        val snapshot: RemoteSnapshot? = null,
     )
 
     @Serializable
     private data class Item(val seq: Long, val entity: String, val uuid: String, val fields: JsonObject, val hlc: String, val deleted: Boolean)
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
+
+    private companion object {
+        const val SNAPSHOT = "snapshot"
+    }
 
     /**
      * Kant van de telefoon die verbinding maakt met [peerId]. [pairing] alleen bij de eerste keer: de
@@ -107,6 +130,19 @@ class SyncSession(
     }
 
     /**
+     * Het overzicht van de ander ophalen (eerste samenvoegen). De ander slaat deze telefoon dan nog niet
+     * op als gekoppeld; dat gebeurt bij de uitwisseling daarna, met hetzelfde koppelbewijs.
+     */
+    suspend fun fetchSnapshot(reader: BufferedReader, writer: BufferedWriter, pairing: Pair<PairingCode, String>): RemoteSnapshot {
+        val (code, ownFingerprint) = pairing
+        send(writer, Message("hello", deviceId, deviceName, 0, proof = PairingCode.proof(code.secret, deviceId, ownFingerprint), mode = SNAPSHOT))
+        val hello = receive(reader)
+        if (hello.type == "error") throw SyncRefused(hello.message ?: "Geweigerd")
+        if (hello.deviceId != code.deviceId) throw SyncRefused("Andere telefoon dan verwacht")
+        return receive(reader).snapshot ?: throw SyncRefused("Geen overzicht ontvangen")
+    }
+
+    /**
      * Kant van de telefoon die de verbinding aanneemt. [clientFingerprint] komt uit de TLS-verbinding;
      * [pending] is er alleen zolang deze telefoon een koppelcode laat zien.
      */
@@ -115,12 +151,25 @@ class SyncSession(
         val clientId = hello.deviceId ?: return refuse(writer, "Onbekende telefoon")
         val existing = peers.find(clientId)
         var paired = false
+        val snapshotOnly = hello.mode == SNAPSHOT
         val peer = when {
             existing != null && existing.fingerprint == clientFingerprint -> existing
             hello.proof != null && pending != null && now() < pending.expiresAt &&
                 constantTimeEquals(hello.proof, PairingCode.proof(pending.secret, clientId, clientFingerprint)) ->
-                KnownPeer(clientId, hello.name ?: "Telefoon", clientFingerprint, 0).also { peers.save(it); paired = true }
+                KnownPeer(clientId, hello.name ?: "Telefoon", clientFingerprint, 0).also {
+                    if (!snapshotOnly) { peers.save(it); paired = true }
+                }
             else -> return refuse(writer, "Deze telefoon is niet gekoppeld")
+        }
+
+        if (snapshotOnly) {
+            // Eerst alles klaarzetten: wat de ander bij het samenvoegen laat winnen, krijgt dan een latere tijd.
+            engine.prepareOutgoing()
+            send(writer, Message("hello", deviceId, deviceName))
+            val records = engine.snapshot()
+            val others = peers.all().any { it.deviceId != clientId }
+            send(writer, Message("snapshot", snapshot = RemoteSnapshot(deviceId, deviceName, engine.clockNow(), others, records)))
+            return SyncResult(hello.name ?: peer.name, received = 0, sent = records.size, snapshot = true)
         }
 
         engine.prepareOutgoing()

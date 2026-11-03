@@ -633,4 +633,20 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
   - **Scherm Synchroniseren:** QR-code tonen, scannen of plakken; gekoppelde telefoons met laatste keer en ontkoppelen; "Nu synchroniseren".
   - Synchroniseren staat alleen in debug- en staging-builds (`BuildConfig.SYNC`), tot S6 af is. `-PstagingVariant=2` bouwt een tweede testapp (`.staging2`, "Bibliotheek test 2").
   - **Getest op de Fairphone met twee testapps:** koppelen via plakken; 425 boeken (913 wijzigingen) overgekomen en identiek; favorieten, leeslijst en leessessies bleven op de eigen telefoon; een gewijzigde eigenaar ging met "Nu synchroniseren" over terwijl de andere app op de achtergrond stond. QR-scannen kan pas met twee telefoons getest worden.
-  - **Nog voor S4/S5:** na het terugzetten van een back-up op een andere telefoon moet die een nieuw telefoon-id krijgen; nu gaat het id mee in de back-up.
+- **S4 (3 november 2026):** eerste keer samenvoegen.
+  - **Wie samenvoegt:** de telefoon die de code scant, als die nog met geen enkele telefoon gekoppeld is. Hij voegt zich bij de ander (die mag al in een groep zitten).
+    - Is de scannende telefoon al gekoppeld, dan moet het andersom, tenzij de ander leeg en nieuw is.
+    - Twee groepen samenvoegen kan niet.
+  - **Overzicht:** de ander zet eerst al zijn wijzigingen klaar en stuurt dan een overzicht van alle gedeelde records, met zijn klokstand. Hij slaat de scannende telefoon dan nog niet op als gekoppeld; dat gebeurt pas bij de uitwisseling na het samenvoegen, met hetzelfde koppelbewijs.
+  - **`FirstMerge`:**
+    - overeenkomsten: boeken met `ImportMatcher` (ISBN, anders titel + auteur; zelfde titel met een ander ISBN is een twijfelgeval), plekken op pad, series en personen op naam, en daarnaast werken en uitleningen van samengevoegde boeken;
+    - lokale records krijgen de uuid van de ander, en het bijhouden begint opnieuw;
+    - de schaduwkopie per veld bepaalt wie wint: een ingevuld veld wint van een leeg veld, en bij een verschil het record met de laatste wijziging (`updatedAt`). Daarna doet de gewone uitwisseling de rest.
+  - **Controlescherm:** twijfelgevallen bovenaan (standaard apart), daaronder de zekere paren (standaard samen), met aantallen.
+  - **Kopieën:** vóór het samenvoegen maken beide telefoons een kopie (`voor-samenvoegen.zip`, in de app). Die is net als de kopie van vóór het terugzetten terug te zetten in het Back-up-scherm.
+  - **Na terugzetten van een back-up:** nieuw telefoon-id, geen koppelingen, en het bijhouden begint opnieuw. De back-up kan van een andere telefoon komen, of ouder zijn dan wat gekoppelde telefoons al hebben.
+  - **Getest:**
+    - unit-tests: in het geheugen, waarbij de klok van de samenvoegende telefoon achterloopt, en met twee echte Room-databases;
+    - op de Fairphone: "Test" had je back-up (425 boeken), "Test 2" dezelfde bibliotheek met eigen uuid's en verschillen (30 boeken minder, 2 extra, lege eigenaren, nieuwere notities, 5 zonder ISBN, 3 met een ander ISBN);
+    - het controlescherm toonde 395 paren, waarvan 3 twijfel;
+    - na het samenvoegen 430 boeken op beide, identiek: lege velden aangevuld, nieuwere notities gewonnen, geen dubbele plekken of series, en persoonlijke gegevens bleven per telefoon.

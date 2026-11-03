@@ -75,11 +75,39 @@ class InMemorySyncStore : SyncStore {
     override suspend fun outboxAfter(seq: Long) = outbox.filter { it.seq > seq }
     override suspend fun afterApply(touched: Set<Pair<String, String>>) = Unit
 
-    private fun json(value: Any?) = when (value) {
+    /** updatedAt per record voor het eerste samenvoegen; standaard 0. */
+    val updatedAt = mutableMapOf<Pair<String, String>, Long>()
+
+    override suspend fun snapshot() = records.map { (k, v) -> SnapshotRecord(k.first, k.second, v, updatedAt[k] ?: 0) }
+
+    override suspend fun rename(entity: String, from: String, to: String) {
+        records.remove(entity to from)?.let { records[entity to to] = it }
+        updatedAt.remove(entity to from)?.let { updatedAt[entity to to] = it }
+        // Verwijzingen gaan in de echte database via lokale id's; hier de uuid's in andere records bijwerken.
+        records.replaceAll { _, fields ->
+            JsonObject(fields.mapValues { (_, value) ->
+                when (value) {
+                    is kotlinx.serialization.json.JsonPrimitive -> if (value.isString && value.content == from) kotlinx.serialization.json.JsonPrimitive(to) else value
+                    is kotlinx.serialization.json.JsonArray -> kotlinx.serialization.json.JsonArray(value.map {
+                        if (it is kotlinx.serialization.json.JsonPrimitive && it.isString && it.content == from) kotlinx.serialization.json.JsonPrimitive(to) else it
+                    })
+                    else -> value
+                }
+            })
+        }
+    }
+
+    override suspend fun restartTracking() {
+        outbox.clear(); shadows.clear(); clocks.clear(); dirty.clear()
+        records.keys.forEach { dirty[it] = false }
+    }
+
+    private fun json(value: Any?): kotlinx.serialization.json.JsonElement = when (value) {
         null -> JsonNull
         is String -> kotlinx.serialization.json.JsonPrimitive(value)
         is Number -> kotlinx.serialization.json.JsonPrimitive(value)
         is Boolean -> kotlinx.serialization.json.JsonPrimitive(value)
+        is List<*> -> kotlinx.serialization.json.JsonArray(value.map(::json))
         else -> error("onbekend type")
     }
 }

@@ -18,6 +18,7 @@ class SyncSessionTest {
 
     private class MemoryPeers : PeerStore {
         val peers = mutableMapOf<String, KnownPeer>()
+        override suspend fun all() = peers.values.toList()
         override suspend fun find(deviceId: String) = peers[deviceId]
         override suspend fun save(peer: KnownPeer) { peers[peer.deviceId] = peer }
         override suspend fun markReceived(deviceId: String, upTo: Long, at: Long) {
@@ -118,5 +119,31 @@ class SyncSessionTest {
         pairAB()
         val (_, server) = exchange(clientFingerprint = "fp-indringer")
         assertThrows(SyncRefused::class.java) { server.getOrThrow() }
+    }
+
+    @Test
+    fun `snapshot for the first merge does not pair yet`() {
+        b.store.edit("book", "b2", "title" to "Het smelt")
+        val secret = PairingCode.newSecret()
+        val code = PairingCode(b.id, "Telefoon b", b.fingerprint, secret)
+        val snapshot = runBlocking(Dispatchers.IO) {
+            val toB = PipedOutputStream(); val bIn = PipedInputStream(toB, 1 shl 20)
+            val toA = PipedOutputStream(); val aIn = PipedInputStream(toA, 1 shl 20)
+            val server = async {
+                runCatching { b.session.accept(bIn.bufferedReader(), toA.bufferedWriter(), a.fingerprint, PendingPairing(secret, 2_000L)) }
+                    .also { toA.close() }
+            }
+            val result = a.session.fetchSnapshot(aIn.bufferedReader(), toB.bufferedWriter(), code to a.fingerprint)
+            toB.close()
+            assertEquals(true, server.await().getOrThrow().snapshot)
+            result
+        }
+        assertEquals(listOf("b2"), snapshot.records.map { it.uuid })
+        assertEquals(false, snapshot.hasOtherPeers)
+        assertNull(b.peers.peers["a"])
+        // Daarna koppelen met hetzelfde bewijs; de wijziging van b komt nog steeds mee.
+        val (client, server) = exchange(pending = PendingPairing(secret, 2_000L), pairing = code)
+        assertEquals(1, client.getOrThrow().received)
+        assertEquals(true, server.getOrThrow().paired)
     }
 }

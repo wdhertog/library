@@ -17,7 +17,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import nl.wdhertog.library.BuildConfig
+import nl.wdhertog.library.data.sync.FirstMerge
+import nl.wdhertog.library.data.sync.MergePlan
+import nl.wdhertog.library.data.sync.SnapshotRecord
 import nl.wdhertog.library.data.sync.SyncEngine
+import nl.wdhertog.library.data.sync.SyncSchema
 import nl.wdhertog.library.data.sync.SyncRepository
 import nl.wdhertog.library.data.sync.SyncStore
 import java.io.BufferedReader
@@ -38,6 +42,9 @@ sealed interface PairingState {
     /** Deze telefoon laat een code zien en wacht op de andere. */
     data class Showing(val code: PairingCode) : PairingState
     data class Paired(val name: String) : PairingState
+
+    /** Beide telefoons hebben boeken: kiezen welke hetzelfde zijn (alleen op de telefoon die scant). */
+    data class Review(val peerName: String, val plan: MergePlan) : PairingState
 }
 
 /**
@@ -53,7 +60,15 @@ class SyncManager(
     private val store: () -> SyncStore,
     private val scope: CoroutineScope,
     private val inBackground: () -> Boolean,
+    /** Kopie van de bibliotheek vóór het eerste samenvoegen. */
+    private val backup: suspend () -> Unit,
 ) {
+    private val storeInstance by lazy { store() }
+
+    /** Wat er tussen het controlescherm en het samenvoegen bewaard moet blijven. */
+    private class PendingMerge(val code: PairingCode, val remote: RemoteSnapshot, val local: List<SnapshotRecord>, val plan: MergePlan)
+    @Volatile private var pendingMerge: PendingMerge? = null
+
     private val identity by lazy { SyncIdentity.androidKeyStore() }
     private val tls by lazy { SyncTls(identity) }
     private val discovery by lazy { Discovery(context, scope) }
@@ -112,6 +127,8 @@ class SyncManager(
 
     suspend fun startPairing(): PairingCode {
         repo.enable()
+        // De andere telefoon kan hier velden laten winnen bij het samenvoegen.
+        if (repo.peers().isEmpty()) runCatching { backup() }.onFailure { Log.w(TAG, "Kopie mislukt", it) }
         val port = startListening()
         val secret = PairingCode.newSecret()
         pending = PendingPairing(secret, System.currentTimeMillis() + PAIRING_VALID_MILLIS)
@@ -125,22 +142,86 @@ class SyncManager(
         _pairing.value = null
     }
 
-    /** Koppelen met de telefoon die [code] laat zien; meteen de eerste uitwisseling. */
-    suspend fun pairWith(code: PairingCode): Result<SyncResult> = runCatching {
+    /**
+     * Koppelen met de telefoon die [code] laat zien. Hebben beide telefoons boeken, dan eerst het
+     * overzicht van de ander ophalen en samenvoegen (ontwerp §11, S4); met twijfel- of zekere paren
+     * komt het controlescherm ([PairingState.Review]) en gaat het verder met [confirmMerge].
+     * Geeft null terug zolang het controlescherm openstaat.
+     */
+    suspend fun pairWith(code: PairingCode): Result<SyncResult?> = runCatching {
         if (code.deviceId == repo.deviceId()) throw SyncRefused("Dit is de code van deze telefoon zelf")
         repo.enable()
         startListening()
         code.hosts.forEach { lastKnown[code.deviceId] = Endpoint(it, code.port) }
-        val candidates = code.hosts.map { Endpoint(it, code.port) } +
-            listOfNotNull(discovery.found.value[code.deviceId] ?: discovery.await(code.deviceId, 5_000))
-        sessionLock.withLock {
-            exchange(code.name, code.deviceId, code.fingerprint, candidates.distinct()) { reader, writer ->
-                session().connect(reader, writer, code.deviceId, code to identity.fingerprint)
+        // Al eerder gekoppeld (bijv. de code opnieuw gescand): gewoon uitwisselen.
+        if (repo.peerStore.find(code.deviceId) != null) return@runCatching finishPairing(code)
+
+        val remote = sessionLock.withLock {
+            exchange(code.name, code.deviceId, code.fingerprint, candidates(code)) { reader, writer ->
+                session().fetchSnapshot(reader, writer, code to identity.fingerprint)
             }
         }
+        val local = storeInstance.snapshot()
+        val localBooks = local.any { it.entity == SyncSchema.BOOK }
+        val remoteBooks = remote.records.any { it.entity == SyncSchema.BOOK }
+        val localHasPeers = repo.peers().isNotEmpty()
+        when {
+            !localHasPeers -> Unit // deze telefoon voegt zich bij de ander
+            !remoteBooks && !remote.hasOtherPeers -> return@runCatching finishPairing(code) // de ander is leeg en nieuw
+            !remote.hasOtherPeers -> throw SyncRefused(
+                "Deze telefoon is al gekoppeld met andere telefoons. Laat de code op deze telefoon zien en scan hem met ${code.name}.",
+            )
+            else -> throw SyncRefused("Beide telefoons zijn al met andere telefoons gekoppeld. Twee groepen samenvoegen kan niet.")
+        }
+        val plan = FirstMerge.plan(local, remote.records)
+        val merge = PendingMerge(code, remote, local, plan)
+        if (localBooks && remoteBooks && plan.pairs.isNotEmpty()) {
+            pendingMerge = merge
+            _status.value = SyncStatus.Idle
+            _pairing.value = PairingState.Review(code.name, plan)
+            null
+        } else {
+            merge(merge, accepted = emptySet())
+        }
+    }.also { result ->
+        result.onSuccess { r -> r?.let { _pairing.value = PairingState.Paired(it.peerName) } }
+    }
+
+    /** Na het controlescherm: [accepted] zijn de lokale uuid's van de boeken die hetzelfde zijn. */
+    suspend fun confirmMerge(accepted: Set<String>): Result<SyncResult> = runCatching {
+        val merge = pendingMerge ?: throw SyncRefused("Er staat geen samenvoeging klaar")
+        pendingMerge = null
+        merge(merge, accepted)
     }.also { result ->
         result.onSuccess { _pairing.value = PairingState.Paired(it.peerName) }
+        result.onFailure { _pairing.value = null }
     }
+
+    fun cancelMerge() {
+        pendingMerge = null
+        _pairing.value = null
+    }
+
+    private suspend fun merge(merge: PendingMerge, accepted: Set<String>): SyncResult {
+        _status.value = SyncStatus.Busy("Samenvoegen…")
+        if (merge.local.any { it.entity == SyncSchema.BOOK }) backup()
+        val renames = FirstMerge.renames(merge.plan, accepted, merge.local, merge.remote.records)
+        FirstMerge.apply(storeInstance, repo.clock(), renames, merge.local, merge.remote.records, merge.remote.clock)
+        repo.saveClock(repo.clock().current.toString())
+        return finishPairing(merge.code)
+    }
+
+    /** De eerste gewone uitwisseling; daarmee slaan beide telefoons elkaar op als gekoppeld. */
+    private suspend fun finishPairing(code: PairingCode): SyncResult = sessionLock.withLock {
+        exchange(code.name, code.deviceId, code.fingerprint, candidates(code)) { reader, writer ->
+            session().connect(reader, writer, code.deviceId, code to identity.fingerprint)
+        }
+    }
+
+    private suspend fun candidates(code: PairingCode) = (
+        listOfNotNull(discovery.found.value[code.deviceId]) + code.hosts.map { Endpoint(it, code.port) } +
+            listOfNotNull(if (code.hosts.isEmpty()) discovery.await(code.deviceId, 5_000) else null)
+        ).distinct()
 
     /** Met alle gekoppelde telefoons die thuis te vinden zijn. */
     suspend fun syncNow() {
@@ -164,13 +245,13 @@ class SyncManager(
         _status.value = SyncStatus.Done(messages.joinToString("\n"))
     }
 
-    private suspend fun exchange(
+    private suspend fun <T> exchange(
         name: String,
         peerId: String,
         fingerprint: String,
         endpoints: List<Endpoint>,
-        talk: suspend (BufferedReader, BufferedWriter) -> SyncResult,
-    ): SyncResult {
+        talk: suspend (BufferedReader, BufferedWriter) -> T,
+    ): T {
         _status.value = SyncStatus.Busy("Synchroniseren met $name…")
         var lastError: Throwable = SyncRefused("$name niet gevonden op dit netwerk")
         for (endpoint in endpoints) {
@@ -179,7 +260,7 @@ class SyncManager(
             lastKnown[peerId] = endpoint
             return try {
                 withContext(Dispatchers.IO) { socket.use { talk(it.inputStream.bufferedReader(), it.outputStream.bufferedWriter()) } }
-                    .also { _status.value = SyncStatus.Done(describe(it)) }
+                    .also { result -> if (result is SyncResult) _status.value = SyncStatus.Done(describe(result)) }
             } catch (e: Exception) {
                 _status.value = SyncStatus.Failed(e.message ?: "Mislukt")
                 throw e
@@ -190,7 +271,7 @@ class SyncManager(
     }
 
     private suspend fun session(): SyncSession = session ?: SyncSession(
-        SyncEngine(store(), repo.clock(), repo::saveClock),
+        SyncEngine(storeInstance, repo.clock(), repo::saveClock),
         repo.peerStore,
         repo.deviceId(),
         deviceName,
@@ -259,11 +340,19 @@ class SyncManager(
             try {
                 _status.value = SyncStatus.Busy("Synchroniseren…")
                 val result = session().accept(reader, writer, fingerprint, pending)
-                if (result.paired) {
-                    pending = null
-                    _pairing.value = PairingState.Paired(result.peerName)
+                when {
+                    result.snapshot -> {
+                        // Het controlescherm op de andere telefoon kan even duren.
+                        pending = pending?.copy(expiresAt = System.currentTimeMillis() + PAIRING_VALID_MILLIS)
+                        _status.value = SyncStatus.Busy("${result.peerName} kiest welke boeken hetzelfde zijn…")
+                    }
+                    result.paired -> {
+                        pending = null
+                        _pairing.value = PairingState.Paired(result.peerName)
+                        _status.value = SyncStatus.Done(describe(result))
+                    }
+                    else -> _status.value = SyncStatus.Done(describe(result))
                 }
-                _status.value = SyncStatus.Done(describe(result))
             } finally {
                 sessionLock.unlock()
             }

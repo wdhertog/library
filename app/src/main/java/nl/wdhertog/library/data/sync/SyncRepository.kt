@@ -45,17 +45,27 @@ class SyncRepository(private val db: LibraryDatabase) {
      */
     suspend fun enable() = db.withTransaction {
         if (isEnabled()) return@withTransaction
-        dao.markAllBook(); dao.markAllWork(); dao.markAllSeries()
-        dao.markAllLocation(); dao.markAllPerson(); dao.markAllLoan()
+        markAll(dao)
         setEnabled(true)
     }
 
     fun observePeers() = dao.observePeers()
 
+    companion object {
+        /** Alle bestaande gedeelde records als gewijzigd markeren. */
+        suspend fun markAll(dao: SyncDao) {
+            dao.markAllBook(); dao.markAllWork(); dao.markAllSeries()
+            dao.markAllLocation(); dao.markAllPerson(); dao.markAllLoan()
+        }
+    }
+
     suspend fun unpair(deviceId: String) = dao.deletePeer(deviceId)
 
     /** Gekoppelde telefoons voor [nl.wdhertog.library.sync.SyncSession]. */
     val peerStore = object : nl.wdhertog.library.sync.PeerStore {
+        override suspend fun all() = dao.peers().map {
+            nl.wdhertog.library.sync.KnownPeer(it.deviceId, it.name, it.certificateFingerprint, it.receivedUpTo)
+        }
         override suspend fun find(deviceId: String) = dao.peer(deviceId)?.let {
             nl.wdhertog.library.sync.KnownPeer(it.deviceId, it.name, it.certificateFingerprint, it.receivedUpTo)
         }

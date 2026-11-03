@@ -118,6 +118,27 @@ interface SyncDao {
     @Query("DELETE FROM work WHERE id = :id") suspend fun deleteWork(id: Long)
     @Query("DELETE FROM series WHERE id = :id") suspend fun deleteSeries(id: Long)
     @Query("DELETE FROM person WHERE id = :id") suspend fun deletePerson(id: Long)
+
+    // --- Eerste keer samenvoegen ---
+
+    @Query("SELECT uuid, updatedAt FROM book") suspend fun timesBook(): List<UuidTime>
+    @Query("SELECT uuid, updatedAt FROM work") suspend fun timesWork(): List<UuidTime>
+    @Query("SELECT uuid, updatedAt FROM series") suspend fun timesSeries(): List<UuidTime>
+    @Query("SELECT uuid, updatedAt FROM location") suspend fun timesLocation(): List<UuidTime>
+    @Query("SELECT uuid, updatedAt FROM person") suspend fun timesPerson(): List<UuidTime>
+    @Query("SELECT uuid, updatedAt FROM loan") suspend fun timesLoan(): List<UuidTime>
+    @Query("UPDATE book SET uuid = :to WHERE uuid = :from") suspend fun renameBook(from: String, to: String)
+    @Query("UPDATE work SET uuid = :to WHERE uuid = :from") suspend fun renameWork(from: String, to: String)
+    @Query("UPDATE series SET uuid = :to WHERE uuid = :from") suspend fun renameSeries(from: String, to: String)
+    @Query("UPDATE location SET uuid = :to WHERE uuid = :from") suspend fun renameLocation(from: String, to: String)
+    @Query("UPDATE person SET uuid = :to WHERE uuid = :from") suspend fun renamePerson(from: String, to: String)
+    @Query("UPDATE loan SET uuid = :to WHERE uuid = :from") suspend fun renameLoan(from: String, to: String)
+    @Query("DELETE FROM sync_outbox") suspend fun clearOutbox()
+    @Query("DELETE FROM sync_shadow") suspend fun clearShadows()
+    @Query("DELETE FROM sync_field_clock") suspend fun clearClocks()
+    @Query("DELETE FROM sync_dirty") suspend fun clearAllDirty()
 }
 
 data class IdUuid(val id: Long, val uuid: String)
+
+data class UuidTime(val uuid: String, val updatedAt: Long)
