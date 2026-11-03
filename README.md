@@ -84,7 +84,7 @@ Het ontwerp staat in [`docs/ONTWERP.md`](docs/ONTWERP.md), met de keuzes, het da
 
 ## Status
 
-**Versie 1.2** is uitgebracht. Daarin zitten de volledige Have I Read That-import (ook gelezen boeken die je niet (meer) bezit, en e-books en luisterboeken) en het bewerken van meerdere boeken tegelijk. Wat nog gepland staat: zie [§10 Nog te doen](docs/ONTWERP.md#10-nog-te-doen-na-v10).
+**Versie 1.3** is uitgebracht. Daarin zitten de volledige Have I Read That-import, het bewerken van meerdere boeken tegelijk, en edities: een filter voor boeken die je in meerdere edities hebt, en edities zelf koppelen of loskoppelen. Wat nog gepland staat, waaronder synchronisatie tussen telefoons: zie [§10 en §11 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10).
 
 Fouten of ideeën zijn welkom als [issue](https://github.com/wdhertog/library/issues).
 
