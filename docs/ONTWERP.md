@@ -598,3 +598,16 @@ Eén randgeval: de ander verwijdert een boek uit de gedeelde collectie waar jij 
 | S6 | **Test met twee telefoons** (jouw toestel en dat van je partner), daarna uitbrengen |
 
 Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de staging-app en een kopie van de gegevens, net als bij de import.
+
+**Testen in S6:**
+- Beide testers krijgen een aparte testversie (eigen app-id, naast de gewone app). Zo komen echte bibliotheken nooit per ongeluk samen.
+- Beide telefoons zitten op hetzelfde wifi-netwerk.
+- De testversie komt als losse "testversie" op de releasepagina.
+
+### Voortgang
+- **S1 (3 november 2026):**
+  - nieuwe tabellen `sync_meta`, `sync_dirty`, `sync_shadow`, `sync_field_clock`, `sync_outbox` en `sync_peer`;
+  - database versie 4;
+  - 23 triggers, die alleen vastleggen als synchroniseren aan staat;
+  - de hybride klok.
+  - Getest met unit-tests op echte SQLite met het Room-schema, en met een upgrade van een echte back-up (425 boeken) in de staging-build.

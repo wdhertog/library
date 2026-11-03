@@ -47,6 +47,8 @@ android {
             applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging"
             signingConfig = signingConfigs.getByName("debug")
+            // Wel R8, maar de database is uit te lezen (run-as) om bijv. migraties te controleren.
+            isDebuggable = true
             matchingFallbacks += "release"
         }
     }
@@ -101,5 +103,7 @@ dependencies {
     implementation(libs.mlkit.text)
 
     testImplementation(libs.junit)
+    // Echte SQLite in unit-tests, om de sync-triggers tegen het geëxporteerde Room-schema te draaien.
+    testImplementation(libs.sqlite.jdbc)
     testImplementation(libs.kotlinx.coroutines.test)
 }
