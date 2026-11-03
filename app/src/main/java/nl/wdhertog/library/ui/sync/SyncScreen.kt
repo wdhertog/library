@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -96,6 +97,7 @@ fun SyncScreen(onBack: () -> Unit) {
     val peers by container.syncRepository.observePeers().collectAsState(initial = emptyList())
     val status by manager.status.collectAsState()
     val pairing by manager.pairing.collectAsState()
+    val inBackground by container.settings.syncInBackground.collectAsState()
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SyncDialog?>(null) }
     var unpair by remember { mutableStateOf<SyncPeer?>(null) }
@@ -145,6 +147,22 @@ fun SyncScreen(onBack: () -> Unit) {
                 Icon(Icons.Default.Sync, contentDescription = null)
                 Spacer(Modifier.size(8.dp))
                 Text("Nu synchroniseren")
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Op de achtergrond", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Ook synchroniseren als de app niet open is. Er staat dan een stille, vaste melding.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.size(12.dp))
+                Switch(checked = inBackground, onCheckedChange = {
+                    container.settings.setSyncInBackground(it)
+                    manager.backgroundSettingChanged()
+                })
             }
 
             SectionTitle("Gekoppelde telefoons")
@@ -201,7 +219,7 @@ fun SyncScreen(onBack: () -> Unit) {
             title = { Text("${peer.name} ontkoppelen?") },
             text = { Text("Er wordt niets meer uitgewisseld met deze telefoon. De boeken blijven op beide telefoons staan.") },
             confirmButton = {
-                TextButton(onClick = { scope.launch { container.syncRepository.unpair(peer.deviceId) }; unpair = null }) { Text("Ontkoppelen") }
+                TextButton(onClick = { scope.launch { manager.unpair(peer.deviceId) }; unpair = null }) { Text("Ontkoppelen") }
             },
             dismissButton = { TextButton(onClick = { unpair = null }) { Text("Annuleren") } },
         )
@@ -331,6 +349,9 @@ private fun PasteCodeDialog(onCode: (PairingCode) -> Unit, onDismiss: () -> Unit
                 onValueChange = { text = it },
                 label = { Text("Code (begint met BIB1:)") },
                 isError = text.isNotBlank() && code == null,
+                supportingText = code?.let { { Text("Code van ${it.name}") } },
+                // Eén regel: een lange code duwt de knoppen anders onder het toetsenbord.
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
         },

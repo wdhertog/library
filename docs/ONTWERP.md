@@ -595,7 +595,7 @@ Eén randgeval: de ander verwijdert een boek uit de gedeelde collectie waar jij 
 | S2 | **Wijzigingen** opbouwen, verzenden en samenvoegen per veld, met de scheiding gedeeld/persoonlijk. Uitgebreide unit-tests: gelijktijdige wijzigingen, verwijderingen, klokverschillen, de leesgeschiedenis-regel |
 | S3 | **Koppelen en verbinden**: QR-code, sleutels, TLS met vastgepinde sleutel, NSD, het scherm Synchroniseren en de knop "Nu synchroniseren" |
 | S4 | **Eerste keer samenvoegen**: overzicht uitwisselen, herkennen, controlescherm, locaties samenvoegen |
-| S5 | **Achtergronddienst** met melding, starten en stoppen op het thuisnetwerk, covers meesturen |
+| S5 | **Achtergronddienst** met melding (basis al in S3), starten en stoppen op het thuisnetwerk, synchroniseren na wijzigingen, covers meesturen |
 | S6 | **Test met twee telefoons** (jouw toestel en dat van je partner), daarna uitbrengen |
 
 Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de staging-app en een kopie van de gegevens, net als bij de import.
@@ -622,7 +622,15 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
   - **`RoomSyncStore`:** vertaalt tussen tabellen en uitwisselvorm (uuid's, lijsten voor auteurs en werken).
   - **Triggers aangepast:** eerst weghalen, dan invoegen. `INSERT OR REPLACE` in een trigger botst met de `OR ABORT` van Room.
   - **Getest** met twee gesimuleerde telefoons (10 tests) en met twee echte Room-databases via Robolectric (5 tests).
-- **S3 (bezig):**
-  - **Doorgeven:** de engine zet wat van een andere telefoon binnenkomt en wint, in de eigen outbox (met de oorspronkelijke tijdstempel). Zo werkt A–B–C zonder dat A en C gekoppeld zijn.
-  - **`PairingCode`:** de koppelcode (`BIB1:…`) met telefoon-id, naam, vingerafdruk en eenmalig geheim; de koppelende telefoon bewijst het geheim met een HMAC over zijn id en certificaat.
-  - **`SyncSession`:** het gesprek als JSON-regels (hello, wijzigingen heen en terug, done). Alleen gekoppelde telefoons met het bekende certificaat, of met een geldig koppelbewijs, krijgen iets. Getest over een verbinding in het geheugen.
+- **S3 (3 november 2026):** koppelen en verbinden.
+  - **Doorgeven:** de engine zet wat van een andere telefoon binnenkomt en wint, in de eigen outbox (met de oorspronkelijke tijdstempel). Zo werkt A–B–C zonder dat A en C gekoppeld zijn. Niets gaat terug naar de bron.
+  - **`PairingCode`:** de koppelcode (`BIB1:…`) met telefoon-id, naam, vingerafdruk, adres en een eenmalig geheim (10 minuten geldig). De koppelende telefoon bewijst het geheim met een HMAC over zijn id en certificaat.
+  - **`SyncSession`:** het gesprek als JSON-regels (hello, wijzigingen heen en terug, done). Alleen gekoppelde telefoons met het bekende certificaat, of met een geldig koppelbewijs, krijgen iets.
+  - **`SyncIdentity` en `SyncTls`:** een EC-sleutel in de Android Keystore met eigen certificaat; TLS waarbij de verbinder de vingerafdruk van de ander vastpint. Getest met de TLS van Java en met Conscrypt (die van Android).
+  - **`Discovery`:** NSD `_bibliotheek._tcp` met het telefoon-id.
+  - **`SyncManager`:** luistert zolang de app in beeld is en er een gekoppelde telefoon is; automatisch synchroniseren zodra de ander gevonden is (alleen de telefoon met het kleinste id begint); één sessie tegelijk.
+  - **Uit S5 naar voren gehaald:** de achtergronddienst (`SyncService`, type *connectedDevice*) met stille melding, aan/uit in het scherm. Nodig omdat Android apps op de achtergrond bevriest.
+  - **Scherm Synchroniseren:** QR-code tonen, scannen of plakken; gekoppelde telefoons met laatste keer en ontkoppelen; "Nu synchroniseren".
+  - Synchroniseren staat alleen in debug- en staging-builds (`BuildConfig.SYNC`), tot S6 af is. `-PstagingVariant=2` bouwt een tweede testapp (`.staging2`, "Bibliotheek test 2").
+  - **Getest op de Fairphone met twee testapps:** koppelen via plakken; 425 boeken (913 wijzigingen) overgekomen en identiek; favorieten, leeslijst en leessessies bleven op de eigen telefoon; een gewijzigde eigenaar ging met "Nu synchroniseren" over terwijl de andere app op de achtergrond stond. QR-scannen kan pas met twee telefoons getest worden.
+  - **Nog voor S4/S5:** na het terugzetten van een back-up op een andere telefoon moet die een nieuw telefoon-id krijgen; nu gaat het id mee in de back-up.

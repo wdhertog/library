@@ -52,6 +52,7 @@ class SyncManager(
     private val repo: SyncRepository,
     private val store: () -> SyncStore,
     private val scope: CoroutineScope,
+    private val inBackground: () -> Boolean,
 ) {
     private val identity by lazy { SyncIdentity.androidKeyStore() }
     private val tls by lazy { SyncTls(identity) }
@@ -85,13 +86,28 @@ class SyncManager(
         scope.launch { if (repo.peers().isNotEmpty()) startListening() }
     }
 
-    /** De app gaat uit beeld; even wachten, want draaien van het scherm telt ook. */
+    /**
+     * De app gaat uit beeld. Met de achtergronddienst blijft hij bereikbaar; anders stoppen, na even
+     * wachten (draaien van het scherm telt ook als uit beeld gaan).
+     */
     fun onBackground() {
         stopJob?.cancel()
+        if (inBackground() && server != null) return
         stopJob = scope.launch {
             delay(5_000)
             if (_pairing.value !is PairingState.Showing) stopListening()
         }
+    }
+
+    /** De instelling voor de achtergrond is veranderd (vanuit het scherm, dus in beeld). */
+    fun backgroundSettingChanged() {
+        if (!inBackground()) SyncService.stop(context) else if (server != null) SyncService.start(context)
+    }
+
+    /** Na ontkoppelen: zonder gekoppelde telefoons hoeft er niet meer geluisterd te worden. */
+    suspend fun unpair(deviceId: String) {
+        repo.unpair(deviceId)
+        if (repo.peers().isEmpty() && _pairing.value !is PairingState.Showing) stopListening()
     }
 
     suspend fun startPairing(): PairingCode {
@@ -183,6 +199,8 @@ class SyncManager(
     /** Luisteren, aanmelden en zoeken; geeft de poort. */
     private suspend fun startListening(): Int = stateLock.withLock {
         server?.let { return it.localPort }
+        // Starten kan alleen in beeld; daarom nu al, en niet pas bij het uit beeld gaan.
+        if (inBackground()) SyncService.start(context)
         val socket = withContext(Dispatchers.IO) { tls.serverSocket() }
         server = socket
         discovery.register(socket.localPort, repo.deviceId())
@@ -198,6 +216,7 @@ class SyncManager(
     }
 
     private suspend fun stopListening() = stateLock.withLock {
+        SyncService.stop(context)
         autoJob?.cancel()
         discovery.stop()
         discovery.unregister()

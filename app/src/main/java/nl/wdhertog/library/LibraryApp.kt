@@ -47,7 +47,7 @@ class AppContainer(val app: Application) {
     val seriesRepository by lazy { SeriesRepository(database, bookRepository) }
     val syncRepository by lazy { SyncRepository(database) }
     val syncManager by lazy {
-        nl.wdhertog.library.sync.SyncManager(app, syncRepository, { nl.wdhertog.library.data.sync.RoomSyncStore(database, bookRepository) }, appScope)
+        nl.wdhertog.library.sync.SyncManager(app, syncRepository, { nl.wdhertog.library.data.sync.RoomSyncStore(database, bookRepository) }, appScope, { settings.syncInBackground.value })
     }
     val importProfiles by lazy { ImportProfiles(app) }
     val importService by lazy { ImportService(database, bookRepository, locationRepository) }
