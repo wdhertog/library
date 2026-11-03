@@ -670,4 +670,5 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
 - **S6 (3 november 2026, bezig):**
   - **Covers:** een cover die via synchroniseren vervangen wordt, ruimt nu het oude bestand op (als geen ander boek het gebruikt).
   - **Testversie 1.4-test1** voor je zus, als pre-release op GitHub. Het is de staging-build (`nl.wdhertog.library.staging`, "Bibliotheek test"), naast de gewone app, op twee telefoons en met een testinstructie in de release.
+  - **Batterijbesparing:** zolang de app niet is uitgezonderd, staat onder "Op de achtergrond" een uitleg met de knop **Niet beperken**. Die opent de systeemvraag. Sommige telefoons (Samsung, Xiaomi) leggen apps anders toch stil.
   - **Na een geslaagde test:** `BuildConfig.SYNC` aanzetten in release en versie 1.4 uitbrengen.

@@ -3,7 +3,12 @@ package nl.wdhertog.library.ui.sync
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -73,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
@@ -171,6 +177,7 @@ fun SyncScreen(onBack: () -> Unit) {
                     manager.backgroundSettingChanged()
                 })
             }
+            if (inBackground) BatteryHint()
 
             SectionTitle("Gekoppelde telefoons")
             if (peers.isEmpty()) {
@@ -245,6 +252,41 @@ fun SyncScreen(onBack: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { unpair = null }) { Text("Annuleren") } },
         )
+    }
+}
+
+/**
+ * Sommige telefoons (bijv. Samsung, Xiaomi) leggen apps met batterijbesparing toch stil, ook met een
+ * dienst en melding. Dan kan de gebruiker de app hier uitzonderen.
+ */
+@Composable
+private fun BatteryHint() {
+    val context = LocalContext.current
+    val power = context.getSystemService(PowerManager::class.java)
+    var exempt by remember { mutableStateOf(power.isIgnoringBatteryOptimizations(context.packageName)) }
+    // Opnieuw kijken als je terugkomt uit de systeeminstellingen.
+    LifecycleResumeEffect(Unit) {
+        exempt = power.isIgnoringBatteryOptimizations(context.packageName)
+        onPauseOrDispose { }
+    }
+    if (exempt) return
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+        Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 12.dp)) {
+            Text(
+                "Batterijbesparing kan synchroniseren op de achtergrond vertragen of stilleggen, vooral op " +
+                    "Samsung- en Xiaomi-telefoons. Gaan wijzigingen niet vanzelf over, zet de beperking dan uit.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(
+                onClick = {
+                    @SuppressLint("BatteryLife")
+                    val ask = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+                    val list = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    runCatching { context.startActivity(ask) }.recoverCatching { context.startActivity(list) }
+                },
+                modifier = Modifier.align(Alignment.End),
+            ) { Text("Niet beperken") }
+        }
     }
 }
 
