@@ -162,6 +162,16 @@ fun LibraryScreen(
                         onSelect = viewModel::setOwner,
                     )
                 }
+                if (state.hasNotOwned) {
+                    ChoiceChip(
+                        label = if (state.ownership == OwnershipFilter.IN_HOUSE) "Bezit" else state.ownership.label,
+                        selected = state.ownership != OwnershipFilter.IN_HOUSE,
+                        options = OwnershipFilter.entries,
+                        optionLabel = { it.label },
+                        current = state.ownership,
+                        onSelect = viewModel::setOwnership,
+                    )
+                }
                 ChoiceChip(
                     label = state.read.label,
                     selected = state.read != ReadFilter.ALL,
@@ -179,7 +189,7 @@ fun LibraryScreen(
             }
             // Andere filters of sortering: begin weer bovenaan de lijst.
             val listState = rememberLazyListState()
-            LaunchedEffect(state.language, state.location, state.owner, state.favoritesOnly, state.read, state.sort, state.query) {
+            LaunchedEffect(state.language, state.location, state.owner, state.favoritesOnly, state.read, state.ownership, state.sort, state.query) {
                 listState.scrollToItem(0)
             }
             // Eigen regel: in de schuifbare rij met filters zou het aantal buiten beeld kunnen vallen.

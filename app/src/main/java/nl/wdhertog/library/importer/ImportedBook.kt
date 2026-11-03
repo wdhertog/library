@@ -2,6 +2,7 @@ package nl.wdhertog.library.importer
 
 import nl.wdhertog.library.data.db.BookFormat
 import nl.wdhertog.library.data.db.DatePrecision
+import nl.wdhertog.library.data.db.DisposalReason
 import nl.wdhertog.library.data.db.ReadingStatus
 import nl.wdhertog.library.lookup.BookMetadata
 import java.time.LocalDate
@@ -41,7 +42,8 @@ data class ImportedBook(
     val favorite: Boolean = false,
     /** Van wie het boek is (gedeelde collectie). */
     val owner: String? = null,
-    /** Bij niet (meer) in bezit: aan wie en wanneer. */
+    /** Bij niet (meer) in bezit: hoe, aan wie en wanneer. */
+    val disposalReason: DisposalReason? = null,
     val disposedTo: String? = null,
     val disposedAt: LocalDate? = null,
 )

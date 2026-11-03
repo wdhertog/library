@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import nl.wdhertog.library.data.db.BookFormat
+import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.displayTitle
 import nl.wdhertog.library.data.repository.isAwaitingLookup
@@ -78,6 +80,9 @@ fun BookRow(
                 )
             }
             val meta = listOfNotNull(
+                // Wat niet in de kast staat, valt zo op tussen de rest (bijv. in zoekresultaten).
+                "Niet in bezit".takeIf { item.book.ownership == Ownership.NOT_OWNED },
+                item.book.format?.takeIf { it == BookFormat.EBOOK || it == BookFormat.AUDIO }?.label,
                 item.series?.let { s -> s.seriesName + (s.seriesIndex?.let { " #$it" } ?: "") },
                 item.book.publishedYear?.toString(),
                 item.book.language?.uppercase(),

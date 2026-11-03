@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import nl.wdhertog.library.data.repository.ReadingRepository
 import kotlinx.coroutines.launch
 import nl.wdhertog.library.data.db.LocationType
+import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.BookRepository
 import nl.wdhertog.library.data.repository.LocationNode
@@ -30,6 +31,13 @@ enum class SortOrder(val label: String) {
     ADDED("Laatst toegevoegd"),
     YEAR("Jaar van uitgave"),
     LOCATION("Locatie (plankvolgorde)"),
+}
+
+/** Standaard alleen wat in huis staat (eigen en geleende boeken); de leesgeschiedenis telt alles. */
+enum class OwnershipFilter(val label: String) {
+    IN_HOUSE("In bezit"),
+    NOT_OWNED("Niet in bezit"),
+    ALL("Alles"),
 }
 
 enum class ReadFilter(val label: String) {
@@ -56,8 +64,13 @@ data class LibraryUiState(
     val availableOwners: List<String> = emptyList(),
     val favoritesOnly: Boolean = false,
     val read: ReadFilter = ReadFilter.ALL,
+    val ownership: OwnershipFilter = OwnershipFilter.IN_HOUSE,
+    /** Zijn er boeken die je niet (meer) hebt? Anders is de bezit-filter overbodig. */
+    val hasNotOwned: Boolean = false,
 ) {
-    val anyFilter: Boolean get() = language != null || location != null || owner != null || favoritesOnly || read != ReadFilter.ALL
+    val anyFilter: Boolean
+        get() = language != null || location != null || owner != null || favoritesOnly || read != ReadFilter.ALL ||
+            ownership != OwnershipFilter.IN_HOUSE
 }
 
 private data class Filters(
@@ -68,6 +81,7 @@ private data class Filters(
     val owner: String? = null,
     val favoritesOnly: Boolean = false,
     val read: ReadFilter = ReadFilter.ALL,
+    val ownership: OwnershipFilter = OwnershipFilter.IN_HOUSE,
 )
 
 /** Welke boeken (gezien per werk) gelezen zijn en welke je nu leest. */
@@ -129,7 +143,16 @@ class LibraryViewModel(
             val inSelected = selected?.let(LocationTree::descendantIds)
             val treeOrder = flat.withIndex().associate { (index, node) -> node.id to index }
             val words = TextNormalizer.normalize(filters.query).split(' ').filter(String::isNotEmpty)
-            val visible = all
+            // Zoeken vindt ook boeken die je niet (meer) hebt, zolang je niet zelf een bezit-filter kiest.
+            val ownership = if (words.isNotEmpty() && filters.ownership == OwnershipFilter.IN_HOUSE) OwnershipFilter.ALL else filters.ownership
+            val inScope = all.filter {
+                when (ownership) {
+                    OwnershipFilter.IN_HOUSE -> it.item.book.ownership != Ownership.NOT_OWNED
+                    OwnershipFilter.NOT_OWNED -> it.item.book.ownership == Ownership.NOT_OWNED
+                    OwnershipFilter.ALL -> true
+                }
+            }
+            val visible = inScope
                 .filter { filters.language == null || it.item.book.language == filters.language }
                 .filter { inSelected == null || it.item.book.locationId in inSelected }
                 .filter { filters.owner == null || it.item.book.owner == filters.owner }
@@ -148,7 +171,7 @@ class LibraryViewModel(
             LibraryUiState(
                 loading = false,
                 items = visible,
-                totalCount = all.size,
+                totalCount = inScope.size,
                 query = filters.query,
                 sort = filters.sort,
                 language = filters.language,
@@ -160,6 +183,8 @@ class LibraryViewModel(
                 availableOwners = all.mapNotNull { it.item.book.owner }.distinct().sortedBy { it.lowercase() },
                 favoritesOnly = filters.favoritesOnly,
                 read = filters.read,
+                ownership = filters.ownership,
+                hasNotOwned = all.any { it.item.book.ownership == Ownership.NOT_OWNED },
             )
         }
             .flowOn(Dispatchers.Default)
@@ -178,6 +203,8 @@ class LibraryViewModel(
     fun setFavoritesOnly(value: Boolean) = filters.update { it.copy(favoritesOnly = value) }
 
     fun setRead(value: ReadFilter) = filters.update { it.copy(read = value) }
+
+    fun setOwnership(value: OwnershipFilter) = filters.update { it.copy(ownership = value) }
 
     /** Alle filters uit (zoektekst en sortering blijven). */
     fun clearFilters() = filters.update { Filters(query = it.query, sort = it.sort) }

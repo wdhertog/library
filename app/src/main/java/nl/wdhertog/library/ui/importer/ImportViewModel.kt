@@ -96,20 +96,29 @@ class ImportViewModel(
     val runs: StateFlow<List<ImportRun>> = service.observeRuns()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Have I Read That: ook boeken die je niet (meer) hebt, en e-books en luisterboeken. */
+    val hirtIncludeAll = MutableStateFlow(false)
+
     fun openHirt(resolver: ContentResolver, uri: Uri) {
+        val includeAll = hirtIncludeAll.value
         state.value = ImportUiState.Reading
         viewModelScope.launch {
             state.value = try {
                 val (text, name) = withContext(Dispatchers.IO) { readText(resolver, uri) to displayName(resolver, uri) }
-                val export = withContext(Dispatchers.Default) { HirtParser.parse(text) }
+                val export = withContext(Dispatchers.Default) { HirtParser.parse(text, includeAll) }
                 val matches = ImportMatcher.match(export.books, service.existingBooks())
                 ImportUiState.Review(
                     source = HirtParser.SOURCE,
                     fileName = name,
                     items = export.books.zip(matches, ::ReviewItem),
                     goals = export.goals,
-                    summary = "${export.books.size} boeken in je bezit" +
-                        if (export.skipped > 0) " (${export.skipped} andere overgeslagen: niet in bezit, e-book of luisterboek)" else "",
+                    summary = if (includeAll) {
+                        val notOwned = export.books.count { !it.owned }
+                        "${export.books.size} boeken: ${export.books.size - notOwned} in je bezit, $notOwned niet (meer) in bezit"
+                    } else {
+                        "${export.books.size} boeken in je bezit" +
+                            if (export.skipped > 0) " (${export.skipped} andere overgeslagen: niet in bezit, e-book of luisterboek)" else ""
+                    },
                 )
             } catch (e: HirtParser.FormatException) {
                 ImportUiState.Error(e.message ?: "Onbekend formaat")

@@ -2,8 +2,10 @@ package nl.wdhertog.library.importer
 
 import nl.wdhertog.library.data.db.BookFormat
 import nl.wdhertog.library.data.db.DatePrecision
+import nl.wdhertog.library.data.db.DisposalReason
 import nl.wdhertog.library.data.db.ReadingStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -19,6 +21,24 @@ class HirtParserTest {
         assertEquals(listOf(10L, 11L, 14L, 15L), export.books.map { it.hirtId })
         assertEquals(2, export.skipped)
         assertEquals(mapOf(2026 to 16), export.goals)
+    }
+
+    @Test
+    fun `everything when asked, with borrowed books and e-books`() {
+        val all = HirtParser.parse(javaClass.getResource("/importer/hirt_sample.json")!!.readText(), includeAll = true)
+        assertEquals(listOf(10L, 11L, 12L, 13L, 14L, 15L), all.books.map { it.hirtId })
+        assertEquals(0, all.skipped)
+        val ebook = all.books.single { it.hirtId == 12L }
+        assertEquals(BookFormat.EBOOK, ebook.format)
+        assertTrue(ebook.owned)
+        // "geleend" bij een boek dat je niet hebt: zelf geleend en teruggebracht, geen uitlening.
+        val borrowed = all.books.single { it.hirtId == 13L }
+        assertFalse(borrowed.owned)
+        assertEquals(DisposalReason.BORROWED, borrowed.disposalReason)
+        assertNull(borrowed.lentTo)
+        // "geleend" bij je eigen boek blijft een uitlening.
+        assertEquals("", all.books.single { it.hirtId == 11L }.lentTo)
+        assertNull(all.books.single { it.hirtId == 11L }.disposalReason)
     }
 
     @Test

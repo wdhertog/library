@@ -92,6 +92,7 @@ class ImportService(
                 tags = imported.tags.joinToString(", ").ifEmpty { null },
                 notes = imported.notes,
                 ownership = if (imported.owned) Ownership.OWNED else Ownership.NOT_OWNED,
+                disposalReason = imported.disposalReason.takeIf { !imported.owned },
                 disposedTo = imported.disposedTo.takeIf { !imported.owned },
                 disposedAt = imported.disposedAt.takeIf { !imported.owned },
                 favorite = imported.favorite,
