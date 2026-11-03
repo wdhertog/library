@@ -19,8 +19,12 @@ internal fun parseFirstMarcRecord(xml: String): List<MarcField>? {
         .let { list -> (0 until list.length).map { list.item(it) as Element } }
         .firstOrNull { it.getElementsByTagNameNS("*", "datafield").length > 0 }
         ?: return null
+    // Controlevelden (001–009) hebben geen subvelden; hun tekst staat onder code CONTROL.
+    val controls = record.getElementsByTagNameNS("*", "controlfield")
+        .let { list -> (0 until list.length).map { list.item(it) as Element } }
+        .map { MarcField(it.getAttribute("tag"), listOf(CONTROL to it.textContent)) }
     val fields = record.getElementsByTagNameNS("*", "datafield")
-    return (0 until fields.length).map { i ->
+    return controls + (0 until fields.length).map { i ->
         val field = fields.item(i) as Element
         val subs = field.getElementsByTagNameNS("*", "subfield")
         MarcField(
@@ -33,13 +37,18 @@ internal fun parseFirstMarcRecord(xml: String): List<MarcField>? {
     }
 }
 
+/** Subveldcode waaronder de tekst van een controleveld staat. */
+internal const val CONTROL = '@'
+
 internal fun List<MarcField>.field(tag: String): MarcField? = firstOrNull { it.tag == tag }
 
 internal fun List<MarcField>.fields(tag: String): List<MarcField> = filter { it.tag == tag }
 
 /** "Monaldi, Rita" → "Rita Monaldi". */
 internal fun invertName(name: String): String {
-    val clean = name.trim().trimEnd(',', '.')
+    // De punt achteraan is ISBD-interpunctie, behalve na een voorletter ("Rowling, J. K.").
+    val trimmed = name.trim().trimEnd(',')
+    val clean = if (Regex("""(^|[\s.])\p{Lu}\.$""").containsMatchIn(trimmed)) trimmed else trimmed.trimEnd('.')
     val parts = clean.split(", ", limit = 2)
     return if (parts.size == 2) "${parts[1]} ${parts[0]}" else clean
 }

@@ -65,11 +65,15 @@ class MetadataMergerTest {
             override val name = name
             override suspend fun lookup(isbn13: String): BookMetadata? = null
         }
-        val router = SourceRouter(source("KB"), source("OL"), source("DNB"), source("BnF"))
+        val router = SourceRouter(source("KB"), source("OL"), source("DNB"), source("BnF"), source("BNE"), source("SBN"))
         assertEquals(listOf("KB", "OL"), router.sourcesFor("9789023495635").map { it.name })
         assertEquals(listOf("KB", "OL"), router.sourcesFor("9789400514133").map { it.name })
         assertEquals(listOf("DNB", "OL"), router.sourcesFor("9783499246128").map { it.name })
         assertEquals(listOf("BnF", "OL"), router.sourcesFor("9782081285880").map { it.name })
+        assertEquals(listOf("BNE", "OL"), router.sourcesFor("9788408163435").map { it.name })
+        assertEquals(listOf("OL", "BNE"), router.sourcesFor("9789870407566").map { it.name }) // Argentinië
+        assertEquals(listOf("SBN", "OL"), router.sourcesFor("9788804668237").map { it.name })
+        assertEquals(listOf("SBN", "OL"), router.sourcesFor("9791221000000").map { it.name })
         assertEquals(listOf("OL"), router.sourcesFor("9781786076403").map { it.name })
     }
 

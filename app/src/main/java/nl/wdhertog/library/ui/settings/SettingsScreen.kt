@@ -95,7 +95,8 @@ fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit) {
                 Text(
                     "Boekgegevens komen uit open bronnen, zonder account of sleutel: de Koninklijke Bibliotheek " +
                         "(Nederlandse Bibliografie), Open Library, de Deutsche Nationalbibliothek, de Bibliothèque " +
-                        "nationale de France en Wikidata. Daarbij wordt alleen het ISBN of de zoektekst verstuurd.\n\n" +
+                        "nationale de France, de Biblioteca Nacional de España, het Italiaanse Servizio Bibliotecario " +
+                        "Nazionale en Wikidata. Daarbij wordt alleen het ISBN of de zoektekst verstuurd.\n\n" +
                         "Barcodes en covertekst worden op de telefoon zelf herkend (ML Kit); er gaan geen foto's of " +
                         "gebruiksgegevens naar Google. Al je gegevens staan alleen op deze telefoon en in je eigen back-ups.",
                     style = MaterialTheme.typography.bodySmall,

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/">
+  <version>1.2</version>
+  <numberOfRecords>3</numberOfRecords>
+  <records>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>01542nam a2200409 c 4500</leader>
+          <controlfield tag="001">991016850609708606</controlfield>
+          <controlfield tag="003">SpMaBN</controlfield>
+          <controlfield tag="005">20251210172154.0</controlfield>
+          <controlfield tag="008">181204r20182018sp     | |||| 000 f spa^^</controlfield>
+          <datafield ind1=" " ind2=" " tag="015">
+            <subfield code="a">MON18</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="017">
+            <subfield code="a">B 14202-2018</subfield>
+            <subfield code="b">Oficina Depósito Legal Barcelona</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">978-84-9838-266-2</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)1081369132</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(SpMaBN)a6366088</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="040">
+            <subfield code="a">SpMaBN</subfield>
+            <subfield code="b">spa</subfield>
+            <subfield code="c">SpMaBN</subfield>
+            <subfield code="e">rdc</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="041">
+            <subfield code="a">spa</subfield>
+            <subfield code="h">eng</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="080">
+            <subfield code="a">087.5:82</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="100">
+            <subfield code="a">Rowling, J. K.</subfield>
+            <subfield code="d">1965-</subfield>
+            <subfield code="4">aut</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="0" tag="240">
+            <subfield code="a">Harry Potter and the philosopher's stone</subfield>
+            <subfield code="l">Español</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="0" tag="245">
+            <subfield code="a">Harry Potter y la piedra filosofal</subfield>
+            <subfield code="c">J.K. Rowling ; [traducción, Alicia Dellepiane Rawson]</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="250">
+            <subfield code="a">22ª ed.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="260">
+            <subfield code="a">[Barcelona]</subfield>
+            <subfield code="b">Letras de Bolsillo</subfield>
+            <subfield code="c">2018</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="300">
+            <subfield code="a">250 p.</subfield>
+            <subfield code="c">21 cm</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="336">
+            <subfield code="a">Texto (visual)</subfield>
+            <subfield code="2">isbdcontent</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="337">
+            <subfield code="a">sin mediación</subfield>
+            <subfield code="2">isbdmedia</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="490">
+            <subfield code="a">Letras de bolsillo</subfield>
+            <subfield code="v">82</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="490">
+            <subfield code="a">[Harry Potter]</subfield>
+            <subfield code="v">1</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="594">
+            <subfield code="a">Título original: Harry Potter and the philosopher's stone</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="700">
+            <subfield code="a">Dellepiane Rawson, Alicia</subfield>
+            <subfield code="e">traductor</subfield>
+            <subfield code="4">trl</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="901">
+            <subfield code="a">MON1812</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="915">
+            <subfield code="a">Monografías</subfield>
+            <subfield code="b">2018</subfield>
+            <subfield code="c">Libros infantiles y juveniles: literatura</subfield>
+            <subfield code="c">Libros infantiles y juveniles</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="935">
+            <subfield code="a">a6366088</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="956">
+            <subfield code="a">2</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="993">
+            <subfield code="a">6366088</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="994">
+            <subfield code="a">MONOMODERN</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="999">
+            <subfield code="a">DL/2552425</subfield>
+            <subfield code="w">ALPHANUM</subfield>
+            <subfield code="c">1</subfield>
+            <subfield code="i">1106062831</subfield>
+            <subfield code="l">CONSERVACI</subfield>
+            <subfield code="m">BNALCALA</subfield>
+            <subfield code="r">Y</subfield>
+            <subfield code="s">Y</subfield>
+            <subfield code="t">NO_PRESTA</subfield>
+            <subfield code="u">4/12/2018</subfield>
+            <subfield code="x">MONO_MODER</subfield>
+            <subfield code="z">DEPOSITO_LEGAL</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="999">
+            <subfield code="a">12/1220198</subfield>
+            <subfield code="w">ALPHANUM</subfield>
+            <subfield code="c">1</subfield>
+            <subfield code="i">1106062832</subfield>
+            <subfield code="l">SG_PETANTI</subfield>
+            <subfield code="m">BNALCALA</subfield>
+            <subfield code="r">Y</subfield>
+            <subfield code="s">Y</subfield>
+            <subfield code="t">FONDO_MODE</subfield>
+            <subfield code="u">4/12/2018</subfield>
+            <subfield code="x">MONO_MODER</subfield>
+            <subfield code="z">DEPOSITO_LEGAL</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="AVA">
+            <subfield code="0">991016850609708606</subfield>
+            <subfield code="8">221132553690008606</subfield>
+            <subfield code="a">34BNE_INST</subfield>
+            <subfield code="b">BNALCALA</subfield>
+            <subfield code="c">Salón General-Petición anticipada</subfield>
+            <subfield code="d">12/1220198</subfield>
+            <subfield code="e">available</subfield>
+            <subfield code="f">1</subfield>
+            <subfield code="g">0</subfield>
+            <subfield code="j">SG_PETANTI</subfield>
+            <subfield code="k">4</subfield>
+            <subfield code="p">1</subfield>
+            <subfield code="q">Sede de Alcalá de Henares</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="AVA">
+            <subfield code="0">991016850609708606</subfield>
+            <subfield code="8">221132553710008606</subfield>
+            <subfield code="a">34BNE_INST</subfield>
+            <subfield code="b">BNALCALA</subfield>
+            <subfield code="c">Ejemplar de conservación</subfield>
+            <subfield code="d">DL/2552425</subfield>
+            <subfield code="e">available</subfield>
+            <subfield code="f">1</subfield>
+            <subfield code="g">0</subfield>
+            <subfield code="j">CONSERVACI</subfield>
+            <subfield code="k">4</subfield>
+            <subfield code="p">2</subfield>
+            <subfield code="q">Sede de Alcalá de Henares</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordIdentifier>991016850609708606</recordIdentifier>
+      <recordPosition>1</recordPosition>
+    </record>
+  </records>
+  <nextRecordPosition>2</nextRecordPosition>
+  <extraResponseData xmlns:xb="http://www.exlibris.com/repository/search/xmlbeans/">
+    <xb:exact>true</xb:exact>
+    <xb:responseDate>2026-11-03T18:27:31+0100</xb:responseDate>
+  </extraResponseData>
+</searchRetrieveResponse>
