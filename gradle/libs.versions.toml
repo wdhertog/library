@@ -20,6 +20,8 @@ junit = "4.13.2"
 sqliteJdbc = "3.41.2.2"
 robolectric = "4.14.1"
 androidxTestCore = "1.6.1"
+zxing = "3.5.3"
+conscrypt = "2.5.2"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -42,6 +44,8 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
 androidx-camera-mlkit = { module = "androidx.camera:camera-mlkit-vision", version.ref = "camerax" }
+conscrypt-openjdk = { module = "org.conscrypt:conscrypt-openjdk-uber", version.ref = "conscrypt" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 mlkit-barcode = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcode" }
 mlkit-text = { module = "com.google.mlkit:text-recognition", version.ref = "mlkitText" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }

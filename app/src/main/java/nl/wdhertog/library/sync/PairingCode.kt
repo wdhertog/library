@@ -18,6 +18,9 @@ data class PairingCode(
     val name: String,
     val fingerprint: String,
     val secret: String,
+    /** Adressen van de telefoon die de code toont, zodat koppelen niet op het zoeken hoeft te wachten. */
+    val hosts: List<String> = emptyList(),
+    val port: Int = 0,
 ) {
     fun encode(): String = PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(Json.encodeToString(serializer(), this).toByteArray())
 

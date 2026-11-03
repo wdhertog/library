@@ -11,6 +11,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
+        manifestPlaceholders["appLabel"] = "@string/app_name"
         applicationId = "nl.wdhertog.library"
         minSdk = 26
         targetSdk = 36
@@ -36,7 +37,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "SYNC", "true")
+        }
         release {
+            // Synchroniseren is in aanbouw (ontwerp §11) en blijft uit de gewone app tot het af is.
+            buildConfigField("boolean", "SYNC", "false")
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
@@ -44,8 +50,12 @@ android {
         // Releasecode (met R8) naast de gewone app op een toestel testen.
         create("staging") {
             initWith(getByName("release"))
-            applicationIdSuffix = ".staging"
-            versionNameSuffix = "-staging"
+            // -PstagingVariant=2 geeft een tweede testapp (".staging2"), om synchroniseren op één telefoon te testen.
+            val variant = providers.gradleProperty("stagingVariant").orNull.orEmpty()
+            applicationIdSuffix = ".staging$variant"
+            versionNameSuffix = "-staging$variant"
+            manifestPlaceholders["appLabel"] = "Bibliotheek test $variant".trim()
+            buildConfigField("boolean", "SYNC", "true")
             signingConfig = signingConfigs.getByName("debug")
             // Wel R8, maar de database is uit te lezen (run-as) om bijv. migraties te controleren.
             isDebuggable = true
@@ -56,6 +66,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.all {
+            // Conscrypt (de TLS van Android) wil in de JVM bij InetAddress kunnen; zie SyncTlsTest.
+            it.jvmArgs("--add-opens=java.base/java.net=ALL-UNNAMED")
+        }
     }
 
     buildFeatures {
@@ -101,12 +118,14 @@ dependencies {
     implementation(libs.androidx.camera.mlkit)
     implementation(libs.mlkit.barcode)
     implementation(libs.mlkit.text)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     // Echte SQLite in unit-tests, om de sync-triggers tegen het geëxporteerde Room-schema te draaien.
     testImplementation(libs.sqlite.jdbc)
     // Room in unit-tests (twee databases als twee telefoons bij synchronisatie).
     testImplementation(libs.robolectric)
+    testImplementation(libs.conscrypt.openjdk)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
 }

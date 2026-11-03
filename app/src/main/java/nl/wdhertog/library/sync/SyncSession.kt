@@ -25,7 +25,13 @@ data class PendingPairing(val secret: String, val expiresAt: Long)
 
 class SyncRefused(message: String) : Exception(message)
 
-data class SyncResult(val peerName: String, val received: Int, val sent: Int)
+data class SyncResult(
+    val peerName: String,
+    val received: Int,
+    val sent: Int,
+    /** Deze sessie was de koppeling zelf. */
+    val paired: Boolean = false,
+)
 
 /**
  * Het gesprek tussen twee telefoons over één (al versleutelde) verbinding, als JSON-regels:
@@ -97,7 +103,7 @@ class SyncSession(
         send(writer, Message("changes", items = outgoing.map { it.toItem() }))
         val done = receive(reader)
         if (done.type != "done") throw SyncRefused(done.message ?: "Onverwacht antwoord")
-        return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size)
+        return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size, paired = known != null)
     }
 
     /**
@@ -108,11 +114,12 @@ class SyncSession(
         val hello = receive(reader)
         val clientId = hello.deviceId ?: return refuse(writer, "Onbekende telefoon")
         val existing = peers.find(clientId)
+        var paired = false
         val peer = when {
             existing != null && existing.fingerprint == clientFingerprint -> existing
             hello.proof != null && pending != null && now() < pending.expiresAt &&
                 constantTimeEquals(hello.proof, PairingCode.proof(pending.secret, clientId, clientFingerprint)) ->
-                KnownPeer(clientId, hello.name ?: "Telefoon", clientFingerprint, 0).also { peers.save(it) }
+                KnownPeer(clientId, hello.name ?: "Telefoon", clientFingerprint, 0).also { peers.save(it); paired = true }
             else -> return refuse(writer, "Deze telefoon is niet gekoppeld")
         }
 
@@ -125,12 +132,15 @@ class SyncSession(
         engine.applyIncoming(incoming)
         peers.markReceived(clientId, incoming.maxOfOrNull { it.seq } ?: peer.receivedUpTo, now())
         send(writer, Message("done"))
-        return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size)
+        return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size, paired = paired)
     }
 
     /** Wat de ander nog niet heeft; wat van hemzelf komt (doorgegeven via een derde) hoeft niet terug. */
     private suspend fun changesFor(peerId: String, since: Long) =
         engine.changesAfter(since).filter { HybridClock.Timestamp.parse(it.hlc).deviceId != peerId }
+
+    /** Deze telefoon is al met een andere bezig; de verbinder probeert het later opnieuw. */
+    fun refuseBusy(writer: BufferedWriter) = send(writer, Message("error", message = "Even bezig met een andere telefoon, probeer het zo opnieuw"))
 
     private fun refuse(writer: BufferedWriter, message: String): Nothing {
         send(writer, Message("error", message = message))
