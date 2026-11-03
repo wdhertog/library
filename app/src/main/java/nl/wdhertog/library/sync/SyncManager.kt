@@ -2,6 +2,9 @@ package nl.wdhertog.library.sync
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
@@ -11,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -27,6 +31,7 @@ import nl.wdhertog.library.data.sync.SyncStore
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.net.Inet4Address
+import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import javax.net.ssl.SSLServerSocket
 import javax.net.ssl.SSLSocket
@@ -62,8 +67,18 @@ class SyncManager(
     private val inBackground: () -> Boolean,
     /** Kopie van de bibliotheek vóór het eerste samenvoegen. */
     private val backup: suspend () -> Unit,
+    private val covers: () -> CoverFiles,
 ) {
     private val storeInstance by lazy { store() }
+    private val prefs = context.getSharedPreferences("sync", Context.MODE_PRIVATE)
+    private val connectivity = context.getSystemService(ConnectivityManager::class.java)
+    @Volatile private var visible = false
+    /** Het netwerk waarop de koppelcode getoond werd. */
+    @Volatile private var pairingNetwork: String? = null
+    private var networkWatched = false
+    private var engine: SyncEngine? = null
+    private var editJob: Job? = null
+    private var periodicJob: Job? = null
 
     /** Wat er tussen het controlescherm en het samenvoegen bewaard moet blijven. */
     private class PendingMerge(val code: PairingCode, val remote: RemoteSnapshot, val local: List<SnapshotRecord>, val plan: MergePlan)
@@ -97,35 +112,105 @@ class SyncManager(
 
     /** De app komt in beeld. */
     fun onForeground() {
+        visible = true
         stopJob?.cancel()
-        scope.launch { if (repo.peers().isNotEmpty()) startListening() }
+        watchNetwork()
+        scope.launch {
+            if (repo.peers().isNotEmpty() && inBackground()) SyncService.start(context)
+            evaluate()
+        }
     }
 
-    /**
-     * De app gaat uit beeld. Met de achtergronddienst blijft hij bereikbaar; anders stoppen, na even
-     * wachten (draaien van het scherm telt ook als uit beeld gaan).
-     */
+    /** De app gaat uit beeld; even wachten, want draaien van het scherm telt ook als uit beeld gaan. */
     fun onBackground() {
+        visible = false
         stopJob?.cancel()
-        if (inBackground() && server != null) return
         stopJob = scope.launch {
             delay(5_000)
-            if (_pairing.value !is PairingState.Showing) stopListening()
+            evaluate()
         }
+    }
+
+    /** De achtergronddienst is (opnieuw) gestart, bijvoorbeeld na het opstarten van de telefoon. */
+    fun onServiceStarted() {
+        watchNetwork()
+        scope.launch { evaluate() }
     }
 
     /** De instelling voor de achtergrond is veranderd (vanuit het scherm, dus in beeld). */
     fun backgroundSettingChanged() {
-        if (!inBackground()) SyncService.stop(context) else if (server != null) SyncService.start(context)
+        scope.launch {
+            if (inBackground() && repo.peers().isNotEmpty()) SyncService.start(context) else SyncService.stop(context)
+        }
     }
 
     /** Na ontkoppelen: zonder gekoppelde telefoons hoeft er niet meer geluisterd te worden. */
     suspend fun unpair(deviceId: String) {
         repo.unpair(deviceId)
-        if (repo.peers().isEmpty() && _pairing.value !is PairingState.Showing) stopListening()
+        if (repo.peers().isEmpty()) SyncService.stop(context)
+        evaluate()
+    }
+
+    /**
+     * Luisteren en aanmelden zolang er gekoppeld wordt, of er een gekoppelde telefoon is en de app in
+     * beeld is of de telefoon op een thuisnetwerk zit (met de achtergronddienst).
+     */
+    private suspend fun evaluate() {
+        val peers = repo.peers().isNotEmpty()
+        val pairingBusy = _pairing.value is PairingState.Showing || pendingMerge != null
+        val home = isHomeNetwork()
+        val listen = pairingBusy || (peers && (visible || (home && inBackground())))
+        if (listen) startListening() else stopListening()
+        SyncService.update(context, home)
+    }
+
+    private fun watchNetwork() {
+        if (networkWatched) return
+        networkWatched = true
+        connectivity.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { scope.launch { evaluate() } }
+            override fun onLost(network: Network) { scope.launch { evaluate() } }
+            override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) { scope.launch { evaluate() } }
+        })
+    }
+
+    /**
+     * Herkenning van het huidige wifi-netwerk zonder locatietoestemming (de netwerknaam vraagt die wel):
+     * gateway, subnet en domein. Thuis is een netwerk waar al eens gesynchroniseerd is.
+     */
+    private fun networkKey(): String? {
+        val network = connectivity.activeNetwork ?: return null
+        val capabilities = connectivity.getNetworkCapabilities(network) ?: return null
+        if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) return null
+        val link = connectivity.getLinkProperties(network) ?: return null
+        val gateway = link.routes.firstOrNull { it.isDefaultRoute && it.gateway is Inet4Address }?.gateway?.hostAddress
+        val subnet = link.linkAddresses.firstOrNull { it.address is Inet4Address }?.let { address ->
+            val bytes = address.address.address
+            val mask = if (address.prefixLength == 0) 0 else -1 shl (32 - address.prefixLength)
+            val ip = bytes.fold(0) { acc, b -> (acc shl 8) or (b.toInt() and 0xff) } and mask
+            "${ip ushr 24 and 0xff}.${ip ushr 16 and 0xff}.${ip ushr 8 and 0xff}.${ip and 0xff}/${address.prefixLength}"
+        }
+        if (gateway == null && subnet == null) return null
+        val digest = MessageDigest.getInstance("SHA-256").digest("$gateway|$subnet|${link.domains.orEmpty()}".toByteArray())
+        return digest.take(8).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun isHomeNetwork() = networkKey()?.let { it in prefs.getStringSet(KEY_HOME, emptySet()).orEmpty() } == true
+
+    private fun rememberNetwork(key: String? = networkKey()) {
+        key ?: return
+        val known = prefs.getStringSet(KEY_HOME, emptySet()).orEmpty()
+        if (key !in known) {
+            prefs.edit().putStringSet(KEY_HOME, known + key).apply()
+            scope.launch { evaluate() }
+        }
     }
 
     suspend fun startPairing(): PairingCode {
+        // Nu de app nog in beeld is: de koppeling komt rond als de andere telefoon scant, en dan
+        // kan het zijn dat deze app net uit beeld is (en een dienst niet meer mag starten).
+        if (inBackground()) SyncService.start(context)
+        pairingNetwork = networkKey()
         repo.enable()
         // De andere telefoon kan hier velden laten winnen bij het samenvoegen.
         if (repo.peers().isEmpty()) runCatching { backup() }.onFailure { Log.w(TAG, "Kopie mislukt", it) }
@@ -140,6 +225,10 @@ class SyncManager(
     fun cancelPairing() {
         pending = null
         _pairing.value = null
+        scope.launch {
+            if (repo.peers().isEmpty()) SyncService.stop(context)
+            evaluate()
+        }
     }
 
     /**
@@ -150,6 +239,7 @@ class SyncManager(
      */
     suspend fun pairWith(code: PairingCode): Result<SyncResult?> = runCatching {
         if (code.deviceId == repo.deviceId()) throw SyncRefused("Dit is de code van deze telefoon zelf")
+        if (inBackground()) SyncService.start(context)
         repo.enable()
         startListening()
         code.hosts.forEach { lastKnown[code.deviceId] = Endpoint(it, code.port) }
@@ -200,6 +290,10 @@ class SyncManager(
     fun cancelMerge() {
         pendingMerge = null
         _pairing.value = null
+        scope.launch {
+            if (repo.peers().isEmpty()) SyncService.stop(context)
+            evaluate()
+        }
     }
 
     private suspend fun merge(merge: PendingMerge, accepted: Set<String>): SyncResult {
@@ -216,7 +310,14 @@ class SyncManager(
         exchange(code.name, code.deviceId, code.fingerprint, candidates(code)) { reader, writer ->
             session().connect(reader, writer, code.deviceId, code to identity.fingerprint)
         }
-    }
+    }.also { afterPaired() }
+
+    /**
+     * Gekoppeld (aan deze of de andere kant): dit netwerk is thuis. De dienst draait al sinds het koppelen
+     * begon. Is de app inmiddels uit beeld, dan geeft Android geen netwerkgegevens meer; dan geldt het
+     * netwerk van toen de code werd getoond.
+     */
+    private fun afterPaired() = rememberNetwork(networkKey() ?: pairingNetwork)
 
     private suspend fun candidates(code: PairingCode) = (
         listOfNotNull(discovery.found.value[code.deviceId]) + code.hosts.map { Endpoint(it, code.port) } +
@@ -260,7 +361,12 @@ class SyncManager(
             lastKnown[peerId] = endpoint
             return try {
                 withContext(Dispatchers.IO) { socket.use { talk(it.inputStream.bufferedReader(), it.outputStream.bufferedWriter()) } }
-                    .also { result -> if (result is SyncResult) _status.value = SyncStatus.Done(describe(result)) }
+                    .also { result ->
+                        if (result is SyncResult) {
+                            _status.value = SyncStatus.Done(describe(result))
+                            if (!result.snapshot) rememberNetwork()
+                        }
+                    }
             } catch (e: Exception) {
                 _status.value = SyncStatus.Failed(e.message ?: "Mislukt")
                 throw e
@@ -270,18 +376,20 @@ class SyncManager(
         throw lastError
     }
 
+    private suspend fun engine(): SyncEngine =
+        engine ?: SyncEngine(storeInstance, repo.clock(), repo::saveClock).also { engine = it }
+
     private suspend fun session(): SyncSession = session ?: SyncSession(
-        SyncEngine(storeInstance, repo.clock(), repo::saveClock),
+        engine(),
         repo.peerStore,
         repo.deviceId(),
         deviceName,
+        covers = covers(),
     ).also { session = it }
 
     /** Luisteren, aanmelden en zoeken; geeft de poort. */
     private suspend fun startListening(): Int = stateLock.withLock {
         server?.let { return it.localPort }
-        // Starten kan alleen in beeld; daarom nu al, en niet pas bij het uit beeld gaan.
-        if (inBackground()) SyncService.start(context)
         val socket = withContext(Dispatchers.IO) { tls.serverSocket() }
         server = socket
         discovery.register(socket.localPort, repo.deviceId())
@@ -293,17 +401,55 @@ class SyncManager(
             }
         }
         autoJob = scope.launch { discovery.found.collect { autoSync(it.keys) } }
+        // Na een wijziging hier: als het even stil is, meteen doorgeven.
+        editJob = scope.launch {
+            repo.observeDirtyCount().collectLatest { count ->
+                if (count > 0) {
+                    delay(EDIT_DELAY_MILLIS)
+                    // Los van deze flow: het klaarzetten leegt sync_dirty, en dat zou het versturen afbreken.
+                    scope.launch { pushChanges() }
+                }
+            }
+        }
+        periodicJob = scope.launch {
+            while (isActive) {
+                delay(PERIODIC_MILLIS)
+                lastAuto.clear()
+                autoSync(discovery.found.value.keys)
+            }
+        }
         socket.localPort
     }
 
     private suspend fun stopListening() = stateLock.withLock {
-        SyncService.stop(context)
+        if (server == null) return@withLock
+        editJob?.cancel()
+        periodicJob?.cancel()
         autoJob?.cancel()
         discovery.stop()
         discovery.unregister()
         runCatching { server?.close() }
         serverJob?.cancel()
         server = null
+    }
+
+    /** Eigen wijzigingen klaarzetten en, als er iets is, naar de gevonden gekoppelde telefoons sturen. */
+    private suspend fun pushChanges() {
+        if (!sessionLock.tryLock()) return
+        try {
+            if (engine().prepareOutgoing() == 0) return
+            val found = discovery.found.value
+            for (peer in repo.peers()) {
+                val endpoint = found[peer.deviceId] ?: continue
+                runCatching {
+                    exchange(peer.name, peer.deviceId, peer.certificateFingerprint, listOf(endpoint)) { r, w ->
+                        session().connect(r, w, peer.deviceId)
+                    }
+                }.onFailure { Log.i(TAG, "Doorgeven mislukt: ${it.message}") }
+            }
+        } finally {
+            sessionLock.unlock()
+        }
     }
 
     private suspend fun autoSync(found: Set<String>) {
@@ -350,8 +496,12 @@ class SyncManager(
                         pending = null
                         _pairing.value = PairingState.Paired(result.peerName)
                         _status.value = SyncStatus.Done(describe(result))
+                        afterPaired()
                     }
-                    else -> _status.value = SyncStatus.Done(describe(result))
+                    else -> {
+                        _status.value = SyncStatus.Done(describe(result))
+                        rememberNetwork()
+                    }
                 }
             } finally {
                 sessionLock.unlock()
@@ -363,7 +513,8 @@ class SyncManager(
     }
 
     private fun describe(result: SyncResult) =
-        "${result.peerName}: ${result.received} ontvangen, ${result.sent} verstuurd"
+        "${result.peerName}: ${result.received} ontvangen, ${result.sent} verstuurd" +
+            if (result.coversReceived > 0) ", ${result.coversReceived} covers" else ""
 
     private fun localAddresses(): List<String> {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
@@ -378,5 +529,8 @@ class SyncManager(
         const val RELEASE_ID = "nl.wdhertog.library"
         const val PAIRING_VALID_MILLIS = 10 * 60_000L
         const val AUTO_INTERVAL_MILLIS = 2 * 60_000L
+        const val EDIT_DELAY_MILLIS = 15_000L
+        const val PERIODIC_MILLIS = 15 * 60_000L
+        const val KEY_HOME = "home-networks"
     }
 }

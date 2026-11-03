@@ -26,10 +26,19 @@ class SyncSessionTest {
         }
     }
 
+    private class MemoryCovers : CoverFiles {
+        val files = mutableMapOf<String, ByteArray>()
+        val referenced = mutableSetOf<String>()
+        override suspend fun missing() = (referenced - files.keys).toList()
+        override suspend fun read(name: String) = files[name]
+        override suspend fun write(name: String, data: ByteArray) { files[name] = data }
+    }
+
     private class Phone(val id: String, val fingerprint: String) {
         val store = InMemorySyncStore()
         val peers = MemoryPeers()
-        val session = SyncSession(SyncEngine(store, HybridClock(id) { 1_000L }) {}, peers, id, "Telefoon $id") { 1_000L }
+        val covers = MemoryCovers()
+        val session = SyncSession(SyncEngine(store, HybridClock(id) { 1_000L }) {}, peers, id, "Telefoon $id", { 1_000L }, covers)
     }
 
     private val a = Phone("a", "fp-a") // maakt verbinding
@@ -145,5 +154,25 @@ class SyncSessionTest {
         val (client, server) = exchange(pending = PendingPairing(secret, 2_000L), pairing = code)
         assertEquals(1, client.getOrThrow().received)
         assertEquals(true, server.getOrThrow().paired)
+    }
+
+    @Test
+    fun `own covers go both ways`() {
+        pairAB()
+        a.covers.files["aaaa-1.jpg"] = byteArrayOf(1, 2, 3)
+        b.covers.files["bbbb-2.jpg"] = byteArrayOf(4, 5)
+        a.covers.referenced += listOf("aaaa-1.jpg", "bbbb-2.jpg", "nergens.jpg")
+        b.covers.referenced += listOf("aaaa-1.jpg", "bbbb-2.jpg", "../buiten.jpg")
+        val (client, server) = exchange()
+        assertEquals(1, client.getOrThrow().coversReceived)
+        assertEquals(1, server.getOrThrow().coversReceived)
+        assertEquals(listOf<Byte>(4, 5), a.covers.files["bbbb-2.jpg"]?.toList())
+        assertEquals(listOf<Byte>(1, 2, 3), b.covers.files["aaaa-1.jpg"]?.toList())
+    }
+
+    @Test
+    fun `cover names cannot be paths`() {
+        assertEquals(true, CoverFiles.isValidName("80856c53-4d7f-42b4-aa20-e61c596da05d.jpg"))
+        for (bad in listOf("../buiten.jpg", "a/b.jpg", "x.png", ".jpg", "x.jpg\n")) assertEquals(bad, false, CoverFiles.isValidName(bad))
     }
 }

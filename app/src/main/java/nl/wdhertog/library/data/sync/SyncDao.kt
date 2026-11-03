@@ -24,6 +24,12 @@ interface SyncDao {
     @Query("SELECT * FROM sync_dirty")
     suspend fun dirty(): List<SyncDirty>
 
+    @Query("SELECT COUNT(*) FROM sync_dirty")
+    fun observeDirtyCount(): kotlinx.coroutines.flow.Flow<Int>
+
+    @Query("SELECT DISTINCT coverFile FROM book WHERE coverFile IS NOT NULL")
+    suspend fun coverFiles(): List<String>
+
     @Query("DELETE FROM sync_dirty WHERE entity = :entity AND uuid = :uuid")
     suspend fun clearDirty(entity: String, uuid: String)
 

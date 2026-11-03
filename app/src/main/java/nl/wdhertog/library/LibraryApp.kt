@@ -47,10 +47,18 @@ class AppContainer(val app: Application) {
     val seriesRepository by lazy { SeriesRepository(database, bookRepository) }
     val syncRepository by lazy { SyncRepository(database) }
     val syncManager by lazy {
-        nl.wdhertog.library.sync.SyncManager(app, syncRepository, { nl.wdhertog.library.data.sync.RoomSyncStore(database, bookRepository) }, appScope, { settings.syncInBackground.value }) {
-            java.io.File(app.filesDir, "backups").mkdirs()
-            java.io.File(app.filesDir, nl.wdhertog.library.data.backup.BackupService.BEFORE_MERGE).outputStream().use { backupService.createBackup(it) }
-        }
+        nl.wdhertog.library.sync.SyncManager(
+            context = app,
+            repo = syncRepository,
+            store = { nl.wdhertog.library.data.sync.RoomSyncStore(database, bookRepository) },
+            scope = appScope,
+            inBackground = { settings.syncInBackground.value },
+            backup = {
+                java.io.File(app.filesDir, "backups").mkdirs()
+                java.io.File(app.filesDir, nl.wdhertog.library.data.backup.BackupService.BEFORE_MERGE).outputStream().use { backupService.createBackup(it) }
+            },
+            covers = { nl.wdhertog.library.sync.RoomCoverFiles(app, database.syncDao()) },
+        )
     }
     val importProfiles by lazy { ImportProfiles(app) }
     val importService by lazy { ImportService(database, bookRepository, locationRepository) }

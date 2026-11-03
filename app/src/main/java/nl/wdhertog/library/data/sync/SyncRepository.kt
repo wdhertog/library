@@ -51,6 +51,9 @@ class SyncRepository(private val db: LibraryDatabase) {
 
     fun observePeers() = dao.observePeers()
 
+    /** Aantal nog niet klaargezette wijzigingen (vult zich via de triggers). */
+    fun observeDirtyCount() = dao.observeDirtyCount()
+
     companion object {
         /** Alle bestaande gedeelde records als gewijzigd markeren. */
         suspend fun markAll(dao: SyncDao) {

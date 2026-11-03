@@ -554,8 +554,8 @@ Twee telefoons in één huishouden houden dezelfde collectie bij. Iedereen kan s
 - Gekoppelde telefoons zijn te ontkoppelen.
 
 **Op de achtergrond**
-- Op een netwerk waar al eens met de andere telefoon is gesynchroniseerd, draait een *foreground service*. Android vereist daarvoor een vaste melding: stil en klein, "Bibliotheek: klaar om te synchroniseren".
-- Buiten dat netwerk stopt de dienst vanzelf.
+- Met een gekoppelde telefoon draait een *foreground service*. Android vereist daarvoor een vaste melding: stil en klein, "Klaar om te synchroniseren".
+- Alleen op een thuisnetwerk (een wifi-netwerk waar al eens is gesynchroniseerd) luistert de app en meldt hij zich aan. Elders blijft de dienst bestaan, met de melding "wacht op het thuisnetwerk". Android staat niet toe dat de dienst later vanaf de achtergrond opnieuw start.
 - In Instellingen is dit uit te zetten. Dan synchroniseert de app alleen als hij open staat (en via **Nu synchroniseren**).
 
 **Wanneer**
@@ -596,7 +596,7 @@ Eén randgeval: de ander verwijdert een boek uit de gedeelde collectie waar jij 
 | S3 | **Koppelen en verbinden**: QR-code, sleutels, TLS met vastgepinde sleutel, NSD, het scherm Synchroniseren en de knop "Nu synchroniseren" |
 | S4 | **Eerste keer samenvoegen**: overzicht uitwisselen, herkennen, controlescherm, locaties samenvoegen |
 | S5 | **Achtergronddienst** met melding (basis al in S3), starten en stoppen op het thuisnetwerk, synchroniseren na wijzigingen, covers meesturen |
-| S6 | **Test met twee telefoons** (jouw toestel en dat van je partner), daarna uitbrengen |
+| S6 | **Test met twee telefoons** (twee testversies, door je zus), daarna synchroniseren aanzetten in de gewone app en uitbrengen |
 
 Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de staging-app en een kopie van de gegevens, net als bij de import.
 
@@ -650,3 +650,21 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
     - op de Fairphone: "Test" had je back-up (425 boeken), "Test 2" dezelfde bibliotheek met eigen uuid's en verschillen (30 boeken minder, 2 extra, lege eigenaren, nieuwere notities, 5 zonder ISBN, 3 met een ander ISBN);
     - het controlescherm toonde 395 paren, waarvan 3 twijfel;
     - na het samenvoegen 430 boeken op beide, identiek: lege velden aangevuld, nieuwere notities gewonnen, geen dubbele plekken of series, en persoonlijke gegevens bleven per telefoon.
+- **S5 (3 november 2026):** achtergrond, thuisnetwerk en covers.
+  - **Thuisnetwerk:** herkend zonder locatietoestemming (de wifi-naam vraagt die wel), aan de hand van gateway, subnet en domein, als korte hash. Een netwerk wordt thuis na een geslaagde uitwisseling of koppeling.
+  - **Wanneer de app luistert:** tijdens het koppelen, of met een gekoppelde telefoon als de app in beeld is of (met de achtergronddienst) op een thuisnetwerk.
+  - **Achtergronddienst:**
+    - start bij "Code laten zien" en "Koppelen", en bij het openen van de app (vanaf de achtergrond mag het niet);
+    - na het opstarten van de telefoon en na een update van de app start hij weer (`SyncBootReceiver`).
+  - **Na een wijziging:** als het 15 seconden stil is, worden de eigen wijzigingen klaargezet. Is er iets nieuws, dan gaan ze naar de gevonden telefoons.
+  - **Daarnaast:** elke 15 minuten een ronde, en zodra een telefoon gevonden wordt.
+  - **Covers:** aan het eind van elke uitwisseling vraagt elke kant de eigen foto's die bij een boek horen maar hier ontbreken. Alleen gewone bestandsnamen (`[A-Za-z0-9-].jpg`), hooguit 8 MB, eerst naar een tijdelijk bestand.
+  - **Getest op de Fairphone:**
+    - bij het koppelen kwamen de 6 eigen covers mee;
+    - na een update van de app startten beide diensten vanzelf;
+    - een gewijzigde eigenaar in "Test 2" stond 15 seconden later in "Test", die op de achtergrond stond.
+  - **Gevonden en opgelost:**
+    - de dienst mocht niet starten toen de koppeling aan de achtergrondkant rond kwam (start nu bij het tonen van de code);
+    - Android geeft een app op de achtergrond geen netwerkgegevens (het netwerk van het tonen van de code geldt);
+    - het doorgeven werd afgebroken door de eigen wachtlogica.
+  - **Nog niet:** een cover die via synchroniseren vervangen wordt, laat het oude bestand staan.
