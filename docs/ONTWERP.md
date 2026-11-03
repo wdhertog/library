@@ -513,15 +513,15 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 - **F-Droid-variant zonder ML Kit** (§2).
 
 ### Losse eindjes
-- **Dubbele series samenvoegen** in de app (via Series → ⋮ → Samenvoegen met…):
-  - "Arsène Lupin" met "Arsène Lupin literary series";
-  - "In de ban van de ring" met "The Lord of the Rings".
+- **Dubbele series samenvoegen** in de app. De serielijst wijst nu zelf waarschijnlijk dubbele series aan (kaartje "Mogelijk dezelfde serie", met Samenvoegen of Negeren), zoals "Arsène Lupin" en "Arsène Lupin literary series". Dezelfde serie in een andere taal herkent de app niet; die voeg je zelf samen via Series → ⋮ → Samenvoegen met…:
+  - "In de ban van de ring" met "The Lord of the Rings";
+  - "De Grijze Jager" met "Ranger's Apprentice".
 - **Opruimen:** `samples/repo-voor-herschrijven.bundle` (oude geschiedenis) verwijderen zodra de herschreven repo in orde blijkt.
 - **Pull request #4** toont op GitHub nog de oude namen in de diff. Opruimen kan alleen via GitHub Support ("Remove sensitive data").
 
 ## 11. Synchronisatie tussen telefoons (plan)
 
-Stand 3 november 2026: plan met de gemaakte keuzes; nog niet gebouwd.
+Stand 3 november 2026: S1–S5 gebouwd (alleen in testversies), S6 (test met twee telefoons) loopt; zie Voortgang.
 
 ### Besloten (3 november 2026)
 
