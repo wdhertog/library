@@ -476,7 +476,7 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 ## 10. Nog te doen (na v1.0)
 
-Stand 2 november 2026. Fase 1–6 zijn af en uitgebracht als v1.0.
+Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
 ### Gepland
 - **Filter "Meerdere edities"**: alleen boeken waarvan je minstens twee edities of vertalingen hebt (zelfde werk), om dubbelen te vinden. Gevraagd op 3 november 2026, voor later.
