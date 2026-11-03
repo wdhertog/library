@@ -479,10 +479,13 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
 ### Gepland
-- **Filter "Meerdere edities"**: alleen boeken waarvan je minstens twee edities of vertalingen hebt (zelfde werk), om dubbelen te vinden. Gevraagd op 3 november 2026, voor later.
+- **Synchronisatie tussen telefoons:** zie §11.
+
+### Gebouwd na v1.2
+- **Filter "Meerdere edities"**: alleen boeken waarvan je (binnen de bezit-filter) minstens twee edities of vertalingen van hetzelfde werk hebt; de edities staan in de lijst bij elkaar.
+- **Werken handmatig samenvoegen en splitsen** (§5): op de boekpagina "Koppelen aan andere editie…" en "Loskoppelen van andere edities". Losgekoppelde boeken worden niet meer automatisch gekoppeld (`lockedFields` bevat dan `work`); opnieuw koppelen heft dat op.
 
 ### Uit het ontwerp, nog niet gebouwd
-- **Werken handmatig samenvoegen en splitsen** (§5). Nu gaat dat alleen automatisch via Wikidata of Open Library. Edities die niet herkend worden, kun je nog niet zelf aan elkaar koppelen.
 - **Series: ontbrekend deel zelf toevoegen of uit Wikidata halen** (§6.8). Nu verschijnt alleen een gat tussen de genummerde delen die je hebt.
 - **Instellingen** (§6.12):
   - databronnen aan/uit en volgorde;

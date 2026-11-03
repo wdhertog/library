@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 
 data class BookAuthorRow(val bookId: Long, val name: String)
 
+/** Het (eerste) werk van een boek; edities van hetzelfde werk delen dit id. */
+data class BookWorkRow(val bookId: Long, val workId: Long)
+
 data class BookSeriesRow(
     val bookId: Long,
     val seriesId: Long,
@@ -197,6 +200,25 @@ interface BookDao {
 
     @Query("DELETE FROM book_work WHERE bookId = :bookId AND workId = :workId")
     suspend fun deleteBookWork(bookId: Long, workId: Long)
+
+    @Query("SELECT bookId, workId FROM book_work WHERE position = 0")
+    fun observePrimaryWorks(): Flow<List<BookWorkRow>>
+
+    @Query("SELECT * FROM work WHERE id = :id")
+    suspend fun getWork(id: Long): Work?
+
+    @Query("SELECT bookId FROM book_work WHERE workId = :workId")
+    suspend fun bookIdsOfWork(workId: Long): List<Long>
+
+    /** Alle boeken van werk [from] naar werk [into]; een boek dat al bij [into] hoort, houdt die koppeling. */
+    @Query("UPDATE OR IGNORE book_work SET workId = :into WHERE workId = :from")
+    suspend fun moveBookWorks(from: Long, into: Long)
+
+    @Query("DELETE FROM book_work WHERE workId = :workId")
+    suspend fun deleteBookWorksOf(workId: Long)
+
+    @Query("UPDATE book_work SET workId = :newWorkId WHERE bookId = :bookId AND workId = :oldWorkId")
+    suspend fun replaceBookWork(bookId: Long, oldWorkId: Long, newWorkId: Long)
 
     @Query("SELECT COUNT(*) FROM book_work WHERE workId = :workId")
     suspend fun countBooksForWork(workId: Long): Int

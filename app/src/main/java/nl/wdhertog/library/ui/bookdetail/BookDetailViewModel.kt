@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nl.wdhertog.library.data.repository.BookDetail
+import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.BookRepository
 import nl.wdhertog.library.ui.navigation.BookDetailRoute
 
@@ -104,6 +105,25 @@ class BookDetailViewModel(
     fun toggleWantToRead() {
         val book = (state.value as? BookDetailUiState.Loaded)?.detail?.book ?: return
         viewModelScope.launch { reading.setWantToRead(bookId, !book.wantToRead) }
+    }
+
+    /** Voor "koppelen aan andere editie": alle andere boeken. */
+    val otherBooks: StateFlow<List<BookListItem>> = repository.observeLibrary()
+        .map { items -> items.filter { it.book.id != bookId } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun linkAsSameWork(otherBookId: Long) {
+        viewModelScope.launch {
+            repository.linkAsSameWork(bookId, otherBookId)
+            _messages.send("Gekoppeld als editie van hetzelfde werk")
+        }
+    }
+
+    fun splitFromWork() {
+        viewModelScope.launch {
+            repository.splitFromWork(bookId)
+            _messages.send("Losgekoppeld: dit boek is nu een eigen werk")
+        }
     }
 
     fun markDisposed(reason: DisposalReason, to: String?, date: LocalDate?) {

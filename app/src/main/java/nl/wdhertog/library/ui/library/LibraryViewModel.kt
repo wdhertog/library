@@ -65,12 +65,13 @@ data class LibraryUiState(
     val favoritesOnly: Boolean = false,
     val read: ReadFilter = ReadFilter.ALL,
     val ownership: OwnershipFilter = OwnershipFilter.IN_HOUSE,
+    val multipleEditions: Boolean = false,
     /** Zijn er boeken die je niet (meer) hebt? Anders is de bezit-filter overbodig. */
     val hasNotOwned: Boolean = false,
 ) {
     val anyFilter: Boolean
         get() = language != null || location != null || owner != null || favoritesOnly || read != ReadFilter.ALL ||
-            ownership != OwnershipFilter.IN_HOUSE
+            ownership != OwnershipFilter.IN_HOUSE || multipleEditions
 }
 
 private data class Filters(
@@ -82,6 +83,8 @@ private data class Filters(
     val favoritesOnly: Boolean = false,
     val read: ReadFilter = ReadFilter.ALL,
     val ownership: OwnershipFilter = OwnershipFilter.IN_HOUSE,
+    /** Alleen boeken waarvan je (binnen de bezit-filter) twee of meer edities van hetzelfde werk hebt. */
+    val multipleEditions: Boolean = false,
 )
 
 /** Welke boeken (gezien per werk) gelezen zijn en welke je nu leest. */
@@ -136,7 +139,8 @@ class LibraryViewModel(
         .flowOn(Dispatchers.Default)
 
     val state: StateFlow<LibraryUiState> =
-        combine(indexed, locations.observeTree(), filters, readState) { all, tree, filters, readState ->
+        combine(indexed, locations.observeTree(), filters, readState, repository.observePrimaryWorks()) { all, tree, filters, readState, works ->
+            val workOf = works.associate { it.bookId to it.workId }
             val flat = LocationTree.flatten(tree)
             val byId = flat.associateBy { it.id }
             val selected = filters.locationId?.let(byId::get)
@@ -152,7 +156,15 @@ class LibraryViewModel(
                     OwnershipFilter.ALL -> true
                 }
             }
-            val visible = inScope
+            // Edities: werken waarvan binnen de gekozen bezit-filter minstens twee boeken staan.
+            val editionGroups = if (filters.multipleEditions) {
+                inScope.groupBy { workOf[it.item.book.id] }.filterKeys { it != null }.filterValues { it.size >= 2 }
+            } else {
+                emptyMap()
+            }
+            // Edities van één werk naast elkaar: op de (eerste) titel van het werk, daarbinnen op titel.
+            val groupKey = editionGroups.mapValues { (_, books) -> books.minOf { it.titleKey } }
+            val visible = (if (filters.multipleEditions) editionGroups.values.flatten() else inScope)
                 .filter { filters.language == null || it.item.book.language == filters.language }
                 .filter { inSelected == null || it.item.book.locationId in inSelected }
                 .filter { filters.owner == null || it.item.book.owner == filters.owner }
@@ -166,7 +178,10 @@ class LibraryViewModel(
                     }
                 }
                 .filter { entry -> words.all { entry.item.book.searchText.contains(it) } }
-                .sortedWith(comparatorFor(filters.sort, treeOrder))
+                .sortedWith(
+                    if (filters.multipleEditions) compareBy<Indexed> { groupKey[workOf[it.item.book.id]] }.thenBy { workOf[it.item.book.id] }.thenBy { it.titleKey }
+                    else comparatorFor(filters.sort, treeOrder),
+                )
                 .map { it.item }
             LibraryUiState(
                 loading = false,
@@ -184,6 +199,7 @@ class LibraryViewModel(
                 favoritesOnly = filters.favoritesOnly,
                 read = filters.read,
                 ownership = filters.ownership,
+                multipleEditions = filters.multipleEditions,
                 hasNotOwned = all.any { it.item.book.ownership == Ownership.NOT_OWNED },
             )
         }
@@ -205,6 +221,8 @@ class LibraryViewModel(
     fun setRead(value: ReadFilter) = filters.update { it.copy(read = value) }
 
     fun setOwnership(value: OwnershipFilter) = filters.update { it.copy(ownership = value) }
+
+    fun setMultipleEditions(value: Boolean) = filters.update { it.copy(multipleEditions = value) }
 
     /** Alle filters uit (zoektekst en sortering blijven). */
     fun clearFilters() = filters.update { Filters(query = it.query, sort = it.sort) }

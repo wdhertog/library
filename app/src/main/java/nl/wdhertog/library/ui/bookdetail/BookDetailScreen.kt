@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HideImage
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Person
@@ -60,6 +62,7 @@ import nl.wdhertog.library.ui.locations.LocationPickerDialog
 import nl.wdhertog.library.ui.loans.BorrowedActionsDialog
 import nl.wdhertog.library.ui.loans.DeleteLoanDialog
 import nl.wdhertog.library.ui.loans.DisposeDialog
+import nl.wdhertog.library.ui.loans.BookPickerDialog
 import nl.wdhertog.library.ui.loans.OwnerDialog
 import nl.wdhertog.library.ui.reading.ProgressDialog
 import nl.wdhertog.library.ui.reading.SessionDialog
@@ -110,6 +113,8 @@ fun BookDetailScreen(
     val personNames by viewModel.personNames.collectAsStateWithLifecycle()
     val ownerNames by viewModel.ownerNames.collectAsStateWithLifecycle()
     var editingOwner by remember { mutableStateOf(false) }
+    var editionDialog by remember { mutableStateOf<String?>(null) }
+    val otherBooks by viewModel.otherBooks.collectAsStateWithLifecycle()
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     var sessionDialog by remember { mutableStateOf<Pair<String, ReadingSession>?>(null) }
     var progressFor by remember { mutableStateOf<ReadingSession?>(null) }
@@ -166,6 +171,24 @@ fun BookDetailScreen(
                                         onClick = {
                                             menuOpen = false
                                             viewModel.removeCoverPhoto()
+                                        },
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("Koppelen aan andere editie…") },
+                                    leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        editionDialog = "link"
+                                    },
+                                )
+                                if ((state as? BookDetailUiState.Loaded)?.detail?.otherEditions?.isNotEmpty() == true) {
+                                    DropdownMenuItem(
+                                        text = { Text("Loskoppelen van andere edities") },
+                                        leadingIcon = { Icon(Icons.Default.LinkOff, contentDescription = null) },
+                                        onClick = {
+                                            menuOpen = false
+                                            editionDialog = "split"
                                         },
                                     )
                                 }
@@ -298,6 +321,32 @@ fun BookDetailScreen(
             pages = (state as? BookDetailUiState.Loaded)?.detail?.book?.pages,
             onSave = { page, percent -> viewModel.updateProgress(session.id, page, percent); progressFor = null },
             onDismiss = { progressFor = null },
+        )
+    }
+
+    val loadedDetail = (state as? BookDetailUiState.Loaded)?.detail
+    when (editionDialog) {
+        "link" -> {
+            val sameWork = loadedDetail?.otherEditions?.map { it.id }.orEmpty().toSet()
+            BookPickerDialog(
+                title = "Editie of vertaling van welk boek?",
+                books = otherBooks.filter { it.book.id !in sameWork },
+                onPick = { other -> editionDialog = null; viewModel.linkAsSameWork(other.book.id) },
+                onDismiss = { editionDialog = null },
+            )
+        }
+        "split" -> AlertDialog(
+            onDismissRequest = { editionDialog = null },
+            title = { Text("Loskoppelen?") },
+            text = {
+                Text(
+                    "Dit boek hoort dan niet meer bij ${loadedDetail?.otherEditions?.size ?: 0} andere " +
+                        "${if (loadedDetail?.otherEditions?.size == 1) "editie" else "edities"} en wordt een eigen werk. " +
+                        "Het wordt daarna niet meer automatisch gekoppeld.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { editionDialog = null; viewModel.splitFromWork() }) { Text("Loskoppelen") } },
+            dismissButton = { TextButton(onClick = { editionDialog = null }) { Text("Annuleren") } },
         )
     }
 
