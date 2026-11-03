@@ -387,8 +387,8 @@ private fun MergeReviewDialog(review: PairingState.Review, onConfirm: (Set<Strin
     val plan = review.plan
     var accepted by remember(plan) { mutableStateOf(plan.pairs.filter { it.certain }.map { it.local.uuid }.toSet()) }
     var busy by remember { mutableStateOf(false) }
-    val doubts = plan.pairs.filter { !it.certain }
-    val certain = plan.pairs.filter { it.certain }
+    val doubts = plan.pairs.filter { !it.certain }.sortedBy { it.local.title.lowercase() }
+    val certain = plan.pairs.filter { it.certain }.sortedBy { it.local.title.lowercase() }
 
     Dialog(onDismissRequest = { if (!busy) onCancel() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize()) {
@@ -464,7 +464,7 @@ private fun PairRow(pair: MergePair, peerName: String, checked: Boolean, onChang
     ) {
         Checkbox(checked = checked, onCheckedChange = onChange)
         Column(Modifier.weight(1f)) {
-            Text(pair.local.title, style = MaterialTheme.typography.bodyLarge)
+            Text(pair.local.title.ifBlank { "(zonder titel)" }, style = MaterialTheme.typography.bodyLarge)
             Text("Hier: ${describe(pair.local)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             val remoteTitle = if (pair.remote.title != pair.local.title) "${pair.remote.title} · " else ""
             Text("$peerName: $remoteTitle${describe(pair.remote)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
