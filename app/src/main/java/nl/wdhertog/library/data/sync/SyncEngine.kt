@@ -48,6 +48,17 @@ interface SyncStore {
 
     /** Na het toepassen: afgeleide gegevens bijwerken (zoektekst, verweesde werken en auteurs). */
     suspend fun afterApply(touched: Set<Pair<String, String>>)
+
+    // --- Eerste keer samenvoegen (FirstMerge) ---
+
+    /** Alle gedeelde records. */
+    suspend fun snapshot(): List<SnapshotRecord>
+
+    /** Een record de uuid geven die hetzelfde record op de andere telefoon heeft. */
+    suspend fun rename(entity: String, from: String, to: String)
+
+    /** Alles over eerder uitwisselen vergeten en alle records als gewijzigd markeren. */
+    suspend fun restartTracking()
 }
 
 /**
@@ -103,6 +114,11 @@ class SyncEngine(
     }
 
     suspend fun changesAfter(seq: Long): List<SyncChange> = store.outboxAfter(seq)
+
+    suspend fun snapshot(): List<SnapshotRecord> = store.snapshot()
+
+    /** Huidige klokstand, voor de andere telefoon bij het eerste samenvoegen. */
+    fun clockNow(): String = clock.current.toString()
 
     suspend fun applyIncoming(changes: List<SyncChange>): Int = store.transaction {
         val touched = mutableSetOf<Pair<String, String>>()

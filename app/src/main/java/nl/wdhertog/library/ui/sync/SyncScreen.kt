@@ -7,6 +7,9 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +48,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -75,6 +80,8 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import kotlinx.coroutines.launch
 import nl.wdhertog.library.LibraryApp
+import nl.wdhertog.library.data.sync.MergeBook
+import nl.wdhertog.library.data.sync.MergePair
 import nl.wdhertog.library.data.sync.SyncPeer
 import nl.wdhertog.library.sync.PairingCode
 import nl.wdhertog.library.sync.PairingState
@@ -107,7 +114,8 @@ fun SyncScreen(onBack: () -> Unit) {
         dialog = null
         scope.launch {
             pairMessage = manager.pairWith(code).fold(
-                onSuccess = { "Gekoppeld met ${it.peerName}: ${it.received} ontvangen, ${it.sent} verstuurd." },
+                // null: het controlescherm staat open.
+                onSuccess = { it?.let { r -> "Gekoppeld met ${r.peerName}: ${r.received} ontvangen, ${r.sent} verstuurd." } },
                 onFailure = { "Koppelen mislukt: ${it.message ?: "onbekende fout"}" },
             )
         }
@@ -130,8 +138,7 @@ fun SyncScreen(onBack: () -> Unit) {
             )
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                 Text(
-                    "Testversie: het samenvoegen van twee bestaande bibliotheken komt nog. Boeken die op beide " +
-                        "telefoons staan, komen er nu dubbel in. Gebruik dit alleen met testgegevens.",
+                    "Testversie van synchroniseren. Gebruik dit alleen met testgegevens, niet met je echte bibliotheek.",
                     Modifier.padding(12.dp),
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -204,6 +211,21 @@ fun SyncScreen(onBack: () -> Unit) {
         null -> Unit
     }
 
+    (pairing as? PairingState.Review)?.let { review ->
+        MergeReviewDialog(
+            review = review,
+            onConfirm = { accepted ->
+                scope.launch {
+                    pairMessage = manager.confirmMerge(accepted).fold(
+                        onSuccess = { "Samengevoegd met ${it.peerName}: ${it.received} ontvangen, ${it.sent} verstuurd." },
+                        onFailure = { "Samenvoegen mislukt: ${it.message ?: "onbekende fout"}" },
+                    )
+                }
+            },
+            onCancel = manager::cancelMerge,
+        )
+    }
+
     pairMessage?.let { message ->
         AlertDialog(
             onDismissRequest = { pairMessage = null },
@@ -271,7 +293,7 @@ private fun ShowCodeDialog(pairing: PairingState?, onDismiss: () -> Unit) {
                     }) { Text("Code kopiëren") }
                 }
                 is PairingState.Paired -> Text("Gekoppeld met ${pairing.name}. De collecties worden nu uitgewisseld.")
-                null -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                is PairingState.Review, null -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(if (pairing is PairingState.Paired) "Klaar" else "Annuleren") } },
@@ -358,6 +380,96 @@ private fun PasteCodeDialog(onCode: (PairingCode) -> Unit, onDismiss: () -> Unit
         confirmButton = { TextButton(onClick = { code?.let(onCode) }, enabled = code != null) { Text("Koppelen") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
     )
+}
+
+@Composable
+private fun MergeReviewDialog(review: PairingState.Review, onConfirm: (Set<String>) -> Unit, onCancel: () -> Unit) {
+    val plan = review.plan
+    var accepted by remember(plan) { mutableStateOf(plan.pairs.filter { it.certain }.map { it.local.uuid }.toSet()) }
+    var busy by remember { mutableStateOf(false) }
+    val doubts = plan.pairs.filter { !it.certain }
+    val certain = plan.pairs.filter { it.certain }
+
+    Dialog(onDismissRequest = { if (!busy) onCancel() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Samenvoegen met ${review.peerName}", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "Vink aan welke boeken op beide telefoons hetzelfde zijn. Die worden één boek: lege velden worden " +
+                            "aangevuld, en bij een verschil wint de laatste wijziging. De andere boeken komen er allebei in. " +
+                            "Eerst wordt een kopie van deze bibliotheek gemaakt (terug te zetten via Back-up).",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        listOfNotNull(
+                            "${plan.pairs.size} op beide" + if (doubts.isNotEmpty()) " (${doubts.size} twijfel)" else "",
+                            "${plan.onlyLocal} alleen hier",
+                            "${plan.onlyRemote} alleen op ${review.peerName}",
+                            plan.alreadyShared.takeIf { it > 0 }?.let { "$it al gedeeld" },
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                HorizontalDivider()
+                LazyColumn(Modifier.weight(1f)) {
+                    if (doubts.isNotEmpty()) {
+                        item { ReviewHeader("Twijfelgevallen: zelfde titel, ander ISBN") }
+                        items(doubts, key = { it.local.uuid }) { pair ->
+                            PairRow(pair, review.peerName, pair.local.uuid in accepted) { on ->
+                                accepted = if (on) accepted + pair.local.uuid else accepted - pair.local.uuid
+                            }
+                        }
+                    }
+                    if (certain.isNotEmpty()) {
+                        item { ReviewHeader("Hetzelfde boek") }
+                        items(certain, key = { it.local.uuid }) { pair ->
+                            PairRow(pair, review.peerName, pair.local.uuid in accepted) { on ->
+                                accepted = if (on) accepted + pair.local.uuid else accepted - pair.local.uuid
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider()
+                Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                    if (busy) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.weight(1f))
+                    }
+                    TextButton(onClick = onCancel, enabled = !busy) { Text("Annuleren") }
+                    Spacer(Modifier.size(8.dp))
+                    Button(onClick = { busy = true; onConfirm(accepted) }, enabled = !busy) { Text("Samenvoegen") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReviewHeader(text: String) {
+    Text(
+        text,
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+    )
+}
+
+@Composable
+private fun PairRow(pair: MergePair, peerName: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    fun describe(book: MergeBook) = listOfNotNull(book.authors.firstOrNull(), book.isbn13).joinToString(" · ")
+    Row(
+        Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onChange)
+        Column(Modifier.weight(1f)) {
+            Text(pair.local.title, style = MaterialTheme.typography.bodyLarge)
+            Text("Hier: ${describe(pair.local)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val remoteTitle = if (pair.remote.title != pair.local.title) "${pair.remote.title} · " else ""
+            Text("$peerName: $remoteTitle${describe(pair.remote)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 private val timeFormat = DateTimeFormatter.ofPattern("d MMM HH:mm", Locale.forLanguageTag("nl"))

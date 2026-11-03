@@ -37,6 +37,16 @@ object SyncTriggers {
     }
 
     /**
+     * Synchronisatie helemaal opnieuw, na het terugzetten van een back-up. Die kan van een andere
+     * telefoon komen (zelfde id), of ouder zijn dan wat gekoppelde telefoons al van deze telefoon hebben.
+     */
+    val resetStatements = listOf(
+        "DELETE FROM sync_peer", "DELETE FROM sync_outbox", "DELETE FROM sync_shadow",
+        "DELETE FROM sync_field_clock", "DELETE FROM sync_dirty",
+        "DELETE FROM sync_meta WHERE key IN ('${SyncKeys.DEVICE_ID}', '${SyncKeys.ENABLED}', '${SyncKeys.CLOCK}')",
+    )
+
+    /**
      * Eerst weghalen, dan invoegen. Niet "INSERT OR REPLACE": in een trigger telt de conflictregel van
      * de buitenste opdracht (Room gebruikt OR ABORT), en dan zou een tweede wijziging aan hetzelfde
      * record de hele opdracht laten mislukken. Een uuid die niet (meer) te vinden is, slaat hij over.

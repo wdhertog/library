@@ -150,6 +150,24 @@ class BackupViewModel(
         }
     }
 
+    /** Automatische kopieën in de app (vóór terugzetten, vóór samenvoegen). */
+    val safetyCopies = MutableStateFlow(backup.safetyCopies())
+
+    fun inspectCopy(file: File) {
+        state.value = BackupUiState.Busy("Back-up controleren…")
+        viewModelScope.launch {
+            val (temp, check) = backup.inspect(file.inputStream())
+            when (check) {
+                is BackupFormat.Check.Ok -> state.value = BackupUiState.ConfirmRestore(check.manifest, temp)
+                is BackupFormat.Check.Problem -> {
+                    temp.delete()
+                    state.value = BackupUiState.Idle
+                    _messages.send(check.message)
+                }
+            }
+        }
+    }
+
     fun cancelRestore() {
         (state.value as? BackupUiState.ConfirmRestore)?.file?.delete()
         state.value = BackupUiState.Idle

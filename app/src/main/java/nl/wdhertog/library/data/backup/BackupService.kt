@@ -31,7 +31,12 @@ class BackupService(
     private val coverDir get() = CoverStore.coverDir(context)
 
     /** Kopie van de huidige bibliotheek die bij terugzetten automatisch wordt gemaakt. */
-    val safetyCopy: File get() = File(context.filesDir, "backups/voor-terugzetten.zip")
+    val safetyCopy: File get() = File(context.filesDir, BEFORE_RESTORE)
+
+    /** Automatische kopieën in de app (vóór terugzetten en vóór samenvoegen), nieuwste eerst. */
+    fun safetyCopies(): List<File> = listOf(BEFORE_RESTORE, BEFORE_MERGE).map { File(context.filesDir, it) }
+        .filter(File::exists).sortedByDescending(File::lastModified)
+
 
     suspend fun createBackup(out: OutputStream): BackupManifest {
         val db = database()
@@ -99,6 +104,8 @@ class BackupService(
                 }
             }
             zipFile.delete()
+            // De teruggezette bibliotheek kan van een andere telefoon komen: synchronisatie begint opnieuw.
+            syncResetMarker(context).createNewFile()
         }
     }
 
@@ -112,5 +119,10 @@ class BackupService(
 
     companion object {
         const val DB_NAME = "library.db"
+        const val BEFORE_RESTORE = "backups/voor-terugzetten.zip"
+        const val BEFORE_MERGE = "backups/voor-samenvoegen.zip"
+
+        /** Bestaat dit bestand, dan wordt bij het openen van de database de synchronisatiestatus gewist. */
+        fun syncResetMarker(context: Context) = File(context.filesDir, "sync-opnieuw")
     }
 }

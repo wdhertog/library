@@ -35,7 +35,9 @@ class RoomSyncTest {
         val books = BookRepository(db, CoverStore(context))
         val locations = LocationRepository(db)
         val loans = LoanRepository(db, books)
-        val engine = SyncEngine(RoomSyncStore(db, books), HybridClock(id)) {}
+        val store = RoomSyncStore(db, books)
+        val clock = HybridClock(id)
+        val engine = SyncEngine(store, clock) {}
         var receivedUpTo = 0L
 
         init {
@@ -143,5 +145,47 @@ class RoomSyncTest {
         a.books.delete(idA)
         sync()
         assertNull(b.db.bookDao().getBooks().firstOrNull { it.title == "Kind 44" })
+    }
+
+    @Test
+    fun `first merge of two libraries with the same book`() = runBlocking {
+        fun Phone.dictator(owner: String?) = runBlocking {
+            val room = locations.add("Woonkamer", LocationType.ROOM, null)
+            val shelf = locations.add("Kast 2", LocationType.BOOKCASE, room)
+            val id = books.save(0, BookDraft(title = "Dictator", authors = listOf("Robert Harris"), seriesName = "Cicero", seriesIndex = "3", isbn = "9789023495635"))
+            locations.moveBook(id, shelf)
+            if (owner != null) books.setOwner(listOf(id), owner)
+            id
+        }
+        a.dictator(owner = "Willem")
+        val idB = b.dictator(owner = null)
+        b.books.setFavorite(listOf(idB), true)
+        b.db.readingDao().insert(ReadingSession(bookId = idB, status = ReadingStatus.FINISHED))
+        b.books.save(0, BookDraft(title = "Het smelt", authors = listOf("Lize Spit")))
+
+        a.engine.prepareOutgoing()
+        val remote = a.engine.snapshot()
+        val local = b.engine.snapshot()
+        val plan = FirstMerge.plan(local, remote)
+        assertEquals(1, plan.pairs.size)
+        val renames = FirstMerge.renames(plan, setOf(plan.pairs.single().local.uuid), local, remote)
+        FirstMerge.apply(b.store, b.clock, renames, local, remote, a.engine.clockNow())
+        sync()
+
+        for (phone in listOf(a, b)) {
+            val all = phone.db.bookDao().getBooks()
+            assertEquals(setOf("Dictator", "Het smelt"), all.map { it.title }.toSet())
+            assertEquals(2, phone.db.locationDao().getLocations().size)
+            val dictator = phone.bookByTitle("Dictator")
+            assertEquals(a.bookByTitle("Dictator").uuid, dictator.uuid)
+            assertEquals("Willem", dictator.owner)
+            assertEquals("Kast 2", phone.db.locationDao().getLocation(dictator.locationId!!)!!.name)
+        }
+        // Persoonlijk blijft persoonlijk, en blijft bij het samengevoegde boek.
+        val merged = b.bookByTitle("Dictator")
+        assertEquals(true, merged.favorite)
+        assertEquals(false, a.bookByTitle("Dictator").favorite)
+        assertEquals(merged.id, b.db.readingDao().observeSessions().first().single().bookId)
+        assertEquals(0, a.db.readingDao().observeSessions().first().size)
     }
 }

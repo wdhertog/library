@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -179,6 +180,17 @@ fun BackupScreen(
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(onClick = { pickBackup.launch(arrayOf("application/zip", "application/octet-stream")) }) {
                         Text("Back-up kiezen…")
+                    }
+                    val copies by viewModel.safetyCopies.collectAsStateWithLifecycle()
+                    copies.forEach { file ->
+                        Spacer(Modifier.height(8.dp))
+                        val what = if (file.name.contains("samenvoegen")) "vóór het samenvoegen" else "vóór het terugzetten"
+                        val time = java.time.format.DateTimeFormatter.ofPattern("d MMM HH:mm", java.util.Locale.forLanguageTag("nl"))
+                            .format(java.time.Instant.ofEpochMilli(file.lastModified()).atZone(java.time.ZoneId.systemDefault()))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Kopie van $what ($time)", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = { viewModel.inspectCopy(file) }) { Text("Terugzetten…") }
+                        }
                     }
                 }
             }

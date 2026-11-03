@@ -225,6 +225,33 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
         bookIds.forEach { books.refreshSearchText(it) }
     }
 
+    // --- Eerste keer samenvoegen ---
+
+    override suspend fun snapshot(): List<SnapshotRecord> = listOf(
+        BOOK to dao.timesBook(), WORK to dao.timesWork(), SERIES to dao.timesSeries(),
+        LOCATION to dao.timesLocation(), PERSON to dao.timesPerson(), LOAN to dao.timesLoan(),
+    ).flatMap { (entity, times) ->
+        times.mapNotNull { t -> read(entity, t.uuid)?.let { SnapshotRecord(entity, t.uuid, it, t.updatedAt) } }
+    }
+
+    override suspend fun rename(entity: String, from: String, to: String) = when (entity) {
+        BOOK -> dao.renameBook(from, to)
+        WORK -> dao.renameWork(from, to)
+        SERIES -> dao.renameSeries(from, to)
+        LOCATION -> dao.renameLocation(from, to)
+        PERSON -> dao.renamePerson(from, to)
+        LOAN -> dao.renameLoan(from, to)
+        else -> Unit
+    }
+
+    override suspend fun restartTracking() {
+        dao.clearOutbox()
+        dao.clearShadows()
+        dao.clearClocks()
+        dao.clearAllDirty()
+        SyncRepository.markAll(dao)
+    }
+
     // --- Hulp bij omzetten ---
 
     private fun obj(vararg pairs: Pair<String, Any?>): JsonObject = JsonObject(pairs.associate { (k, v) -> k to toJson(v) })
