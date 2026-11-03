@@ -138,7 +138,7 @@ fun SyncScreen(onBack: () -> Unit) {
             )
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                 Text(
-                    "Testversie van synchroniseren. Gebruik dit alleen met testgegevens, niet met je echte bibliotheek.",
+                    "Testversie van synchroniseren. Dit is een aparte app: je gewone Bibliotheek doet niet mee en blijft onaangeroerd.",
                     Modifier.padding(12.dp),
                     style = MaterialTheme.typography.bodySmall,
                 )

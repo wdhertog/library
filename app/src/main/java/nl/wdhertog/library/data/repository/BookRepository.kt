@@ -387,6 +387,11 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
         if (previous != coverFile) covers.delete(previous)
     }
 
+    /** Een eigen foto weghalen als geen boek hem meer gebruikt (na een wijziging via synchroniseren). */
+    internal suspend fun deleteCoverIfUnused(coverFile: String) {
+        if (dao.countCoverUses(coverFile) == 0) covers.delete(coverFile)
+    }
+
     suspend fun getBook(bookId: Long): Book? = dao.getBook(bookId)
 
     /** Een cover-foto die toch bij geen enkel boek terechtkwam. */

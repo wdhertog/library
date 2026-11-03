@@ -121,6 +121,8 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                     updatedAt = now,
                 )
                 val id = if (existing == null) bookDao.insertBook(b) else b.id.also { bookDao.updateBook(b) }
+                // Een vervangen eigen foto opruimen; de nieuwe komt aan het eind van de sessie mee.
+                existing?.coverFile?.takeIf { it != b.coverFile }?.let { books.deleteCoverIfUnused(it) }
                 f.list("works")?.let { workUuids ->
                     val ids = dao.workIdsByUuid(workUuids).associate { it.uuid to it.id }
                     dao.clearBookWorks(id)

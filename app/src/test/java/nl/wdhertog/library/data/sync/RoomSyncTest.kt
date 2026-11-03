@@ -188,4 +188,18 @@ class RoomSyncTest {
         assertEquals(merged.id, b.db.readingDao().observeSessions().first().single().bookId)
         assertEquals(0, a.db.readingDao().observeSessions().first().size)
     }
+
+    @Test
+    fun `a replaced own cover is cleaned up on the other phone`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val dir = CoverStore.coverDir(context).apply { mkdirs() }
+        val old = java.io.File(dir, "oud-1.jpg").apply { writeBytes(byteArrayOf(1)) }
+        val id = a.books.save(0, BookDraft(title = "Dictator", authors = listOf("Robert Harris")))
+        a.db.bookDao().setCoverFile(id, "oud-1.jpg", java.time.Instant.now())
+        sync()
+        a.db.bookDao().setCoverFile(id, "nieuw-2.jpg", java.time.Instant.now())
+        sync()
+        assertEquals("nieuw-2.jpg", b.bookByTitle("Dictator").coverFile)
+        assertFalse(old.exists())
+    }
 }

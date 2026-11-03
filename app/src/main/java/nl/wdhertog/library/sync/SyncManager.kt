@@ -106,8 +106,9 @@ class SyncManager(
 
     val deviceName: String by lazy {
         val name = Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)?.takeIf(String::isNotBlank) ?: Build.MODEL
-        // Testversies naast elkaar op één telefoon uit elkaar houden.
-        if (BuildConfig.APPLICATION_ID == RELEASE_ID) name else "$name (${BuildConfig.APPLICATION_ID.removePrefix("$RELEASE_ID.")})"
+        // Twee testapps naast elkaar op één telefoon (-PstagingVariant) uit elkaar houden.
+        val variant = BuildConfig.APPLICATION_ID.removePrefix("$RELEASE_ID.").takeIf { it != RELEASE_ID && it.any(Char::isDigit) }
+        if (variant == null) name else "$name ($variant)"
     }
 
     /** De app komt in beeld. */

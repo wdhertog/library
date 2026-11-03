@@ -15,8 +15,8 @@ android {
         applicationId = "nl.wdhertog.library"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.3"
+        versionCode = 14
+        versionName = "1.4"
 
         // Alleen ARM (alle gangbare telefoons); x86 is voor emulators en scheelt ~35 MB aan ML Kit-bibliotheken.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
@@ -53,7 +53,7 @@ android {
             // -PstagingVariant=2 geeft een tweede testapp (".staging2"), om synchroniseren op één telefoon te testen.
             val variant = providers.gradleProperty("stagingVariant").orNull.orEmpty()
             applicationIdSuffix = ".staging$variant"
-            versionNameSuffix = "-staging$variant"
+            versionNameSuffix = "-test$variant"
             manifestPlaceholders["appLabel"] = "Bibliotheek test $variant".trim()
             buildConfigField("boolean", "SYNC", "true")
             signingConfig = signingConfigs.getByName("debug")
