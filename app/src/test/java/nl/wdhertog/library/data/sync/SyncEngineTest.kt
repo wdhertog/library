@@ -47,7 +47,35 @@ class SyncEngineTest {
         assertEquals(0, a.engine.prepareOutgoing())
         assertEquals(0, b.engine.prepareOutgoing())
         assertEquals(1, a.engine.changesAfter(0).size) // alleen de oorspronkelijke wijziging
-        assertEquals(0, b.engine.changesAfter(0).size)
+        assertEquals(1, b.engine.changesAfter(0).size) // eenmaal doorgegeven, niet steeds opnieuw
+        sync()
+        assertEquals(1, a.engine.changesAfter(0).size)
+        assertEquals(1, b.engine.changesAfter(0).size)
+    }
+
+    @Test
+    fun `a phone passes changes on to its other paired phones`() = runTest {
+        // Kind (c) is alleen met b gekoppeld; a en c kennen elkaar niet.
+        val c = Phone("c") { 1_000L }
+        var cHasFromB = 0L
+        var bHasFromC = 0L
+        suspend fun syncBC() {
+            b.engine.prepareOutgoing(); c.engine.prepareOutgoing()
+            val fromB = b.engine.changesAfter(cHasFromB)
+            val fromC = c.engine.changesAfter(bHasFromC)
+            c.engine.applyIncoming(fromB); b.engine.applyIncoming(fromC)
+            fromB.maxOfOrNull { it.seq }?.let { cHasFromB = it }
+            fromC.maxOfOrNull { it.seq }?.let { bHasFromC = it }
+        }
+        a.store.edit("book", "b1", "title" to "Dictator")
+        c.store.edit("book", "b2", "title" to "Het smelt")
+        sync(); syncBC(); sync()
+        assertEquals("Dictator", c.store.field("book", "b1", "title"))
+        assertEquals("Het smelt", a.store.field("book", "b2", "title"))
+
+        a.store.remove("book", "b2")
+        sync(); syncBC()
+        assertNull(c.store.field("book", "b2", "title"))
     }
 
     @Test

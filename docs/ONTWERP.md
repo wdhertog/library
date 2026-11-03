@@ -564,6 +564,7 @@ Twee telefoons in één huishouden houden dezelfde collectie bij. Iedereen kan s
 ### Gegevens
 - **Wijzigingenlogboek per telefoon** met oplopende volgnummers. Bij een verbinding vraagt elke telefoon aan de ander: "geef me alles na nummer N". Per gekoppelde telefoon wordt N bijgehouden.
 - **Eén wijziging** bevat: soort record, uuid, de gewijzigde velden met hun nieuwe waarde, en een tijdstempel. Een verwijdering wordt een *grafsteen* (uuid + tijdstip).
+- **Meer dan twee telefoons:** een telefoon kan met meerdere telefoons gekoppeld zijn (bijvoorbeeld ook die van een kind). Wat binnenkomt en wint, geeft hij door aan zijn andere gekoppelde telefoons. Elke nieuwe telefoon hoeft dus maar met één bestaande gekoppeld te worden. Niets gaat terug naar de telefoon waar het vandaan kwam (de tijdstempel bevat het telefoon-id), en wat ergens al bekend is, wint daar niet en gaat niet verder.
 - **Samenvoegen per veld; de laatste wijziging wint.** Per veld onthoudt de app wanneer het voor het laatst gewijzigd is. Wijzig jij de eigenaar en vult de andere telefoon tegelijk de uitgever aan, dan blijven beide staan.
 - **Tijdstempels:** een hybride logische klok (tijd + teller + telefoon-id). Een telefoon met een verkeerd ingestelde klok kan zo geen nieuwere wijzigingen overschrijven.
 - **Vastleggen:** wijzigingen worden in de database zelf vastgelegd (SQLite-triggers op de gedeelde tabellen), zodat ook bulkacties en de achtergrondverrijking automatisch meegaan. Bij het uitwisselen vergelijkt de app met de laatst uitgewisselde versie (een *schaduwkopie*) en stuurt alleen de velden die echt anders zijn.
@@ -621,3 +622,7 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
   - **`RoomSyncStore`:** vertaalt tussen tabellen en uitwisselvorm (uuid's, lijsten voor auteurs en werken).
   - **Triggers aangepast:** eerst weghalen, dan invoegen. `INSERT OR REPLACE` in een trigger botst met de `OR ABORT` van Room.
   - **Getest** met twee gesimuleerde telefoons (10 tests) en met twee echte Room-databases via Robolectric (5 tests).
+- **S3 (bezig):**
+  - **Doorgeven:** de engine zet wat van een andere telefoon binnenkomt en wint, in de eigen outbox (met de oorspronkelijke tijdstempel). Zo werkt A–B–C zonder dat A en C gekoppeld zijn.
+  - **`PairingCode`:** de koppelcode (`BIB1:…`) met telefoon-id, naam, vingerafdruk en eenmalig geheim; de koppelende telefoon bewijst het geheim met een HMAC over zijn id en certificaat.
+  - **`SyncSession`:** het gesprek als JSON-regels (hello, wijzigingen heen en terug, done). Alleen gekoppelde telefoons met het bekende certificaat, of met een geldig koppelbewijs, krijgen iets. Getest over een verbinding in het geheugen.

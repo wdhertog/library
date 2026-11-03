@@ -55,6 +55,10 @@ interface SyncStore {
  * - [prepareOutgoing] zet wat op deze telefoon veranderde in de outbox, alleen de velden die echt anders zijn;
  * - [applyIncoming] voegt wijzigingen van de ander samen, per veld: de nieuwste wint (hybride klok).
  *
+ * Wat wint, gaat ook in de eigen outbox: zo geeft een telefoon wijzigingen door aan zijn andere
+ * gekoppelde telefoons (A–B en B–C koppelen is genoeg). Komt het bij de bron terug, dan heeft het
+ * daar dezelfde tijdstempel, wint het niet en gaat het niet verder.
+ *
  * Verwijderen wint altijd van een wijziging aan hetzelfde record (voorspelbaar, en beide telefoons
  * komen op hetzelfde uit), met één uitzondering: een boek waar deze telefoon leesgeschiedenis bij heeft,
  * blijft hier als "niet in bezit" en doet daarna niet meer mee.
@@ -122,6 +126,7 @@ class SyncEngine(
                     store.setShadow(change.entity, change.uuid, TOMBSTONE)
                 }
                 store.removeClocks(change.entity, change.uuid)
+                store.appendOutbox(change.entity, change.uuid, "{}", change.hlc, deleted = true)
                 touched += key
                 continue
             }
@@ -134,6 +139,8 @@ class SyncEngine(
             // De schaduw krijgt alleen de binnengekomen velden; eigen, nog niet verstuurde wijzigingen blijven zo zichtbaar.
             val previous = shadow?.let(::parse) ?: JsonObject(emptyMap())
             store.setShadow(change.entity, change.uuid, JsonObject(previous + winners).toString())
+            // Doorgeven aan de telefoons waarmee deze gekoppeld is, met de oorspronkelijke tijdstempel.
+            store.appendOutbox(change.entity, change.uuid, JsonObject(winners).toString(), change.hlc, deleted = false)
             touched += key
         }
         saveClock(clock.current.toString())
