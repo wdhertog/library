@@ -68,6 +68,17 @@ interface BookDao {
     @Query("SELECT DISTINCT owner FROM book WHERE owner IS NOT NULL ORDER BY owner COLLATE NOCASE")
     fun observeOwnerNames(): Flow<List<String>>
 
+    // --- Meerdere boeken tegelijk ---
+
+    @Query("UPDATE book SET owner = :owner, updatedAt = :now WHERE id IN (:ids)")
+    suspend fun setOwnerFor(ids: List<Long>, owner: String?, now: java.time.Instant)
+
+    @Query("UPDATE book SET favorite = :favorite, updatedAt = :now WHERE id IN (:ids)")
+    suspend fun setFavoriteFor(ids: List<Long>, favorite: Boolean, now: java.time.Instant)
+
+    @Query("UPDATE book SET wantToRead = :wantToRead, updatedAt = :now WHERE id IN (:ids)")
+    suspend fun setWantToReadFor(ids: List<Long>, wantToRead: Boolean, now: java.time.Instant)
+
     @Query("SELECT COUNT(*) FROM book")
     suspend fun countBooks(): Int
 

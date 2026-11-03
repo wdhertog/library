@@ -329,6 +329,32 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
 
     fun observeOwnerNames(): Flow<List<String>> = dao.observeOwnerNames()
 
+    // --- Meerdere boeken tegelijk (meervoudige selectie) ---
+
+    suspend fun setOwner(ids: Collection<Long>, owner: String?) = db.withTransaction {
+        dao.setOwnerFor(ids.toList(), owner?.trim()?.ifEmpty { null }, Instant.now())
+        ids.forEach { refreshSearchText(it) }
+    }
+
+    suspend fun setFavorite(ids: Collection<Long>, favorite: Boolean) = dao.setFavoriteFor(ids.toList(), favorite, Instant.now())
+
+    suspend fun setWantToRead(ids: Collection<Long>, wantToRead: Boolean) = dao.setWantToReadFor(ids.toList(), wantToRead, Instant.now())
+
+    /** Tags toevoegen; bestaande tags van elk boek blijven staan. */
+    suspend fun addTags(ids: Collection<Long>, tags: List<String>) = db.withTransaction {
+        val clean = tags.map(String::trim).filter(String::isNotEmpty)
+        if (clean.isEmpty()) return@withTransaction
+        ids.forEach { id ->
+            val book = dao.getBook(id) ?: return@forEach
+            val merged = (book.tags?.split(',').orEmpty().map(String::trim) + clean)
+                .filter(String::isNotEmpty).distinctBy(String::lowercase).joinToString(", ")
+            if (merged != book.tags) dao.updateBook(book.copy(tags = merged, updatedAt = Instant.now()))
+            refreshSearchText(id)
+        }
+    }
+
+    suspend fun delete(ids: Collection<Long>) = ids.forEach { delete(it) }
+
     private suspend fun findOrCreateSeries(name: String): Series? {
         val trimmed = name.trim().ifEmpty { return null }
         return dao.findSeries(trimmed) ?: Series(name = trimmed).let { it.copy(id = dao.insertSeries(it)) }

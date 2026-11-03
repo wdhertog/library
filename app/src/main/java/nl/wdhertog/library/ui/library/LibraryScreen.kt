@@ -37,6 +37,10 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.launch
+import nl.wdhertog.library.ui.components.SelectionTopBar
 import nl.wdhertog.library.ui.components.BookRow
 import nl.wdhertog.library.ui.locations.LocationPickerDialog
 import androidx.compose.foundation.layout.widthIn
@@ -88,10 +92,21 @@ fun LibraryScreen(
     val snackbar = remember { SnackbarHostState() }
     var pickingLocation by remember { mutableStateOf(false) }
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
+    // Meervoudige selectie: ids in lijstvolgorde worden bij een actie afgeleid uit de zichtbare lijst.
+    var selection by remember { mutableStateOf(emptySet<Long>()) }
+    val scope = rememberCoroutineScope()
+    BackHandler(enabled = selection.isNotEmpty()) { selection = emptySet() }
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            if (selection.isNotEmpty()) {
+                SelectionTopBar(
+                    selected = state.items.map { it.book.id }.filter { it in selection },
+                    onSelectAll = { selection = state.items.map { it.book.id }.toSet() },
+                    onClear = { selection = emptySet() },
+                    onMessage = { message -> scope.launch { snackbar.showSnackbar(message) } },
+                )
+            } else TopAppBar(
                 title = { Text("Bibliotheek") },
                 actions = {
                     SortMenu(state.sort, viewModel::setSort)
@@ -100,7 +115,7 @@ fun LibraryScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            if (selection.isEmpty()) ExtendedFloatingActionButton(
                 onClick = onScan,
                 icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
                 text = { Text("Scannen") },
@@ -218,10 +233,16 @@ fun LibraryScreen(
                 state.items.isEmpty() -> EmptyMessage("Geen boeken gevonden.")
                 else -> LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 88.dp)) {
                     items(state.items, key = { it.book.id }) { item ->
+                        val id = item.book.id
                         BookRow(
                             item,
-                            onClick = { onBookClick(item.book.id) },
+                            onClick = {
+                                if (selection.isEmpty()) onBookClick(id)
+                                else selection = if (id in selection) selection - id else selection + id
+                            },
                             locationLabel = item.book.locationId?.let(state.locationLabels::get),
+                            selected = id in selection,
+                            onLongClick = { selection = selection + id },
                         )
                         HorizontalDivider(Modifier.padding(start = 84.dp))
                     }
