@@ -40,6 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.data.repository.SeriesDuplicate
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Card
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,9 +67,12 @@ import nl.wdhertog.library.ui.navigation.appViewModel
 fun SeriesListScreen(
     onBack: () -> Unit,
     onOpenSeries: (Long) -> Unit,
-    viewModel: SeriesListViewModel = appViewModel { container, _ -> SeriesListViewModel(container.seriesRepository) },
+    viewModel: SeriesListViewModel = appViewModel { container, _ ->
+        SeriesListViewModel(container.seriesRepository, container.app.getSharedPreferences("series", android.content.Context.MODE_PRIVATE))
+    },
 ) {
     val summaries by viewModel.summaries.collectAsStateWithLifecycle()
+    val duplicates by viewModel.duplicates.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -82,6 +88,9 @@ fun SeriesListScreen(
                 Text("Nog geen series. Ze verschijnen vanzelf zodra boeken bij een serie horen.")
             }
             else -> LazyColumn(Modifier.padding(padding).fillMaxSize()) {
+                items(duplicates, key = { "dubbel-" + it.key }) { duplicate ->
+                    DuplicateCard(duplicate, onMerge = { viewModel.merge(duplicate) }, onIgnore = { viewModel.ignore(duplicate) })
+                }
                 items(list, key = { it.id }) { summary ->
                     Column(Modifier.fillMaxWidth().clickable { onOpenSeries(summary.id) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Text(summary.name, style = MaterialTheme.typography.titleMedium)
@@ -93,6 +102,26 @@ fun SeriesListScreen(
         }
     }
 }
+
+@Composable
+private fun DuplicateCard(duplicate: SeriesDuplicate, onMerge: () -> Unit, onIgnore: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
+            Text("Mogelijk dezelfde serie", style = MaterialTheme.typography.labelLarge)
+            Text("${duplicate.keep.name} (${volumes(duplicate.keep.works)})", style = MaterialTheme.typography.bodyMedium)
+            Text("${duplicate.other.name} (${volumes(duplicate.other.works)})", style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onIgnore) { Text("Negeren") }
+                TextButton(onClick = onMerge) { Text("Samenvoegen als „${duplicate.keep.name}”") }
+            }
+        }
+    }
+}
+
+private fun volumes(count: Int) = if (count == 1) "1 deel" else "$count delen"
 
 private fun summaryLine(summary: SeriesSummary): String {
     val total = listOfNotNull(summary.totalVolumes, summary.maxIndex?.takeIf { it <= SeriesOrder.MAX_PLAUSIBLE_INDEX })
