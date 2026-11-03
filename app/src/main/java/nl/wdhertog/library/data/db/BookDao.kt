@@ -34,6 +34,9 @@ interface BookDao {
     @Query("SELECT * FROM book WHERE id = :id")
     suspend fun getBook(id: Long): Book?
 
+    @Query("SELECT * FROM book")
+    suspend fun getBooks(): List<Book>
+
     @Query("SELECT id FROM book WHERE isbn13 = :isbn13 AND id != :excludeId LIMIT 1")
     suspend fun findBookIdByIsbn(isbn13: String, excludeId: Long): Long?
 

@@ -105,5 +105,8 @@ dependencies {
     testImplementation(libs.junit)
     // Echte SQLite in unit-tests, om de sync-triggers tegen het geëxporteerde Room-schema te draaien.
     testImplementation(libs.sqlite.jdbc)
+    // Room in unit-tests (twee databases als twee telefoons bij synchronisatie).
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
 }
