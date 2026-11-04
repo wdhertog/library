@@ -223,7 +223,7 @@ fun LibraryScreen(
                 state.totalCount == 0 -> EmptyMessage("Nog geen boeken.\nTik op Scannen om te beginnen.")
                 state.items.isEmpty() -> EmptyMessage("Geen boeken gevonden.")
                 grid -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 104.dp),
+                    columns = GridCells.Adaptive(minSize = 116.dp), // drie kolommen op een gewone telefoon, zoals de schetsen
                     state = gridState,
                     contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 88.dp),
                 ) {
@@ -318,8 +318,13 @@ private fun FilterRow(state: LibraryUiState, viewModel: LibraryViewModel, onOpen
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun FilterSheet(state: LibraryUiState, viewModel: LibraryViewModel, onPickLocation: () -> Unit, onDismiss: () -> Unit) {
+    // Gekozen filters groen, net als de chips in de filterrij (standaard zouden ze goud zijn).
+    val colors = MaterialTheme.colorScheme.copy(
+        secondaryContainer = MaterialTheme.colorScheme.primaryContainer,
+        onSecondaryContainer = MaterialTheme.colorScheme.onPrimaryContainer,
+    )
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MaterialTheme(colorScheme = colors) { Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Filters", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                 if (state.anyFilter) TextButton(onClick = viewModel::clearFilters) { Text("Alles wissen") }
@@ -380,7 +385,7 @@ private fun FilterSheet(state: LibraryUiState, viewModel: LibraryViewModel, onPi
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
+        } }
     }
 }
 

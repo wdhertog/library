@@ -57,7 +57,8 @@ fun BookGridItem(
             CoverImage(item.book.title, item.book.cover, Modifier.fillMaxSize(), showTitle = true, author = item.authors.firstOrNull())
             when (status) {
                 is BookStatus.Read -> Badge(Modifier.align(Alignment.TopEnd)) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = "Gelezen", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    // Vast donkergroen op wit: goed zichtbaar op elke cover, licht en donker.
+                    Icon(Icons.Default.CheckCircle, contentDescription = "Gelezen", tint = Color(0xFF2E4A3F), modifier = Modifier.size(18.dp))
                 }
                 is BookStatus.Lent -> Box(
                     Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
@@ -88,7 +89,7 @@ fun BookGridItem(
             item.book.displayTitle,
             Modifier.padding(top = 4.dp),
             fontFamily = Literata,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
