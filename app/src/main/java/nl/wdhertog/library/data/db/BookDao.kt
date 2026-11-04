@@ -47,12 +47,29 @@ interface BookDao {
         """
         SELECT id FROM book
         WHERE isbn13 IS NOT NULL AND enrichStatus IN ('NEW', 'QUICK')
+          -- Status als laatste gezet door een andere telefoon (synchroniseren): die zoekt het op.
+          AND NOT EXISTS (
+            SELECT 1 FROM sync_field_clock c
+            WHERE c.entity = 'book' AND c.uuid = book.uuid AND c.field = 'enrichStatus'
+              AND substr(c.hlc, 23) != (SELECT value FROM sync_meta WHERE key = 'device_id')
+          )
         ORDER BY addedAt LIMIT :limit
         """
     )
     suspend fun booksAwaitingEnrichment(limit: Int): List<Long>
 
-    @Query("SELECT COUNT(*) FROM book WHERE isbn13 IS NOT NULL AND enrichStatus IN ('NEW', 'QUICK')")
+    @Query(
+        """
+        SELECT COUNT(*) FROM book
+        WHERE isbn13 IS NOT NULL AND enrichStatus IN ('NEW', 'QUICK')
+          -- Status als laatste gezet door een andere telefoon (synchroniseren): die zoekt het op.
+          AND NOT EXISTS (
+            SELECT 1 FROM sync_field_clock c
+            WHERE c.entity = 'book' AND c.uuid = book.uuid AND c.field = 'enrichStatus'
+              AND substr(c.hlc, 23) != (SELECT value FROM sync_meta WHERE key = 'device_id')
+          )
+        """
+    )
     fun observeAwaitingEnrichmentCount(): Flow<Int>
 
     /** Zet mislukte boeken terug in de wachtrij; geeft het aantal terug. */

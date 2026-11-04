@@ -671,4 +671,8 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
   - **Covers:** een cover die via synchroniseren vervangen wordt, ruimt nu het oude bestand op (als geen ander boek het gebruikt).
   - **Testversie 1.4-test1** voor je zus, als pre-release op GitHub. Het is de staging-build (`nl.wdhertog.library.staging`, "Bibliotheek test"), naast de gewone app, op twee telefoons en met een testinstructie in de release.
   - **Batterijbesparing:** zolang de app niet is uitgezonderd, staat onder "Op de achtergrond" een uitleg met de knop **Niet beperken**. Die opent de systeemvraag. Sommige telefoons (Samsung, Xiaomi) leggen apps anders toch stil.
+  - **Eerste test door je zus (4 november):** koppelen, samenvoegen (4 boeken, 1 dubbel) en wijzigingen werkten; daarna stonden beide bibliotheken gelijk. Gevonden:
+    - **Dubbel opzoeken:** boeken die via synchroniseren binnenkwamen (status "nog op te zoeken"), gingen op de andere telefoon óók in de opzoekrij. Die rij werd daar niet gestart, dus de teller bleef staan tot vernieuwen. Nu zoekt alleen de telefoon die de status als laatste zette een boek op; zo staat het in de veldklok van `enrichStatus`. Die boeken tellen op de andere telefoon ook niet mee.
+    - **Vertraging tijdens importeren:** doorgeven wachtte tot het 15 seconden stil was, en dat werd het tijdens importeren en opzoeken nooit. Nu na 5 seconden stilte, en bij aanhoudende wijzigingen minstens elke minuut.
+    - **Eigenaar wijzigen** duurde 10–20 seconden; nu ongeveer 5.
   - **Na een geslaagde test:** `BuildConfig.SYNC` aanzetten in release en versie 1.4 uitbrengen.

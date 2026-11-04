@@ -202,4 +202,16 @@ class RoomSyncTest {
         assertEquals("nieuw-2.jpg", b.bookByTitle("Dictator").coverFile)
         assertFalse(old.exists())
     }
+
+    @Test
+    fun `only the phone that added a book looks it up`() = runBlocking {
+        val id = a.books.save(0, BookDraft(title = "Dictator", isbn = "9789023495635"))
+        a.db.bookDao().setEnrichStatus(id, nl.wdhertog.library.data.db.EnrichStatus.NEW, java.time.Instant.now())
+        a.db.syncDao().setMeta(SyncMeta(SyncKeys.DEVICE_ID, "a"))
+        b.db.syncDao().setMeta(SyncMeta(SyncKeys.DEVICE_ID, "b"))
+        sync()
+        assertEquals(listOf(id), a.db.bookDao().booksAwaitingEnrichment(10))
+        assertEquals(emptyList<Long>(), b.db.bookDao().booksAwaitingEnrichment(10))
+        assertEquals(0, b.db.bookDao().observeAwaitingEnrichmentCount().first())
+    }
 }
