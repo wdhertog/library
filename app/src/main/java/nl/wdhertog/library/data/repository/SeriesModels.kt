@@ -119,6 +119,13 @@ object SeriesOrder {
             val part = partsByNumber[number]
             return SeriesVolume.Missing(ordinal, part?.title?.ifBlank { null }, part?.year)
         }
+        // Geen enkel deel met een nummer: dan is niet te zien welke nummers je mist. Toon alleen wat je zelf als
+        // ontbrekend opgaf. (Eén los boek zonder nummer naast genummerde delen is gewoon een bijdeel.)
+        if (present.isNotEmpty() && numbers.isEmpty()) {
+            val own = manual.filter { m -> sortKey(m.ordinal) !in numbers }
+                .map { SeriesVolume.Missing(it.ordinal, it.title.ifBlank { null }, null, manual = true) }
+            return (present + own).sortedWith(compareBy<SeriesVolume> { sortKey(it.index) }.thenBy { (it as? SeriesVolume.Present)?.title })
+        }
         val gaps = (1..highest).filter { n -> numbers.none { it == n.toDouble() } }.map { n -> missing(n.toDouble(), n.toString()) }
         // Tussennummers (bijv. een novelle 2.5) die je niet hebt.
         val between = (partsByNumber.keys + manualByNumber.keys)

@@ -141,6 +141,13 @@ fun ImportScreen(
                     Text("Klaar", style = MaterialTheme.typography.headlineSmall)
                     Spacer(Modifier.height(8.dp))
                     Text("${s.result.added} toegevoegd, ${s.result.updated} bijgewerkt, ${s.result.skipped} overgeslagen.")
+                    if (s.result.languageChecks > 0) {
+                        Text(
+                            "Bij ${s.result.languageChecks} ${if (s.result.languageChecks == 1) "boek past" else "boeken past"} de taal uit het bestand " +
+                                "niet bij het ISBN. Ze hebben de tag „taal controleren”; zoek daarop om ze na te lopen.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                     Text(
                         "Nieuwe boeken met een ISBN worden op de achtergrond aangevuld uit de open bronnen.",
                         style = MaterialTheme.typography.bodySmall,

@@ -95,4 +95,16 @@ class SeriesOrderTest {
         assertEquals(emptyList<ManualPart>(), ManualParts.decode("rommel"))
         assertEquals(10, ManualParts.highest(ManualParts.encode(parts)))
     }
+
+    @Test
+    fun `volumes without numbers - only parts you added yourself count as missing`() {
+        val volumes = SeriesOrder.volumes(
+            listOf(row(1, null), row(2, null)),
+            totalVolumes = 8,
+            parts = listOf(SeriesPart(1, "3", "Wikidata", null, null)),
+            manual = listOf(ManualPart("10", "The Last Orphan")),
+        )
+        assertEquals(listOf("10"), volumes.filterIsInstance<SeriesVolume.Missing>().map { it.index })
+        assertEquals(3, volumes.size)
+    }
 }

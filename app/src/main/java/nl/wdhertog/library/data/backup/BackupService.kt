@@ -106,6 +106,8 @@ class BackupService(
             zipFile.delete()
             // De teruggezette bibliotheek kan van een andere telefoon komen: synchronisatie begint opnieuw.
             syncResetMarker(context).createNewFile()
+            // En van een oudere versie: eenmalige onderhoudstaken (bijv. talen uit het ISBN) opnieuw doen.
+            context.getSharedPreferences("onderhoud", Context.MODE_PRIVATE).edit().clear().commit()
         }
     }
 
