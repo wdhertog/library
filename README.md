@@ -13,6 +13,7 @@ De app is in het Nederlands en gemaakt voor eigen gebruik, maar iedereen mag hem
   - wat je nu leest, met je voortgang;
   - je leeslijst en je leesdoel per jaar;
   - per jaar wat je las, met beoordelingen (in halve sterren) en recensies.
+- **Auteurs:** per auteur je boeken (edities bij elkaar), series en gegevens uit Wikidata.
 - **Series:** welke delen je hebt, welke je gelezen hebt en welke nog ontbreken, met titels uit Wikidata. Zelf een ontbrekend deel toevoegen kan ook, en de app wijst series aan die dubbel lijken.
 - **Edities en vertalingen** van hetzelfde werk horen bij elkaar. Lees je de Engelse editie, dan telt de Nederlandse ook als gelezen.
 - **Covers:** fotografeer zelf de cover als er geen in de open bronnen staat; dat geldt voor de meeste Nederlandse boeken.
@@ -86,7 +87,7 @@ Het ontwerp staat in [`docs/ONTWERP.md`](docs/ONTWERP.md), met de keuzes, het da
 
 ## Status
 
-**Versie 1.4** is uitgebracht. Daarin zitten synchroniseren tussen telefoons, ontbrekende delen van series (uit Wikidata of zelf toegevoegd), de taal herkennen aan het ISBN, en instellingen voor bronnen en de plank-modus. Wat nog op de lijst staat: zie [§10 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10); het ontwerp van synchroniseren staat in §11.
+**Versie 1.5** is uitgebracht, met een nieuwe vormgeving (eigen groen-crème palet met donkere variant, Literata voor titels, bibliotheek als lijst of raster, boekpagina met kaarten, leesdoel als ring), een auteurspagina, ontbrekende delen van series, de taal uit het ISBN en instellingen voor bronnen en de plank-modus. Synchroniseren tussen telefoons zit er sinds 1.4 in. Wat nog op de lijst staat: zie [§10 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10).
 
 Fouten of ideeën zijn welkom als [issue](https://github.com/wdhertog/library/issues).
 
