@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
@@ -83,6 +84,7 @@ fun LibraryScreen(
     onScan: () -> Unit,
     onImport: () -> Unit,
     onSeries: () -> Unit,
+    onAuthors: () -> Unit,
     onBackup: () -> Unit,
     onSettings: () -> Unit,
     viewModel: LibraryViewModel = appViewModel { container, _ ->
@@ -114,7 +116,7 @@ fun LibraryScreen(
                 title = { Text("Bibliotheek") },
                 actions = {
                     SortMenu(state.sort, viewModel::setSort)
-                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport, onSeries = onSeries, onBackup = onBackup, onSettings = onSettings)
+                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport, onSeries = onSeries, onAuthors = onAuthors, onBackup = onBackup, onSettings = onSettings)
                 },
             )
         },
@@ -298,7 +300,15 @@ private fun countLabel(state: LibraryUiState): String {
 }
 
 @Composable
-private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onImport: () -> Unit, onSeries: () -> Unit, onBackup: () -> Unit, onSettings: () -> Unit) {
+private fun OverflowMenu(
+    onAddBook: () -> Unit,
+    onUpdateLibrary: () -> Unit,
+    onImport: () -> Unit,
+    onSeries: () -> Unit,
+    onAuthors: () -> Unit,
+    onBackup: () -> Unit,
+    onSettings: () -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Meer") }
@@ -317,6 +327,11 @@ private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit, onI
                 text = { Text("Series") },
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = null) },
                 onClick = { open = false; onSeries() },
+            )
+            DropdownMenuItem(
+                text = { Text("Auteurs") },
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                onClick = { open = false; onAuthors() },
             )
             DropdownMenuItem(
                 text = { Text("Importeren…") },

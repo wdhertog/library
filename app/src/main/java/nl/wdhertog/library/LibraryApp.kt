@@ -48,6 +48,11 @@ class AppContainer(val app: Application) {
     val seriesRepository by lazy {
         SeriesRepository(database, bookRepository, WikidataSource(http)) { settings.isSourceEnabled(nl.wdhertog.library.lookup.LookupSource.WIKIDATA) }
     }
+    val authorRepository by lazy {
+        nl.wdhertog.library.data.repository.AuthorRepository(database, WikidataSource(http)) {
+            settings.isSourceEnabled(nl.wdhertog.library.lookup.LookupSource.WIKIDATA)
+        }
+    }
     val syncRepository by lazy { SyncRepository(database) }
     val syncManager by lazy {
         nl.wdhertog.library.sync.SyncManager(

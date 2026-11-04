@@ -104,6 +104,13 @@ object SettingsRoute
 object SyncRoute
 
 @Serializable
+object AuthorListRoute
+
+/** Op id (uit de lijst) of op naam (vanaf de boekpagina). */
+@Serializable
+data class AuthorRoute(val authorId: Long = 0, val name: String = "")
+
+@Serializable
 object SeriesListRoute
 
 @Serializable
@@ -205,6 +212,7 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onScan = { navController.navigate(ScanRoute()) },
                     onImport = { navController.navigate(ImportRoute) },
                     onSeries = { navController.navigate(SeriesListRoute) },
+                    onAuthors = { navController.navigate(AuthorListRoute) },
                     onBackup = { navController.navigate(BackupRoute) },
                     onSettings = { navController.navigate(SettingsRoute) },
                 )
@@ -224,6 +232,19 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
             }
             composable<ReadingRoute> {
                 ReadingScreen(onOpenBook = { navController.navigate(BookDetailRoute(it)) })
+            }
+            composable<AuthorListRoute> { entry ->
+                nl.wdhertog.library.ui.authors.AuthorListScreen(
+                    onBack = { navController.popFrom(entry) },
+                    onOpenAuthor = { navController.navigate(AuthorRoute(authorId = it)) },
+                )
+            }
+            composable<AuthorRoute> { entry ->
+                nl.wdhertog.library.ui.authors.AuthorScreen(
+                    onBack = { navController.popFrom(entry) },
+                    onOpenBook = { navController.navigate(BookDetailRoute(it)) },
+                    onOpenSeries = { navController.navigate(SeriesDetailRoute(it)) },
+                )
             }
             composable<SeriesListRoute> { entry ->
                 SeriesListScreen(
@@ -270,6 +291,7 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onOpenLocation = { navController.navigate(LocationDetailRoute(it)) },
                     onPhotoCover = { navController.navigate(CoverRoute(it)) },
                     onOpenSeries = { navController.navigate(SeriesDetailRoute(it)) },
+                    onOpenAuthor = { navController.navigate(AuthorRoute(name = it)) },
                 )
             }
             composable<ImportRoute> { entry ->

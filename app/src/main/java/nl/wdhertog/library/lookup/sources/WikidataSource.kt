@@ -20,6 +20,9 @@ data class WikidataSeriesPart(val ordinal: String, val title: String, val year: 
 
 data class WikidataSeriesParts(val seriesId: String, val parts: List<WikidataSeriesPart>)
 
+/** Wat Wikidata over een auteur weet, voor de auteurspagina. */
+data class WikidataAuthor(val id: String, val birthYear: Int?, val deathYear: Int?, val country: String?, val description: String?)
+
 /**
  * Zoekt het werk op Wikidata aan de hand van titel(s) en auteur, voor serie + volgnummer (P179/P1545)
  * en een werk-id waarmee vertalingen van hetzelfde boek gekoppeld kunnen worden.
@@ -47,8 +50,65 @@ class WikidataSource(private val http: LookupHttp) {
         return parseSeriesParts(body, workIds, seriesName)
     }
 
+    /**
+     * De auteur op Wikidata: via zijn id, of via de Wikidata-id's van zijn werken (de auteur van die werken
+     * met dezelfde naam). Null als Wikidata hem niet kent of er geen verbinding is.
+     */
+    suspend fun authorInfo(authorId: String?, workIds: List<String>, name: String): WikidataAuthor? {
+        val query = buildAuthorQuery(authorId, workIds) ?: return null
+        val body = http.postForm(ENDPOINT, mapOf("query" to query), accept = "application/sparql-results+json") ?: return null
+        return parseAuthor(body, name)
+    }
+
     companion object {
         private const val ENDPOINT = "https://query.wikidata.org/sparql"
+
+        fun buildAuthorQuery(authorId: String?, workIds: List<String>): String? {
+            val start = when {
+                authorId != null && idPattern.matches(authorId) -> "VALUES ?author { wd:$authorId }"
+                else -> {
+                    val ids = workIds.filter { idPattern.matches(it) }.distinct().take(20)
+                    if (ids.isEmpty()) return null
+                    "VALUES ?w { ${ids.joinToString(" ") { "wd:$it" }} }\n  ?w wdt:P50 ?author ."
+                }
+            }
+            return """
+                PREFIX wd: <http://www.wikidata.org/entity/>
+                PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                PREFIX schema: <http://schema.org/>
+                SELECT ?author ?label ?description (LANG(?description) AS ?descLang) ?birth ?death ?countryLabel (LANG(?countryLabel) AS ?countryLang) WHERE {
+                  $start
+                  ?author rdfs:label ?label . FILTER(LANG(?label) IN ("nl", "en", "mul"))
+                  OPTIONAL { ?author schema:description ?description . FILTER(LANG(?description) IN ("nl", "en")) }
+                  OPTIONAL { ?author wdt:P569 ?birth }
+                  OPTIONAL { ?author wdt:P570 ?death }
+                  OPTIONAL { ?author wdt:P27 ?country . ?country rdfs:label ?countryLabel . FILTER(LANG(?countryLabel) IN ("nl", "en")) }
+                } LIMIT 500
+            """.trimIndent()
+        }
+
+        /** Kiest de auteur met dezelfde naam (ook "Achternaam, Voornaam"); Nederlandse teksten gaan voor. */
+        fun parseAuthor(json: String, name: String): WikidataAuthor? {
+            val rows = Json.parseToJsonElement(json).jsonObject["results"]?.jsonObject?.get("bindings")?.jsonArray
+                ?.map { binding -> (binding as JsonObject).mapValues { (_, v) -> v.str("value").orEmpty() } }
+                .orEmpty()
+            fun key(text: String) = nl.wdhertog.library.util.TextNormalizer.normalize(text).replace(Regex("[^a-z0-9]"), "")
+            val wanted = setOfNotNull(key(name), name.split(',').takeIf { it.size == 2 }?.let { (last, first) -> key("$first $last") })
+            val byAuthor = rows.groupBy { it["author"].orEmpty().substringAfterLast('/') }.filterKeys { it.isNotEmpty() }
+            val (id, authorRows) = byAuthor.entries.firstOrNull { (_, r) -> r.any { key(it["label"].orEmpty()) in wanted } }
+                ?: byAuthor.entries.singleOrNull()?.takeIf { (_, r) -> r.any { key(it["label"].orEmpty()).let { l -> wanted.any { w -> l.contains(w) || w.contains(l) } } } }
+                ?: return null
+            fun preferDutch(field: String, lang: String) =
+                authorRows.filter { !it[field].isNullOrBlank() }.minByOrNull { if (it[lang] == "nl") 0 else 1 }?.get(field)
+            return WikidataAuthor(
+                id = id,
+                birthYear = authorRows.mapNotNull { yearIn(it["birth"]) }.minOrNull(),
+                deathYear = authorRows.mapNotNull { yearIn(it["death"]) }.maxOrNull(),
+                country = preferDutch("countryLabel", "countryLang"),
+                description = preferDutch("description", "descLang"),
+            )
+        }
 
         /** Een uitgeversreeks met honderden nummers is geen serie met "ontbrekende delen". */
         const val MAX_PARTS = 100
