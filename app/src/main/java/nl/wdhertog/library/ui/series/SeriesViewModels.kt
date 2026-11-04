@@ -110,6 +110,14 @@ class SeriesDetailViewModel(
         viewModelScope.launch { series.setManualPart(seriesId.value, ordinal, title, previousOrdinal) }
     }
 
+    /** Een ontbrekend deel op je leeslijst zetten (als boek "niet in bezit"). */
+    fun addToWishlist(ordinal: String, title: String, done: (String) -> Unit) {
+        viewModelScope.launch {
+            series.addToWishlist(seriesId.value, ordinal, title)
+            done("\u2018$title\u2019 staat op je leeslijst")
+        }
+    }
+
     fun setTotal(total: Int?) {
         viewModelScope.launch { series.setTotalVolumes(seriesId.value, total) }
     }

@@ -116,6 +116,21 @@ interface SeriesDao {
     @Query("SELECT bookId FROM book_work WHERE workId = :workId")
     suspend fun bookIdsOfWork(workId: Long): List<Long>
 
+    /** De auteur van de meeste delen van de serie (voor een deel dat je nog niet hebt). */
+    @Query(
+        """
+        SELECT a.name FROM author a
+        JOIN work_author wa ON wa.authorId = a.id
+        JOIN work w ON w.id = wa.workId
+        WHERE w.seriesId = :seriesId
+        GROUP BY a.id ORDER BY COUNT(*) DESC LIMIT 1
+        """
+    )
+    suspend fun mainAuthor(seriesId: Long): String?
+
+    @Query("UPDATE book SET ownership = 'NOT_OWNED', updatedAt = :now WHERE id = :bookId")
+    suspend fun markNotOwned(bookId: Long, now: java.time.Instant)
+
     // --- Delen volgens Wikidata ---
 
     @Query("SELECT * FROM series_part WHERE seriesId = :seriesId")

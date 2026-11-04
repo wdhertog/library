@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.BookmarkAdd
 import nl.wdhertog.library.data.repository.ManualParts
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
@@ -220,6 +221,10 @@ fun SeriesDetailScreen(
             volume = volume,
             onSave = { ordinal, title -> viewModel.setManualPart(ordinal, title, previousOrdinal = volume.index.ifEmpty { null }); editingMissing = null },
             onRemove = { viewModel.setManualPart(volume.index, ""); editingMissing = null },
+            onWishlist = { ordinal, title ->
+                viewModel.addToWishlist(ordinal, title) { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+                editingMissing = null
+            },
             onDismiss = { editingMissing = null },
         )
     }
@@ -336,7 +341,13 @@ private fun MissingVolume(volume: SeriesVolume.Missing, onClick: () -> Unit) {
 
 /** Titel van een ontbrekend deel invullen; bij een nieuw deel ook het nummer. */
 @Composable
-private fun MissingPartDialog(volume: SeriesVolume.Missing, onSave: (String, String) -> Unit, onRemove: () -> Unit, onDismiss: () -> Unit) {
+private fun MissingPartDialog(
+    volume: SeriesVolume.Missing,
+    onSave: (String, String) -> Unit,
+    onRemove: () -> Unit,
+    onWishlist: (String, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val isNew = volume.index.isEmpty()
     var ordinal by remember { mutableStateOf(volume.index) }
     var title by remember { mutableStateOf(volume.title.orEmpty()) }
@@ -369,6 +380,15 @@ private fun MissingPartDialog(volume: SeriesVolume.Missing, onSave: (String, Str
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // Nog niet in huis, wel willen lezen: komt in Lezen onder "Wil ik lezen".
+                TextButton(
+                    onClick = { onWishlist(ordinal.trim(), title.trim()) },
+                    enabled = ordinal.isNotBlank() && title.isNotBlank(),
+                ) {
+                    Icon(Icons.Default.BookmarkAdd, contentDescription = null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Op mijn leeslijst")
+                }
             }
         },
         confirmButton = {

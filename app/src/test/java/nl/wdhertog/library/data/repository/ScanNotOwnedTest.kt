@@ -3,6 +3,7 @@ package nl.wdhertog.library.data.repository
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import nl.wdhertog.library.covers.CoverStore
 import nl.wdhertog.library.data.db.DisposalReason
@@ -43,5 +44,21 @@ class ScanNotOwnedTest {
         assertNull(book.disposalReason)
         assertNull(book.disposedTo)
         assertEquals(ScanAddResult.AlreadyPresent(id, notOwned = false), books.addScannedIsbn("9789023495635"))
+    }
+
+    @Test
+    fun `a missing part on the reading list becomes a book you do not own, in the series`() = runBlocking {
+        books.save(0, BookDraft(title = "Dictator", authors = listOf("Robert Harris"), seriesName = "Cicero", seriesIndex = "3"))
+        val series = SeriesRepository(db, books)
+        val seriesId = db.seriesDao().observeSummaries().first().single().id
+        series.setManualPart(seriesId, "1", "Imperium")
+
+        val id = series.addToWishlist(seriesId, "1", "Imperium")
+        val book = books.getBook(id)!!
+        assertEquals(Ownership.NOT_OWNED, book.ownership)
+        assertEquals(true, book.wantToRead)
+        assertEquals(listOf("Robert Harris"), db.bookDao().getAuthorNames(db.bookDao().getPrimaryWork(id)!!.id))
+        assertEquals("1", db.bookDao().getPrimaryWork(id)!!.seriesIndex)
+        assertEquals(null, db.seriesDao().observeSummaries().first().single().manualParts)
     }
 }
