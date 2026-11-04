@@ -44,6 +44,7 @@ fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit, onSync: () -> Unit)
     val container = (context.applicationContext as LibraryApp).container
     val settings = container.settings
     val wifiOnly by settings.wifiOnly.collectAsStateWithLifecycle()
+    val autoLookup by settings.autoLookup.collectAsStateWithLifecycle()
     val sound by settings.scanSound.collectAsStateWithLifecycle()
     val vibrate by settings.scanVibrate.collectAsStateWithLifecycle()
     val reminders by settings.loanReminders.collectAsStateWithLifecycle()
@@ -61,6 +62,16 @@ fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit, onSync: () -> Unit)
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
             Header("Gegevens opzoeken")
             SwitchRow(
+                title = "Automatisch opzoeken",
+                text = "Gegevens van nieuwe boeken meteen opzoeken. Uit: alleen als je zelf \"Bibliotheek bijwerken\" kiest, " +
+                    "of bij een boek \"Gegevens opnieuw ophalen\".",
+                checked = autoLookup,
+                onChange = {
+                    settings.setAutoLookup(it)
+                    container.enrichScheduler.schedule()
+                },
+            )
+            if (autoLookup) SwitchRow(
                 title = "Alleen via wifi",
                 text = "Op mobiele data wacht het opzoeken van boekgegevens tot je weer wifi hebt.",
                 checked = wifiOnly,

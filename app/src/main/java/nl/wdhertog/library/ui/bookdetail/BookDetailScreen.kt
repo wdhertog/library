@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,6 +94,7 @@ fun BookDetailScreen(
     onOpenLocation: (Long) -> Unit,
     onPhotoCover: (Long) -> Unit,
     onOpenSeries: (Long) -> Unit,
+    onOpenAuthor: (String) -> Unit = {},
     viewModel: BookDetailViewModel = appViewModel { container, handle ->
         BookDetailViewModel(
             handle,
@@ -219,6 +221,7 @@ fun BookDetailScreen(
                     onPickLocation = { pickingLocation = true },
                     onEditOwner = { editingOwner = true },
                     onOpenSeries = onOpenSeries,
+                    onOpenAuthor = onOpenAuthor,
                     onPhotoCover = { onPhotoCover(viewModel.bookId) },
                     refreshing = refreshing,
                     onRefresh = viewModel::refresh,
@@ -400,6 +403,7 @@ private fun DetailContent(
     onPickLocation: () -> Unit,
     onEditOwner: () -> Unit,
     onOpenSeries: (Long) -> Unit,
+    onOpenAuthor: (String) -> Unit,
     onPhotoCover: () -> Unit,
     refreshing: Boolean,
     onRefresh: () -> Unit,
@@ -436,7 +440,17 @@ private fun DetailContent(
                 }
                 if (detail.authors.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
-                    Text(detail.authors.joinToString(", "), style = MaterialTheme.typography.titleMedium)
+                    // Elke naam opent de auteurspagina.
+                    FlowRow {
+                        detail.authors.forEachIndexed { index, name ->
+                            Text(
+                                name + if (index < detail.authors.lastIndex) ", " else "",
+                                Modifier.clickable { onOpenAuthor(name) },
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 MetaLine(listOfNotNull(book.publisher, book.publishedYear?.toString(), book.pages?.let { "$it p." }))

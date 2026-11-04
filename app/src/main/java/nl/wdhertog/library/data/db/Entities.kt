@@ -99,6 +99,13 @@ data class Work(
 data class Author(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
+    // Uit Wikidata voor de auteurspagina; per telefoon opgehaald, niet gesynchroniseerd.
+    val wikidataId: String? = null,
+    val birthYear: Int? = null,
+    val deathYear: Int? = null,
+    val country: String? = null,
+    val description: String? = null,
+    val infoFetchedAt: Instant? = null,
 )
 
 @Entity(

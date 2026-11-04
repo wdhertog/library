@@ -1,0 +1,834 @@
+{
+ "head": {
+  "vars": [
+   "author",
+   "label",
+   "description",
+   "descLang",
+   "birth",
+   "death",
+   "countryLabel",
+   "countryLang"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "mul",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "mul",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "mul",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "mul",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Kingdom of Denmark"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "mul",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "mul",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Deens krimi-auteur, bekend van de serie \"Afdeling Q\""
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "nl"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "mul",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "mul",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   },
+   {
+    "author": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q930301"
+    },
+    "label": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Jussi Adler-Olsen"
+    },
+    "description": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Danish author of novels"
+    },
+    "birth": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "1950-08-02T00:00:00Z"
+    },
+    "countryLabel": {
+     "xml:lang": "nl",
+     "type": "literal",
+     "value": "Koninkrijk Denemarken"
+    },
+    "descLang": {
+     "type": "literal",
+     "value": "en"
+    },
+    "countryLang": {
+     "type": "literal",
+     "value": "nl"
+    }
+   }
+  ]
+ }
+}

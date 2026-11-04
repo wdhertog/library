@@ -433,6 +433,7 @@ private fun SessionList(
     emptyHint: String,
     modifier: Modifier,
 ) {
+    val autoLookup by (LocalContext.current.applicationContext as nl.wdhertog.library.LibraryApp).container.settings.autoLookup.collectAsStateWithLifecycle()
     Column(modifier) {
         Text(
             if (rows.isEmpty()) emptyHint else "Deze sessie (${rows.size})",
@@ -444,6 +445,7 @@ private fun SessionList(
             items(rows, key = { it.entry.isbn13 }) { row ->
                 SessionRowItem(
                     row,
+                    autoLookup = autoLookup,
                     onClick = { onOpenBook(row.entry.bookId) },
                     onUndo = { onUndo(row.entry.isbn13) },
                     onMoveHere = { onMoveHere(row.entry.isbn13) },
@@ -459,6 +461,7 @@ private fun SessionList(
 @Composable
 private fun SessionRowItem(
     row: SessionRow,
+    autoLookup: Boolean,
     onClick: () -> Unit,
     onUndo: () -> Unit,
     onMoveHere: () -> Unit,
@@ -490,6 +493,7 @@ private fun SessionRowItem(
                 ScanOutcome.RECLAIMED -> "Weer in bezit"
                 ScanOutcome.ADDED -> when {
                     book == null -> ""
+                    book.enrichStatus == EnrichStatus.NEW && !autoLookup -> "Nog niet opgezocht"
                     book.enrichStatus == EnrichStatus.NEW -> "Zoeken…"
                     book.enrichStatus == EnrichStatus.FAILED -> "Niet gevonden — later aanvullen"
                     else -> row.item.authorLine.orEmpty()
@@ -511,7 +515,7 @@ private fun SessionRowItem(
             TextButton(onClick = onMoveHere) { Text("Hierheen") }
         } else if (row.entry.outcome == ScanOutcome.NOT_OWNED) {
             TextButton(onClick = onReclaim) { Text("In bezit") }
-        } else if (book?.enrichStatus == EnrichStatus.NEW && row.entry.outcome == ScanOutcome.ADDED) {
+        } else if (book?.enrichStatus == EnrichStatus.NEW && row.entry.outcome == ScanOutcome.ADDED && autoLookup) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         } else if (book != null && book.cover == null) {
             // Geen open bron met een cover: meteen zelf fotograferen nu het boek in je hand ligt.

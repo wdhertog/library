@@ -479,7 +479,14 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
 ### Gepland
-- **Auteurspagina** (gevraagd 4 november 2026): per auteur je boeken en werken, wat je gelezen hebt, en series. Uitwerking volgt.
+- **Nieuwe vormgeving** naar de schetsen van 4 november 2026 (lokaal: `samples/bibliotheek_app_schetsen.html`). Groen-crème palet en Literata voor titels. Bibliotheek als lijst en als raster, met filterchips en status per boek. Boekpagina met cover op een kleurvlak, één hoofdknop en kaarten. Lezen met een leesdoel-ring, "nu aan het lezen" en "wil ik lezen" als covers. Uitwerking in stappen volgt.
+
+### Gebouwd na 1.4
+- **Auteurspagina.**
+  - **Lijst Auteurs** via ⋮ in de bibliotheek: op achternaam, met een zoekveld en het aantal boeken en werken.
+  - **Per auteur:** gegevens uit Wikidata (jaren, land, omschrijving; database versie 6, per telefoon), aantal boeken, werken, gelezen en je gemiddelde beoordeling. De series met "x van y delen", en de boeken per werk (edities bij elkaar, op serievolgorde en jaar) met een vinkje bij gelezen.
+  - **Op de boekpagina** is elke auteursnaam aanklikbaar.
+- **Automatisch opzoeken uit** (§6.12): alleen nog met "Bibliotheek bijwerken" of "Gegevens opnieuw ophalen". De bibliotheek toont dan "N boeken nog niet opgezocht" met de knop **Nu opzoeken**.
 
 ### Gebouwd in 1.4
 - **Synchronisatie tussen telefoons:** zie §11.
@@ -521,8 +528,6 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
   - Er verandert niets vanzelf. In de scanlijst staat "Niet in bezit · Weggegeven aan Jan" (of wat er bekend is), met de knop **In bezit**: weer een eigen boek, en de gegevens over weggedaan vervallen. De leesgeschiedenis blijft.
   - In plank-modus vraagt de app eerst: "Weer in bezit nemen en op deze plank zetten?" De instelling "verplaatsen / eerst vragen / laten staan" geldt voor boeken die je wél hebt.
 
-### Uit het ontwerp, nog niet gebouwd
-- **Achtergrond-verrijking "alleen handmatig"** (§6.12): nu is er automatisch, of alleen via wifi.
 
 ### Eigenaar voor meerdere boeken tegelijk (gebouwd in 1.2)
 Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijkheden:
@@ -548,7 +553,6 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 - **Dubbele series samenvoegen** in de app. De serielijst wijst nu zelf waarschijnlijk dubbele series aan (kaartje "Mogelijk dezelfde serie", met Samenvoegen of Negeren), zoals "Arsène Lupin" en "Arsène Lupin literary series". Dezelfde serie in een andere taal herkent de app niet; die voeg je zelf samen via Series → ⋮ → Samenvoegen met…:
   - "In de ban van de ring" met "The Lord of the Rings";
   - "De Grijze Jager" met "Ranger's Apprentice".
-- **Opruimen:** `samples/repo-voor-herschrijven.bundle` (oude geschiedenis) verwijderen zodra de herschreven repo in orde blijkt.
 - **Pull request #4** toont op GitHub nog de oude namen in de diff. Opruimen kan alleen via GitHub Support ("Remove sensitive data").
 
 ## 11. Synchronisatie tussen telefoons (plan)

@@ -20,6 +20,7 @@ class AppSettings(private val context: Context) {
     private fun flag(key: String, default: Boolean) = MutableStateFlow(prefs.getBoolean(key, default))
 
     private val _wifiOnly = flag(KEY_WIFI_ONLY, false)
+    private val _autoLookup = flag(KEY_AUTO_LOOKUP, true)
     private val _scanSound = flag(KEY_SCAN_SOUND, true)
     private val _scanVibrate = flag(KEY_SCAN_VIBRATE, true)
     private val _loanReminders = flag(KEY_LOAN_REMINDERS, true)
@@ -31,6 +32,9 @@ class AppSettings(private val context: Context) {
 
     /** Gegevens opzoeken alleen via wifi (niet via mobiele data). */
     val wifiOnly: StateFlow<Boolean> = _wifiOnly
+
+    /** Gegevens vanzelf opzoeken; uit = alleen met "Bibliotheek bijwerken" of "Gegevens opnieuw ophalen". */
+    val autoLookup: StateFlow<Boolean> = _autoLookup
     val scanSound: StateFlow<Boolean> = _scanSound
     val scanVibrate: StateFlow<Boolean> = _scanVibrate
     val loanReminders: StateFlow<Boolean> = _loanReminders
@@ -57,6 +61,7 @@ class AppSettings(private val context: Context) {
     val syncInBackground: StateFlow<Boolean> = _syncInBackground
 
     fun setWifiOnly(value: Boolean) = set(KEY_WIFI_ONLY, _wifiOnly, value)
+    fun setAutoLookup(value: Boolean) = set(KEY_AUTO_LOOKUP, _autoLookup, value)
     fun setScanSound(value: Boolean) = set(KEY_SCAN_SOUND, _scanSound, value)
     fun setScanVibrate(value: Boolean) = set(KEY_SCAN_VIBRATE, _scanVibrate, value)
     fun setLoanReminders(value: Boolean) = set(KEY_LOAN_REMINDERS, _loanReminders, value)
@@ -64,6 +69,7 @@ class AppSettings(private val context: Context) {
 
     /** Mag er nu meteen worden opgezocht (bijv. de snelle lookup na een scan)? */
     fun mayLookUpNow(): Boolean {
+        if (!_autoLookup.value) return false
         if (!_wifiOnly.value) return true
         val connectivity = context.getSystemService(ConnectivityManager::class.java) ?: return true
         return !connectivity.isActiveNetworkMetered
@@ -76,6 +82,7 @@ class AppSettings(private val context: Context) {
 
     private companion object {
         const val KEY_WIFI_ONLY = "lookup-wifi-only"
+        const val KEY_AUTO_LOOKUP = "lookup-auto"
         const val KEY_SCAN_SOUND = "scan-sound"
         const val KEY_SCAN_VIBRATE = "scan-vibrate"
         const val KEY_LOAN_REMINDERS = "loan-reminders"
