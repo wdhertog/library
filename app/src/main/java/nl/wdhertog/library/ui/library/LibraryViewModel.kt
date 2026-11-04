@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import nl.wdhertog.library.data.db.LocationType
 import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.repository.BookListItem
+import nl.wdhertog.library.data.repository.BookStatus
+import nl.wdhertog.library.data.repository.LoanRepository
 import nl.wdhertog.library.data.repository.BookRepository
 import nl.wdhertog.library.data.repository.LocationNode
 import nl.wdhertog.library.data.repository.LocationRepository
@@ -68,10 +70,17 @@ data class LibraryUiState(
     val multipleEditions: Boolean = false,
     /** Zijn er boeken die je niet (meer) hebt? Anders is de bezit-filter overbodig. */
     val hasNotOwned: Boolean = false,
+    /** Statusregel per boek: uitgeleend, bezig of gelezen. */
+    val statuses: Map<Long, BookStatus> = emptyMap(),
 ) {
     val anyFilter: Boolean
-        get() = language != null || location != null || owner != null || favoritesOnly || read != ReadFilter.ALL ||
-            ownership != OwnershipFilter.IN_HOUSE || multipleEditions
+        get() = activeFilterCount > 0
+
+    val activeFilterCount: Int
+        get() = listOf(
+            language != null, location != null, owner != null, favoritesOnly, read != ReadFilter.ALL,
+            ownership != OwnershipFilter.IN_HOUSE, multipleEditions,
+        ).count { it }
 }
 
 private data class Filters(
@@ -88,7 +97,7 @@ private data class Filters(
 )
 
 /** Welke boeken (gezien per werk) gelezen zijn en welke je nu leest. */
-private data class ReadState(val read: Set<Long>, val reading: Set<Long>)
+private data class ReadState(val read: Set<Long>, val reading: Set<Long>, val statuses: Map<Long, BookStatus> = emptyMap())
 
 /** Lijstitem met vooraf berekende sorteersleutels, zodat sorteren en filteren snel blijven. */
 private class Indexed(val item: BookListItem) {
@@ -102,6 +111,7 @@ class LibraryViewModel(
     private val locations: LocationRepository,
     private val scheduler: EnrichScheduler,
     reading: ReadingRepository,
+    loans: LoanRepository? = null,
 ) : ViewModel() {
 
     /** Aantal boeken waarvan de gegevens nog op de achtergrond worden opgehaald. */
@@ -130,8 +140,15 @@ class LibraryViewModel(
     val queryText: StateFlow<String> = filters.map { it.query }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
-    private val readState = combine(reading.observeReadBookIds(), reading.observeReadingBookIds()) { read, current ->
-        ReadState(read.toSet(), current.toSet())
+    private val readState = combine(
+        reading.observeReadBookIds(),
+        reading.observeReadingBookIds(),
+        reading.observeLastFinished(),
+        reading.observeProgress(),
+        loans?.observeActiveLoans() ?: kotlinx.coroutines.flow.flowOf(emptyList()),
+    ) { read, current, finished, progress, active ->
+        val readIds = read.toSet()
+        ReadState(readIds, current.toSet(), BookStatus.of(active, progress, finished, readIds))
     }
 
     private val indexed = repository.observeLibrary()
@@ -201,6 +218,7 @@ class LibraryViewModel(
                 ownership = filters.ownership,
                 multipleEditions = filters.multipleEditions,
                 hasNotOwned = all.any { it.item.book.ownership == Ownership.NOT_OWNED },
+                statuses = readState.statuses,
             )
         }
             .flowOn(Dispatchers.Default)

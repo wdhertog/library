@@ -55,6 +55,30 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.ui.components.BookGridItem
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Badge
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.material3.TextButton
@@ -77,13 +101,16 @@ fun LibraryScreen(
     onAddBook: () -> Unit,
     onScan: () -> Unit,
     viewModel: LibraryViewModel = appViewModel { container, _ ->
-        LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler, container.readingRepository)
+        LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler, container.readingRepository, container.loanRepository)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.queryText.collectAsStateWithLifecycle()
     val awaitingLookup by viewModel.awaitingLookup.collectAsStateWithLifecycle()
-    val autoLookup by (LocalContext.current.applicationContext as nl.wdhertog.library.LibraryApp).container.settings.autoLookup.collectAsStateWithLifecycle()
+    val settings = (LocalContext.current.applicationContext as nl.wdhertog.library.LibraryApp).container.settings
+    val autoLookup by settings.autoLookup.collectAsStateWithLifecycle()
+    val grid by settings.libraryGrid.collectAsStateWithLifecycle()
+    var showFilters by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     var pickingLocation by remember { mutableStateOf(false) }
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
@@ -101,13 +128,49 @@ fun LibraryScreen(
                     onClear = { selection = emptySet() },
                     onMessage = { message -> scope.launch { snackbar.showSnackbar(message) } },
                 )
-            } else TopAppBar(
-                title = { Text("Bibliotheek") },
-                actions = {
+            } else {
+                // Schetsen: geen titelbalk, maar een afgeronde zoekbalk met de knoppen erin.
+                Row(
+                    Modifier.statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 4.dp)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(28.dp))
+                        .padding(start = 16.dp, end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(12.dp))
+                    BasicTextField(
+                        value = query,
+                        onValueChange = viewModel::setQuery,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.weight(1f).padding(vertical = 14.dp),
+                        decorationBox = { field ->
+                            if (query.isEmpty()) {
+                                Text(
+                                    "Zoek in ${state.totalCount} ${if (state.totalCount == 1) "boek" else "boeken"}",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            field()
+                        },
+                    )
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.setQuery("") }) { Icon(Icons.Default.Clear, contentDescription = "Zoekopdracht wissen") }
+                    }
+                    IconButton(onClick = { settings.setLibraryGrid(!grid) }) {
+                        Icon(
+                            if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                            contentDescription = if (grid) "Als lijst" else "Als raster",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     SortMenu(state.sort, viewModel::setSort)
                     OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary)
-                },
-            )
+                }
+            }
         },
         floatingActionButton = {
             if (selection.isEmpty()) ExtendedFloatingActionButton(
@@ -122,46 +185,157 @@ fun LibraryScreen(
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = viewModel::setQuery,
-                placeholder = { Text("Zoek titel, auteur, serie, ISBN") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.setQuery("") }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Zoekopdracht wissen")
+            FilterRow(state, viewModel, onOpenFilters = { showFilters = true })
+            // Andere filters of sortering: begin weer bovenaan de lijst.
+            val listState = rememberLazyListState()
+            val gridState = rememberLazyGridState()
+            LaunchedEffect(state.language, state.location, state.owner, state.favoritesOnly, state.read, state.ownership, state.multipleEditions, state.sort, state.query) {
+                listState.scrollToItem(0)
+                gridState.scrollToItem(0)
+            }
+            // Aantal, en wat er nog wordt opgezocht (schetsen: "312 van 1.284 boeken · 37 worden aangevuld").
+            Row(Modifier.padding(start = 16.dp, end = 4.dp).heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    buildAnnotatedString {
+                        append(countLabel(state))
+                        if (awaitingLookup > 0) {
+                            withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                                append(" · $awaitingLookup ")
+                                append(if (autoLookup) "worden aangevuld" else "nog niet opgezocht")
+                            }
                         }
-                    }
-                },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            )
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (state.anyFilter) {
-                    AssistChip(
-                        onClick = viewModel::clearFilters,
-                        label = { Text("Wissen") },
-                        leadingIcon = { Icon(Icons.Default.Clear, contentDescription = null, Modifier.size(18.dp)) },
-                    )
+                    },
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (awaitingLookup > 0 && !autoLookup) TextButton(onClick = viewModel::updateLibrary) { Text("Nu opzoeken") }
+            }
+            if (awaitingLookup > 0 && autoLookup) {
+                LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp), trackColor = MaterialTheme.colorScheme.outlineVariant)
+            } else {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+            when {
+                state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
+                state.totalCount == 0 -> EmptyMessage("Nog geen boeken.\nTik op Scannen om te beginnen.")
+                state.items.isEmpty() -> EmptyMessage("Geen boeken gevonden.")
+                grid -> LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 116.dp), // drie kolommen op een gewone telefoon, zoals de schetsen
+                    state = gridState,
+                    contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 88.dp),
+                ) {
+                    items(state.items, key = { it.book.id }) { item ->
+                        val id = item.book.id
+                        BookGridItem(
+                            item,
+                            status = state.statuses[id],
+                            onClick = {
+                                if (selection.isEmpty()) onBookClick(id)
+                                else selection = if (id in selection) selection - id else selection + id
+                            },
+                            selected = id in selection,
+                            onLongClick = { selection = selection + id },
+                        )
+                    }
+                }
+                else -> LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 88.dp)) {
+                    items(state.items, key = { it.book.id }) { item ->
+                        val id = item.book.id
+                        BookRow(
+                            item,
+                            onClick = {
+                                if (selection.isEmpty()) onBookClick(id)
+                                else selection = if (id in selection) selection - id else selection + id
+                            },
+                            locationLabel = item.book.locationId?.let(state.locationLabels::get),
+                            status = state.statuses[id],
+                            selected = id in selection,
+                            onLongClick = { selection = selection + id },
+                        )
+                        HorizontalDivider(Modifier.padding(start = 84.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showFilters) FilterSheet(state, viewModel, onPickLocation = { pickingLocation = true }, onDismiss = { showFilters = false })
+    if (pickingLocation) LocationFilterDialog(state, viewModel, onDismiss = { pickingLocation = false })
+}
+
+/** "Filters (n)", daarna de actieve filters als chips met ✕; zonder filters twee snelkeuzes. */
+@Composable
+private fun FilterRow(state: LibraryUiState, viewModel: LibraryViewModel, onOpenFilters: () -> Unit) {
+    val active = buildList<Pair<String, () -> Unit>> {
+        state.language?.let { add(Languages.displayName(it).replaceFirstChar(Char::uppercase) to { viewModel.setLanguage(null) }) }
+        state.location?.let { add(it.location.name to { viewModel.setLocation(null) }) }
+        state.owner?.let { add(it to { viewModel.setOwner(null) }) }
+        if (state.ownership != OwnershipFilter.IN_HOUSE) add(state.ownership.label to { viewModel.setOwnership(OwnershipFilter.IN_HOUSE) })
+        if (state.read != ReadFilter.ALL) add(state.read.label to { viewModel.setRead(ReadFilter.ALL) })
+        if (state.multipleEditions) add("Meerdere edities" to { viewModel.setMultipleEditions(false) })
+        if (state.favoritesOnly) add("Favorieten" to { viewModel.setFavoritesOnly(false) })
+    }
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FilterChip(
+            selected = false,
+            onClick = onOpenFilters,
+            label = { Text("Filters") },
+            leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null, Modifier.size(18.dp)) },
+            trailingIcon = if (active.isNotEmpty()) {
+                { Badge(containerColor = MaterialTheme.colorScheme.primary) { Text("${active.size}") } }
+            } else {
+                null
+            },
+        )
+        active.forEach { (label, clear) ->
+            FilterChip(
+                selected = true,
+                onClick = clear,
+                label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 160.dp)) },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = "$label uitzetten", Modifier.size(16.dp)) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedTrailingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
+            )
+        }
+        if (active.isEmpty()) {
+            FilterChip(selected = false, onClick = { viewModel.setRead(ReadFilter.READ) }, label = { Text("Gelezen") })
+            FilterChip(selected = false, onClick = { viewModel.setFavoritesOnly(true) }, label = { Text("Favorieten") })
+        }
+    }
+}
+
+/** Alle filters bij elkaar, van onderaf. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSheet(state: LibraryUiState, viewModel: LibraryViewModel, onPickLocation: () -> Unit, onDismiss: () -> Unit) {
+    // Gekozen filters groen, net als de chips in de filterrij (standaard zouden ze goud zijn).
+    val colors = MaterialTheme.colorScheme.copy(
+        secondaryContainer = MaterialTheme.colorScheme.primaryContainer,
+        onSecondaryContainer = MaterialTheme.colorScheme.onPrimaryContainer,
+    )
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        MaterialTheme(colorScheme = colors) { Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Filters", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                if (state.anyFilter) TextButton(onClick = viewModel::clearFilters) { Text("Alles wissen") }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LanguageFilter(state.language, state.availableLanguages, viewModel::setLanguage)
                 if (state.locationTree.isNotEmpty()) {
                     FilterChip(
                         selected = state.location != null,
-                        onClick = { pickingLocation = true },
-                        label = {
-                            Text(
-                                state.location?.location?.name ?: "Locatie",
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.widthIn(max = 140.dp),
-                            )
-                        },
+                        onClick = onPickLocation,
+                        label = { Text(state.location?.location?.name ?: "Locatie", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 140.dp)) },
                         trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
                     )
                 }
@@ -206,67 +380,13 @@ fun LibraryScreen(
                     leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, Modifier.size(18.dp)) },
                 )
             }
-            // Andere filters of sortering: begin weer bovenaan de lijst.
-            val listState = rememberLazyListState()
-            LaunchedEffect(state.language, state.location, state.owner, state.favoritesOnly, state.read, state.ownership, state.multipleEditions, state.sort, state.query) {
-                listState.scrollToItem(0)
-            }
-            // Eigen regel: in de schuifbare rij met filters zou het aantal buiten beeld kunnen vallen.
             Text(
-                text = countLabel(state),
+                "${state.items.size} van ${state.totalCount} boeken",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
-            if (awaitingLookup > 0 && autoLookup) {
-                Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "Gegevens ophalen voor $awaitingLookup ${if (awaitingLookup == 1) "boek" else "boeken"}…",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else if (awaitingLookup > 0) {
-                // Automatisch opzoeken staat uit: niets draait vanzelf; hier kun je het starten.
-                Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "$awaitingLookup ${if (awaitingLookup == 1) "boek" else "boeken"} nog niet opgezocht",
-                        Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = viewModel::updateLibrary) { Text("Nu opzoeken") }
-                }
-            }
-            when {
-                state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-                state.totalCount == 0 -> EmptyMessage("Nog geen boeken.\nTik op Scannen om te beginnen.")
-                state.items.isEmpty() -> EmptyMessage("Geen boeken gevonden.")
-                else -> LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 88.dp)) {
-                    items(state.items, key = { it.book.id }) { item ->
-                        val id = item.book.id
-                        BookRow(
-                            item,
-                            onClick = {
-                                if (selection.isEmpty()) onBookClick(id)
-                                else selection = if (id in selection) selection - id else selection + id
-                            },
-                            locationLabel = item.book.locationId?.let(state.locationLabels::get),
-                            selected = id in selection,
-                            onLongClick = { selection = selection + id },
-                        )
-                        HorizontalDivider(Modifier.padding(start = 84.dp))
-                    }
-                }
-            }
-        }
+        } }
     }
-
-    if (pickingLocation) LocationFilterDialog(state, viewModel, onDismiss = { pickingLocation = false })
 }
 
 @Composable

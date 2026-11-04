@@ -49,6 +49,28 @@ interface ReadingDao {
     )
     fun observeBookIdsWithStatus(status: ReadingStatus): Flow<List<Long>>
 
+    /** Laatste keer uitgelezen per boek, ook via een andere editie van hetzelfde werk. */
+    @Query(
+        """
+        SELECT other.bookId AS bookId, MAX(s.finishedAt) AS finishedAt FROM reading_session s
+        JOIN book_work mine ON mine.bookId = s.bookId
+        JOIN book_work other ON other.workId = mine.workId
+        WHERE s.status = 'FINISHED'
+        GROUP BY other.bookId
+        """
+    )
+    fun observeLastFinished(): Flow<List<BookFinished>>
+
+    /** Voortgang van de boeken die je nu leest. */
+    @Query(
+        """
+        SELECT s.bookId AS bookId, s.progressPage AS progressPage, s.progressPercent AS progressPercent, b.pages AS pages
+        FROM reading_session s JOIN book b ON b.id = s.bookId
+        WHERE s.status = 'READING'
+        """
+    )
+    fun observeProgress(): Flow<List<BookProgress>>
+
     @Insert
     suspend fun insert(session: ReadingSession): Long
 
@@ -72,4 +94,12 @@ interface ReadingDao {
 
     @Query("DELETE FROM reading_goal WHERE year = :year")
     suspend fun deleteGoal(year: Int)
+}
+
+data class BookFinished(val bookId: Long, val finishedAt: java.time.LocalDate?)
+
+data class BookProgress(val bookId: Long, val progressPage: Int?, val progressPercent: Int?, val pages: Int?) {
+    /** Percentage, uit het opgegeven percentage of uit pagina's. */
+    val percent: Int?
+        get() = progressPercent ?: progressPage?.let { page -> pages?.takeIf { it > 0 }?.let { (page * 100 / it).coerceIn(0, 100) } }
 }
