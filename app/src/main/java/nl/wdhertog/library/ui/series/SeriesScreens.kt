@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.data.repository.ManualParts
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import nl.wdhertog.library.data.repository.SeriesDuplicate
@@ -130,7 +131,11 @@ private fun DuplicateCard(duplicate: SeriesDuplicate, onMerge: () -> Unit, onIgn
 private fun volumes(count: Int) = if (count == 1) "1 deel" else "$count delen"
 
 private fun summaryLine(summary: SeriesSummary): String {
-    val total = listOfNotNull(summary.totalVolumes, summary.maxIndex?.takeIf { it <= SeriesOrder.MAX_PLAUSIBLE_INDEX })
+    val total = listOfNotNull(
+        summary.totalVolumes,
+        summary.maxIndex?.takeIf { it <= SeriesOrder.MAX_PLAUSIBLE_INDEX },
+        ManualParts.highest(summary.manualParts),
+    )
         .maxOrNull()?.takeIf { it >= summary.works }
     val have = if (total != null) "${summary.works} van $total delen" else "${summary.works} " + if (summary.works == 1) "deel" else "delen"
     val notOwned = summary.works - summary.owned
@@ -160,6 +165,7 @@ fun SeriesDetailScreen(
     var editingVolume by remember { mutableStateOf<SeriesVolume.Present?>(null) }
     val lookingUp by viewModel.lookingUp.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var editingMissing by remember { mutableStateOf<SeriesVolume.Missing?>(null) }
 
     Scaffold(
         topBar = {
@@ -173,6 +179,10 @@ fun SeriesDetailScreen(
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             DropdownMenuItem(text = { Text("Aantal delen…") }, onClick = { menuOpen = false; editingTotal = true })
                             DropdownMenuItem(text = { Text("Samenvoegen met…") }, onClick = { menuOpen = false; merging = true })
+                            DropdownMenuItem(
+                                text = { Text("Ontbrekend deel toevoegen…") },
+                                onClick = { menuOpen = false; editingMissing = SeriesVolume.Missing(index = "", manual = true) },
+                            )
                             DropdownMenuItem(
                                 text = { Text("Delen opzoeken op Wikidata") },
                                 enabled = !lookingUp,
@@ -196,7 +206,7 @@ fun SeriesDetailScreen(
             items(d.volumes, key = { volume -> (volume as? SeriesVolume.Present)?.workId?.toString() ?: "missing-${volume.index}" }) { volume ->
                 when (volume) {
                     is SeriesVolume.Present -> PresentVolume(volume, onOpenBook = onOpenBook, onEdit = { editingVolume = volume })
-                    is SeriesVolume.Missing -> MissingVolume(volume)
+                    is SeriesVolume.Missing -> MissingVolume(volume, onClick = { editingMissing = volume })
                 }
                 HorizontalDivider(Modifier.padding(start = 64.dp))
             }
@@ -204,6 +214,14 @@ fun SeriesDetailScreen(
     }
 
     val d = detail ?: return
+    editingMissing?.let { volume ->
+        MissingPartDialog(
+            volume = volume,
+            onSave = { ordinal, title -> viewModel.setManualPart(ordinal, title, previousOrdinal = volume.index.ifEmpty { null }); editingMissing = null },
+            onRemove = { viewModel.setManualPart(volume.index, ""); editingMissing = null },
+            onDismiss = { editingMissing = null },
+        )
+    }
     if (renaming) {
         TextDialog(
             title = "Naam van de serie",
@@ -295,20 +313,73 @@ private fun PresentVolume(volume: SeriesVolume.Present, onOpenBook: (Long) -> Un
 }
 
 @Composable
-private fun MissingVolume(volume: SeriesVolume.Missing) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun MissingVolume(volume: SeriesVolume.Missing, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(volume.index, Modifier.width(40.dp), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline)
         Column {
             if (volume.title != null) {
                 Text(volume.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
             }
             Text(
-                listOfNotNull(volume.year?.toString(), "ontbreekt in je collectie").joinToString(" · ").replaceFirstChar(Char::uppercase),
+                listOfNotNull(volume.year?.toString(), "ontbreekt in je collectie", "zelf toegevoegd".takeIf { volume.manual })
+                    .joinToString(" · ").replaceFirstChar(Char::uppercase),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
             )
         }
     }
+}
+
+/** Titel van een ontbrekend deel invullen; bij een nieuw deel ook het nummer. */
+@Composable
+private fun MissingPartDialog(volume: SeriesVolume.Missing, onSave: (String, String) -> Unit, onRemove: () -> Unit, onDismiss: () -> Unit) {
+    val isNew = volume.index.isEmpty()
+    var ordinal by remember { mutableStateOf(volume.index) }
+    var title by remember { mutableStateOf(volume.title.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(decorFitsSystemWindows = false),
+        modifier = Modifier.imePadding(),
+        title = { Text(if (isNew) "Ontbrekend deel toevoegen" else "Deel ${volume.index}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isNew) {
+                    OutlinedTextField(
+                        value = ordinal,
+                        onValueChange = { ordinal = it },
+                        label = { Text("Deelnummer") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Titel") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    "Wordt gedeeld met je gekoppelde telefoons. Heb je het deel later, dan verdwijnt het hier vanzelf.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(ordinal.trim(), title.trim()) }, enabled = ordinal.isNotBlank() && title.isNotBlank()) { Text("Opslaan") }
+        },
+        dismissButton = {
+            Row {
+                if (volume.manual && !isNew) TextButton(onClick = onRemove) { Text("Weghalen") }
+                TextButton(onClick = onDismiss) { Text("Annuleren") }
+            }
+        },
+    )
 }
 
 @Composable

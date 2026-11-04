@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 5,
-    "identityHash": "07c4525e36e3bb39c2c40154ba6577ec",
+    "identityHash": "4307d90c25357f491e36c98cacb549e0",
     "entities": [
       {
         "tableName": "book",
@@ -557,7 +557,7 @@
       },
       {
         "tableName": "series",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `totalVolumes` INTEGER, `wikidataId` TEXT, `updatedAt` INTEGER NOT NULL, `partsFetchedAt` INTEGER)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `totalVolumes` INTEGER, `wikidataId` TEXT, `updatedAt` INTEGER NOT NULL, `partsFetchedAt` INTEGER, `manualParts` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -597,6 +597,11 @@
             "fieldPath": "partsFetchedAt",
             "columnName": "partsFetchedAt",
             "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "manualParts",
+            "columnName": "manualParts",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -1300,7 +1305,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '07c4525e36e3bb39c2c40154ba6577ec')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4307d90c25357f491e36c98cacb549e0')"
     ]
   }
 }

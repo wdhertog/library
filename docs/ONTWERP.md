@@ -494,12 +494,21 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
   - **Uitgeversreeksen** met meer dan 100 nummers worden genegeerd.
   - **In jouw bibliotheek** leverde dit delen op voor 19 van de 52 series (bijv. Department Q 9, Mma Ramotswe 21, Montalbano 35). Titels zijn vaak Engels, als Wikidata geen Nederlandse kent.
 
+- **Ontbrekend deel zelf toevoegen** (§6.8), gebouwd 4 november 2026.
+  - Op het serie-scherm via ⋮ → "Ontbrekend deel toevoegen…" (nummer en titel), of door op een ontbrekend deel te tikken (titel invullen, aanpassen of weghalen).
+  - Opgeslagen in `Series.manualParts` (JSON) en gedeeld via synchroniseren. Een zelf ingevulde titel gaat voor die van Wikidata, en telt mee in het totaal van de serielijst.
+  - Heb je het deel later, dan verdwijnt het vanzelf.
+  - **Series zonder één deelnummer** (zoals Orphan X bij jou): de app kan dan niet zien welke nummers ontbreken. Er verschijnen alleen de delen die je zelf hebt toegevoegd, niet langer een rij lege nummers.
+- **Taal uit het ISBN** (§6.11), gebouwd 4 november 2026.
+  - `IsbnLanguage` leidt de taal af uit de registratiegroep: 978-90/94 Nederlands, 978-0/1 Engels, 978-2 Frans, 978-3 Duits, 978-84 Spaans, 978-88 Italiaans, enzovoort. Talen die in een land ook gewoon voorkomen (Catalaans bij 978-84, Fries bij 978-90) tellen niet als tegenstrijdig.
+  - **Aanvullen:** geeft geen bron een taal, dan neemt het boek die van het ISBN.
+  - **Importeren:** spreekt de taal in het bestand het ISBN tegen, dan blijft die taal staan, maar krijgt het boek de tag "taal controleren"; de melding na de import noemt het aantal.
+  - **Eenmalig voor de bestaande bibliotheek** (bij de eerste start van 1.4, en opnieuw na het terugzetten van een back-up): lege talen invullen en tegenstrijdige taggen. In jouw bibliotheek: 38 talen aangevuld, 1 boek getagd ("A History of Japan to 1334", Engels ISBN met "nl" uit Have I Read That).
+
 ### Uit het ontwerp, nog niet gebouwd
-- **Series: ontbrekend deel zelf toevoegen** (§6.8), voor series die Wikidata niet (goed) kent.
 - **Instellingen** (§6.12):
   - databronnen aan/uit en volgorde;
   - gedrag in plank-modus bij een boek dat er al is (verplaatsen of eerst vragen).
-- **Taalcontrole bij import** (§6.11): boeken markeren waarvan de taal niet bij het ISBN past.
 
 ### Eigenaar voor meerdere boeken tegelijk
 Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijkheden:

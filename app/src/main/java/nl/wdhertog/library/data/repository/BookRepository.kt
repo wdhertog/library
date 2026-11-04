@@ -13,6 +13,7 @@ import nl.wdhertog.library.data.db.Series
 import nl.wdhertog.library.data.db.Work
 import nl.wdhertog.library.data.db.WorkAuthor
 import nl.wdhertog.library.covers.CoverStore
+import nl.wdhertog.library.util.IsbnLanguage
 import nl.wdhertog.library.lookup.BookMetadata
 import nl.wdhertog.library.scan.Isbn
 import nl.wdhertog.library.util.TextNormalizer
@@ -226,7 +227,8 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                 book.copy(
                     title = pick("title", book.title, metadata.title) ?: book.title,
                     subtitle = pick("subtitle", book.subtitle, metadata.subtitle),
-                    language = pick("language", book.language, metadata.language),
+                    // Geeft geen bron een taal, dan die van het ISBN (978-90 is Nederlands, enzovoort).
+                    language = pick("language", book.language, metadata.language ?: IsbnLanguage.guess(book.isbn13)),
                     translators = metadata.translators.joinToString(", ").ifEmpty { null }.let { found ->
                         if (provisional && found != null && "translators" !in locked) found else pick("translators", book.translators, found)
                     },
@@ -431,6 +433,28 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
     }
 
     suspend fun delete(ids: Collection<Long>) = ids.forEach { delete(it) }
+
+    /**
+     * Eenmalig voor de hele bibliotheek: een lege taal invullen uit het ISBN, en boeken waarvan de taal
+     * het ISBN tegenspreekt de tag [IsbnLanguage.CHECK_TAG] geven. Geeft (ingevuld, gemarkeerd).
+     */
+    suspend fun checkLanguagesFromIsbn(): Pair<Int, Int> {
+        var filled = 0
+        val flagged = mutableListOf<Long>()
+        db.withTransaction {
+            for (row in dao.isbnLanguages()) {
+                when {
+                    row.language.isNullOrBlank() -> IsbnLanguage.guess(row.isbn13)?.let {
+                        dao.setLanguage(row.id, it, Instant.now())
+                        filled++
+                    }
+                    IsbnLanguage.conflicts(row.isbn13, row.language) -> flagged += row.id
+                }
+            }
+        }
+        addTags(flagged, listOf(IsbnLanguage.CHECK_TAG))
+        return filled to flagged.size
+    }
 
     private suspend fun findOrCreateSeries(name: String): Series? {
         val trimmed = name.trim().ifEmpty { return null }

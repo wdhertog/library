@@ -17,6 +17,8 @@ data class SeriesSummary(
     val read: Int,
     /** Hoogste genummerde deel, als het nummer een geheel getal is. */
     val maxIndex: Int?,
+    /** Zelf toegevoegde ontbrekende delen (JSON), voor het totaal. */
+    val manualParts: String? = null,
 )
 
 /** Eén exemplaar van een deel in de serie. */
@@ -53,7 +55,8 @@ interface SeriesDao {
                COUNT(DISTINCT CASE WHEN b.ownership = 'OWNED' THEN w.id END) AS owned,
                COUNT(DISTINCT CASE WHEN rs.status = 'FINISHED' THEN w.id END) AS read,
                MAX(CASE WHEN w.seriesIndex GLOB '[0-9]*' AND w.seriesIndex NOT GLOB '*[^0-9]*'
-                        THEN CAST(w.seriesIndex AS INTEGER) END) AS maxIndex
+                        THEN CAST(w.seriesIndex AS INTEGER) END) AS maxIndex,
+               s.manualParts
         FROM series s
         JOIN work w ON w.seriesId = s.id
         JOIN book_work bw ON bw.workId = w.id
