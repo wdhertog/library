@@ -562,11 +562,11 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 **Gebouwd (3 november 2026):** lang drukken op een boek in de bibliotheek of op een locatiepagina begint de selectie. Acties: eigenaar, verplaatsen (achteraan, in lijstvolgorde), favoriet aan/uit, leeslijst aan/uit, tags toevoegen, verwijderen. "Alles selecteren" pakt alle boeken in de lijst, of alle boeken op die plek.
 
 ### Bronnen voor meer talen
-- **Roemeens** (geparkeerd, 3 november 2026): de Biblioteca Națională a României heeft alleen Z39.50 (UNIMARC) en een Aleph-webcatalogus op aleph.bibnat.ro, die vanaf hier niet bereikbaar was. Tot er een open HTTP-dienst gevonden is: Open Library en Wikidata.
+- **Roemeens** (besloten 4 november 2026: komt er niet; eerder geparkeerd op 3 november): de Biblioteca Națională a României heeft alleen Z39.50 (UNIMARC) en een Aleph-webcatalogus op aleph.bibnat.ro, die vanaf hier niet bereikbaar was. Tot er een open HTTP-dienst gevonden is: Open Library en Wikidata.
 
 ### Later, misschien
-- **Eigenaar-modus bij scannen** (optie C hierboven), als die gemist wordt.
-- **F-Droid-variant zonder ML Kit** (§2).
+- **Eigenaar-modus bij scannen** (optie C hierboven): besloten 4 november 2026, niet nodig; wordt niet gemist.
+- **F-Droid-variant zonder ML Kit** (§2): geparkeerd (4 november 2026) tot besloten is of de app echt via F-Droid uitgebracht wordt.
 
 ### Losse eindjes
 - **Dubbele series samenvoegen** in de app. De serielijst wijst nu zelf waarschijnlijk dubbele series aan (kaartje "Mogelijk dezelfde serie", met Samenvoegen of Negeren), zoals "Arsène Lupin" en "Arsène Lupin literary series". Dezelfde serie in een andere taal herkent de app niet; die voeg je zelf samen via Series → ⋮ → Samenvoegen met…:
