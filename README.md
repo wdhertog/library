@@ -80,6 +80,7 @@ Zonder deze gegevens wordt de release-APK niet ondertekend. Test een release eer
 - **Achtergrond:** WorkManager voor het opzoeken van gegevens, herinneringen en back-ups.
 - **Camera:** CameraX met ML Kit (barcode en tekst, volledig op het toestel).
 - **Netwerk:** OkHttp en kotlinx.serialization.
+- **Letter:** [Literata](https://github.com/googlefonts/literata) voor titels, onder de SIL Open Font License 1.1 (zie `app/src/main/assets/licenses/`).
 
 Het ontwerp staat in [`docs/ONTWERP.md`](docs/ONTWERP.md), met de keuzes, het datamodel, de schermen en de bouwfases. Wat nog op de lijst staat, vind je in [§10 Nog te doen](docs/ONTWERP.md#10-nog-te-doen-na-v10).
 
