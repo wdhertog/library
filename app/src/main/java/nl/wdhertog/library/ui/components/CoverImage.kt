@@ -8,6 +8,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.ui.theme.Literata
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import nl.wdhertog.library.covers.CoverStore
@@ -32,7 +36,7 @@ private val placeholderColors = listOf(
  * [cover] is een URL of de bestandsnaam van een eigen foto (zie Book.cover).
  */
 @Composable
-fun CoverImage(title: String, cover: String?, modifier: Modifier = Modifier, showTitle: Boolean = true) {
+fun CoverImage(title: String, cover: String?, modifier: Modifier = Modifier, showTitle: Boolean = true, author: String? = null) {
     val shape = RoundedCornerShape(4.dp)
     if (cover != null) {
         val context = LocalContext.current
@@ -41,31 +45,60 @@ fun CoverImage(title: String, cover: String?, modifier: Modifier = Modifier, sho
             contentDescription = "Cover van $title",
             contentScale = ContentScale.Crop,
             modifier = modifier.clip(shape),
-            error = { Placeholder(title, showTitle) },
-            loading = { Placeholder(title, showTitle) },
+            error = { Placeholder(title, showTitle, author) },
+            loading = { Placeholder(title, showTitle, author) },
         )
     } else {
-        Box(modifier.clip(shape)) { Placeholder(title, showTitle) }
+        Box(modifier.clip(shape)) { Placeholder(title, showTitle, author) }
     }
 }
 
+/**
+ * Zolang er geen cover is: een gekleurd vlak met een donkere "boekrug" links, de titel in serif en
+ * (als er plaats is) de achternaam van de auteur. Net gescand en nog zonder titel: een neutraal vlak.
+ */
 @Composable
-private fun Placeholder(title: String, showTitle: Boolean) {
-    val color = placeholderColors[title.hashCode().absoluteValue % placeholderColors.size]
+private fun Placeholder(title: String, showTitle: Boolean, author: String?) {
+    val empty = title.isBlank()
+    val color = if (empty) Color(0xFFD8D2C6) else placeholderColors[title.hashCode().absoluteValue % placeholderColors.size]
     Box(
         Modifier
             .fillMaxSize()
             .background(color)
-            .padding(4.dp),
+            .drawBehind { drawRect(Color.Black.copy(alpha = 0.18f), size = size.copy(width = 3.dp.toPx())) }
+            .padding(start = 6.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = if (showTitle) title else title.take(1),
-            color = Color.White.copy(alpha = 0.9f),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            maxLines = 4,
-        )
+        when {
+            empty -> Text("…", color = Color(0xFF5E5A52), style = MaterialTheme.typography.titleMedium)
+            !showTitle -> Text(
+                title.trim().take(1).uppercase(),
+                color = Color.White.copy(alpha = 0.92f),
+                fontFamily = Literata,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            else -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = title,
+                    color = Color.White.copy(alpha = 0.92f),
+                    fontFamily = Literata,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                author?.substringAfterLast(' ')?.takeIf(String::isNotBlank)?.let {
+                    Text(
+                        it,
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontFamily = Literata,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 }

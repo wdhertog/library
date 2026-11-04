@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.ui.theme.BookTitleStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,7 +77,7 @@ fun BookRow(
                 Text(
                     item.book.displayTitle,
                     Modifier.weight(1f, fill = false),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = BookTitleStyle,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -84,7 +85,7 @@ fun BookRow(
                     Icon(
                         Icons.Default.Favorite,
                         contentDescription = "Favoriet",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(start = 6.dp).size(16.dp),
                     )
                 }

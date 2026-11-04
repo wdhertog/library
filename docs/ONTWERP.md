@@ -479,7 +479,17 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
 ### Gepland
-- **Nieuwe vormgeving** naar de schetsen van 4 november 2026 (lokaal: `samples/bibliotheek_app_schetsen.html`). Groen-crème palet en Literata voor titels. Bibliotheek als lijst en als raster, met filterchips en status per boek. Boekpagina met cover op een kleurvlak, één hoofdknop en kaarten. Lezen met een leesdoel-ring, "nu aan het lezen" en "wil ik lezen" als covers. Uitwerking in stappen volgt.
+- **Nieuwe vormgeving** naar de schetsen van 4 november 2026 (lokaal: `samples/bibliotheek_app_schetsen.html`).
+  - **Besloten (4 november 2026):**
+    - altijd het eigen groen-crème palet, niet de kleuren van de achtergrond (Material You);
+    - in donkere modus een donkere variant van dezelfde tinten (volgt de telefoon);
+    - de onderbalk wordt Bibliotheek · Lezen · Series · Uitleen · Meer, met Locaties onder Meer.
+  - **Stappen**, elk een eigen PR plus een testversie:
+    1. **Basis:** palet licht en donker; Literata (OFL, in de app) voor schermtitels en boektitels; kaartstijl (`AppCard`); covers zonder afbeelding met boekrug en serif; Scannen goud; groene markering in de onderbalk. *Gebouwd.*
+    2. **Navigatie:** de nieuwe onderbalk en een Meer-scherm (Locaties, Auteurs, Importeren, Back-up, Synchroniseren, Instellingen).
+    3. **Bibliotheek:** afgeronde zoekbalk met weergave, sorteren en menu; chip Filters met aantal en actieve filters als chips met ✕; status per boek (gelezen in jaar, uitgeleend aan … en hoe lang, aan het lezen %); rasterweergave (covers 2:3, badges, voortgangsbalk).
+    4. **Boekpagina:** cover op een kleurvlak (kleur uit de cover), titel in serif gecentreerd, één hoofdknop die met de status meebeweegt, plus Uitlenen; kaarten (Lezen, Plek en eigenaar, Beschrijving ingeklapt met tags als chips, Gegevens en bronnen dicht). Ook het bewerkscherm in dezelfde stijl: velden in kaarten per onderwerp.
+    5. **Lezen:** jaarkeuze, leesdoel als ring, "Nu aan het lezen" als covers met voortgang, "Wil ik lezen" als rij covers met "Alles", maandgrafiek in een kaart.
 
 ### Gebouwd na 1.4
 - **Auteurspagina.**

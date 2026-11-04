@@ -159,7 +159,8 @@ fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit, onSync: () -> Unit)
                         "nationale de France, de Biblioteca Nacional de España, het Italiaanse Servizio Bibliotecario " +
                         "Nazionale en Wikidata. Daarbij wordt alleen het ISBN of de zoektekst verstuurd.\n\n" +
                         "Barcodes en covertekst worden op de telefoon zelf herkend (ML Kit); er gaan geen foto's of " +
-                        "gebruiksgegevens naar Google. Al je gegevens staan alleen op deze telefoon en in je eigen back-ups.",
+                        "gebruiksgegevens naar Google. Al je gegevens staan alleen op deze telefoon en in je eigen back-ups.\n\n" +
+                        "Titels staan in Literata (SIL Open Font License 1.1, The Literata Project Authors); het lettertype zit in de app.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

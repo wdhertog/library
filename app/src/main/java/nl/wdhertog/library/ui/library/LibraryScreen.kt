@@ -123,6 +123,9 @@ fun LibraryScreen(
         floatingActionButton = {
             if (selection.isEmpty()) ExtendedFloatingActionButton(
                 onClick = onScan,
+                // Goud, zoals in de schetsen: de belangrijkste actie springt eruit.
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
                 text = { Text("Scannen") },
             )
