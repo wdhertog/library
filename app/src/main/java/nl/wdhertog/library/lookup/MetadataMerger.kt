@@ -53,6 +53,7 @@ object MetadataMerger {
             source = metadata.source + ", Wikidata",
             seriesName = work.seriesName,
             seriesIndex = work.seriesIndex ?: metadata.seriesIndex,
+            seriesWikidataId = work.seriesId,
         )
     }
 }

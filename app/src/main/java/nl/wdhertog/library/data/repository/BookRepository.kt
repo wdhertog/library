@@ -259,7 +259,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
             }
             val seriesLocked = "series" in locked
             val takeSeries = !seriesLocked && metadata.seriesName != null && (refresh || work.seriesId == null)
-            val series = if (takeSeries) findOrCreateSeries(metadata.seriesName!!) else null
+            val series = if (takeSeries) findOrCreateSeries(metadata.seriesName) else null
             // Zelfde serie, maar nog zonder deelnummer: dat nummer alsnog overnemen.
             val sameSeries = !seriesLocked && work.seriesId != null &&
                 work.seriesId.let { dao.getSeries(it)?.name }.equals(metadata.seriesName, ignoreCase = true)
@@ -281,6 +281,11 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     updatedAt = Instant.now(),
                 ),
             )
+            // Wikidata-id van de serie bewaren, voor het ophalen van de (ontbrekende) delen.
+            val finalSeriesId = series?.id ?: work.seriesId
+            if (metadata.seriesWikidataId != null && finalSeriesId != null && (takeSeries || sameSeries)) {
+                dao.setSeriesWikidataIfMissing(finalSeriesId, metadata.seriesWikidataId, Instant.now())
+            }
             // Zelf losgekoppeld: niet automatisch weer aan andere edities hangen.
             if (WORK_LOCK !in locked) linkToExistingWork(bookId, work.id, metadata)
             refreshSearchText(bookId)

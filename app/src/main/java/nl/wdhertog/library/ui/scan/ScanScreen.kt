@@ -445,7 +445,7 @@ private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> U
                     book == null -> ""
                     book.enrichStatus == EnrichStatus.NEW -> "Zoeken…"
                     book.enrichStatus == EnrichStatus.FAILED -> "Niet gevonden — later aanvullen"
-                    else -> row.item?.authorLine.orEmpty()
+                    else -> row.item.authorLine.orEmpty()
                 }
             }
             if (status.isNotEmpty()) {

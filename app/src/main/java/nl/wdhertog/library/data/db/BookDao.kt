@@ -82,6 +82,10 @@ interface BookDao {
     @Query("SELECT COUNT(*) FROM book WHERE coverFile = :coverFile")
     suspend fun countCoverUses(coverFile: String): Int
 
+    /** Nu bekend: de delen opnieuw ophalen (partsFetchedAt leeg). */
+    @Query("UPDATE series SET wikidataId = :wikidataId, partsFetchedAt = NULL, updatedAt = :now WHERE id = :id AND wikidataId IS NULL")
+    suspend fun setSeriesWikidataIfMissing(id: Long, wikidataId: String, now: java.time.Instant)
+
     @Query("UPDATE book SET coverFile = :coverFile, updatedAt = :now WHERE id = :id")
     suspend fun setCoverFile(id: Long, coverFile: String?, now: java.time.Instant)
 

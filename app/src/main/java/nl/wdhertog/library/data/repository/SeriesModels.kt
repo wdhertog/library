@@ -1,6 +1,7 @@
 package nl.wdhertog.library.data.repository
 
 import nl.wdhertog.library.data.db.SeriesBookRow
+import nl.wdhertog.library.data.db.SeriesPart
 
 /** Eén deel van een serie: een werk met de exemplaren die je ervan hebt, of een ontbrekend nummer. */
 sealed interface SeriesVolume {
@@ -15,7 +16,8 @@ sealed interface SeriesVolume {
         val read: Boolean,
     ) : SeriesVolume
 
-    data class Missing(override val index: String) : SeriesVolume
+    /** Een deel dat je niet hebt; titel en jaar als Wikidata ze kent. */
+    data class Missing(override val index: String, val title: String? = null, val year: Int? = null) : SeriesVolume
 }
 
 object SeriesOrder {
@@ -52,10 +54,21 @@ object SeriesOrder {
     }
 
     /**
-     * Delen op volgorde, met ontbrekende hele nummers tussen 1 en het hoogste nummer
-     * (of het opgegeven aantal delen) als gat.
+     * Het laatste deelnummer volgens Wikidata, maar alleen als Wikidata minstens de helft van de nummers
+     * tot daar kent. Kent het alleen deel 13 van een serie, dan is 13 geen betrouwbaar totaal.
      */
-    fun volumes(rows: List<SeriesBookRow>, totalVolumes: Int?): List<SeriesVolume> {
+    fun completeTotal(parts: List<SeriesPart>): Int? {
+        val numbers = parts.mapNotNull { it.ordinal.trim().toIntOrNull() }.filter { it in 1..MAX_PLAUSIBLE_INDEX }.toSet()
+        val highest = numbers.maxOrNull() ?: return null
+        return highest.takeIf { numbers.size * 2 >= it }
+    }
+
+    /**
+     * Delen op volgorde, met ontbrekende hele nummers tussen 1 en het hoogste nummer (of het opgegeven
+     * aantal delen, of het laatste deel volgens Wikidata) als gat. [parts] geeft die gaten een titel,
+     * en voegt delen met een tussennummer (bijv. 2.5) toe die je niet hebt.
+     */
+    fun volumes(rows: List<SeriesBookRow>, totalVolumes: Int?, parts: List<SeriesPart> = emptyList()): List<SeriesVolume> {
         val present = rows.groupBy { it.workId }.map { (workId, books) ->
             val first = books.first()
             SeriesVolume.Present(
@@ -69,9 +82,17 @@ object SeriesOrder {
         }
         val numbers = present.map { sortKey(it.index) }.filter { it != Double.MAX_VALUE }
         val highestNumber = numbers.maxOrNull()?.toInt()?.takeIf { it <= MAX_PLAUSIBLE_INDEX } ?: 0
-        val highest = maxOf(highestNumber, totalVolumes ?: 0)
-        val missing = (1..highest).filter { n -> numbers.none { it == n.toDouble() } }
-            .map { SeriesVolume.Missing(it.toString()) }
+        val partsByNumber = parts.filter { sortKey(it.ordinal) != Double.MAX_VALUE }.associateBy { sortKey(it.ordinal) }
+        val highestPart = completeTotal(parts) ?: 0
+        val highest = maxOf(highestNumber, totalVolumes ?: 0, highestPart)
+        val gaps = (1..highest).filter { n -> numbers.none { it == n.toDouble() } }.map { n ->
+            val part = partsByNumber[n.toDouble()]
+            SeriesVolume.Missing(n.toString(), part?.title?.ifBlank { null }, part?.year)
+        }
+        // Tussennummers (bijv. een novelle 2.5) die je niet hebt.
+        val between = partsByNumber.filter { (number, _) -> number != Math.floor(number) && number <= MAX_PLAUSIBLE_INDEX && number !in numbers }
+            .map { (_, part) -> SeriesVolume.Missing(part.ordinal, part.title.ifBlank { null }, part.year) }
+        val missing = gaps + between
         return (present + missing).sortedWith(compareBy<SeriesVolume> { sortKey(it.index) }.thenBy { (it as? SeriesVolume.Present)?.title })
     }
 }
