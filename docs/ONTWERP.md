@@ -550,7 +550,7 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 
 ## 11. Synchronisatie tussen telefoons (plan)
 
-Stand 3 november 2026: S1–S5 gebouwd (alleen in testversies), S6 (test met twee telefoons) loopt; zie Voortgang.
+Stand 4 november 2026: gebouwd en uitgebracht in versie 1.4; zie Voortgang.
 
 ### Besloten (3 november 2026)
 
@@ -696,4 +696,12 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
     - de dienst mocht niet starten toen de koppeling aan de achtergrondkant rond kwam (start nu bij het tonen van de code);
     - Android geeft een app op de achtergrond geen netwerkgegevens (het netwerk van het tonen van de code geldt);
     - het doorgeven werd afgebroken door de eigen wachtlogica.
-  - **Nog niet:** een cover die via synchroniseren vervangen wordt, laat het oude bestand staan.
+- **S6 (3 november 2026, bezig):**
+  - **Covers:** een cover die via synchroniseren vervangen wordt, ruimt nu het oude bestand op (als geen ander boek het gebruikt).
+  - **Testversie 1.4-test1** voor je zus, als pre-release op GitHub. Het is de staging-build (`nl.wdhertog.library.staging`, "Bibliotheek test"), naast de gewone app, op twee telefoons en met een testinstructie in de release.
+  - **Batterijbesparing:** zolang de app niet is uitgezonderd, staat onder "Op de achtergrond" een uitleg met de knop **Niet beperken**. Die opent de systeemvraag. Sommige telefoons (Samsung, Xiaomi) leggen apps anders toch stil.
+  - **Eerste test door je zus (4 november):** koppelen, samenvoegen (4 boeken, 1 dubbel) en wijzigingen werkten; daarna stonden beide bibliotheken gelijk. Gevonden:
+    - **Dubbel opzoeken:** boeken die via synchroniseren binnenkwamen (status "nog op te zoeken"), gingen op de andere telefoon óók in de opzoekrij. Die rij werd daar niet gestart, dus de teller bleef staan tot vernieuwen. Nu zoekt alleen de telefoon die de status als laatste zette een boek op; zo staat het in de veldklok van `enrichStatus`. Die boeken tellen op de andere telefoon ook niet mee.
+    - **Vertraging tijdens importeren:** doorgeven wachtte tot het 15 seconden stil was, en dat werd het tijdens importeren en opzoeken nooit. Nu na 5 seconden stilte, en bij aanhoudende wijzigingen minstens elke minuut.
+    - **Eigenaar wijzigen** duurde 10–20 seconden; nu ongeveer 5.
+  - **Uitgebracht in 1.4 (4 november 2026):** `BuildConfig.SYNC` staat ook in de gewone app aan (de vlag blijft als noodrem). De waarschuwing "Testversie" staat alleen nog in testversies. Test2 is door je zus nog niet nagelopen; dit is uitgebracht op jouw verzoek.

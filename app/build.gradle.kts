@@ -15,8 +15,8 @@ android {
         applicationId = "nl.wdhertog.library"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.3"
+        versionCode = 14
+        versionName = "1.4"
 
         // Alleen ARM (alle gangbare telefoons); x86 is voor emulators en scheelt ~35 MB aan ML Kit-bibliotheken.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
@@ -41,8 +41,8 @@ android {
             buildConfigField("boolean", "SYNC", "true")
         }
         release {
-            // Synchroniseren is in aanbouw (ontwerp §11) en blijft uit de gewone app tot het af is.
-            buildConfigField("boolean", "SYNC", "false")
+            // Synchroniseren (ontwerp §11) zit sinds 1.4 in de gewone app; de vlag blijft voor een eventuele noodrem.
+            buildConfigField("boolean", "SYNC", "true")
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
@@ -53,7 +53,7 @@ android {
             // -PstagingVariant=2 geeft een tweede testapp (".staging2"), om synchroniseren op één telefoon te testen.
             val variant = providers.gradleProperty("stagingVariant").orNull.orEmpty()
             applicationIdSuffix = ".staging$variant"
-            versionNameSuffix = "-staging$variant"
+            versionNameSuffix = "-test$variant"
             manifestPlaceholders["appLabel"] = "Bibliotheek test $variant".trim()
             buildConfigField("boolean", "SYNC", "true")
             signingConfig = signingConfigs.getByName("debug")

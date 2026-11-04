@@ -190,6 +190,32 @@ class RoomSyncTest {
     }
 
     @Test
+    fun `a replaced own cover is cleaned up on the other phone`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val dir = CoverStore.coverDir(context).apply { mkdirs() }
+        val old = java.io.File(dir, "oud-1.jpg").apply { writeBytes(byteArrayOf(1)) }
+        val id = a.books.save(0, BookDraft(title = "Dictator", authors = listOf("Robert Harris")))
+        a.db.bookDao().setCoverFile(id, "oud-1.jpg", java.time.Instant.now())
+        sync()
+        a.db.bookDao().setCoverFile(id, "nieuw-2.jpg", java.time.Instant.now())
+        sync()
+        assertEquals("nieuw-2.jpg", b.bookByTitle("Dictator").coverFile)
+        assertFalse(old.exists())
+    }
+
+    @Test
+    fun `only the phone that added a book looks it up`() = runBlocking {
+        val id = a.books.save(0, BookDraft(title = "Dictator", isbn = "9789023495635"))
+        a.db.bookDao().setEnrichStatus(id, nl.wdhertog.library.data.db.EnrichStatus.NEW, java.time.Instant.now())
+        a.db.syncDao().setMeta(SyncMeta(SyncKeys.DEVICE_ID, "a"))
+        b.db.syncDao().setMeta(SyncMeta(SyncKeys.DEVICE_ID, "b"))
+        sync()
+        assertEquals(listOf(id), a.db.bookDao().booksAwaitingEnrichment(10))
+        assertEquals(emptyList<Long>(), b.db.bookDao().booksAwaitingEnrichment(10))
+        assertEquals(0, b.db.bookDao().observeAwaitingEnrichmentCount().first())
+    }
+
+    @Test
     fun `own missing parts of a series go to the other phone`() = runBlocking {
         a.books.save(0, BookDraft(title = "Dictator", authors = listOf("Robert Harris"), seriesName = "Cicero", seriesIndex = "3"))
         val series = a.db.seriesDao().observeSummaries().first().single()

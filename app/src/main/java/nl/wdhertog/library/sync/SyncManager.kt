@@ -106,8 +106,9 @@ class SyncManager(
 
     val deviceName: String by lazy {
         val name = Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)?.takeIf(String::isNotBlank) ?: Build.MODEL
-        // Testversies naast elkaar op één telefoon uit elkaar houden.
-        if (BuildConfig.APPLICATION_ID == RELEASE_ID) name else "$name (${BuildConfig.APPLICATION_ID.removePrefix("$RELEASE_ID.")})"
+        // Twee testapps naast elkaar op één telefoon (-PstagingVariant) uit elkaar houden.
+        val variant = BuildConfig.APPLICATION_ID.removePrefix("$RELEASE_ID.").takeIf { it != RELEASE_ID && it.any(Char::isDigit) }
+        if (variant == null) name else "$name ($variant)"
     }
 
     /** De app komt in beeld. */
@@ -401,14 +402,18 @@ class SyncManager(
             }
         }
         autoJob = scope.launch { discovery.found.collect { autoSync(it.keys) } }
-        // Na een wijziging hier: als het even stil is, meteen doorgeven.
+        // Na een wijziging hier: als het even stil is doorgeven, en bij aanhoudende wijzigingen (importeren,
+        // gegevens opzoeken) toch minstens elke minuut.
         editJob = scope.launch {
+            var firstChangeAt = 0L
             repo.observeDirtyCount().collectLatest { count ->
-                if (count > 0) {
-                    delay(EDIT_DELAY_MILLIS)
-                    // Los van deze flow: het klaarzetten leegt sync_dirty, en dat zou het versturen afbreken.
-                    scope.launch { pushChanges() }
-                }
+                if (count == 0) return@collectLatest
+                val now = System.currentTimeMillis()
+                if (firstChangeAt == 0L) firstChangeAt = now
+                delay(minOf(EDIT_QUIET_MILLIS, maxOf(0, firstChangeAt + EDIT_MAX_WAIT_MILLIS - now)))
+                firstChangeAt = 0L
+                // Los van deze flow: het klaarzetten leegt sync_dirty, en dat zou het versturen afbreken.
+                scope.launch { pushChanges() }
             }
         }
         periodicJob = scope.launch {
@@ -529,7 +534,8 @@ class SyncManager(
         const val RELEASE_ID = "nl.wdhertog.library"
         const val PAIRING_VALID_MILLIS = 10 * 60_000L
         const val AUTO_INTERVAL_MILLIS = 2 * 60_000L
-        const val EDIT_DELAY_MILLIS = 15_000L
+        const val EDIT_QUIET_MILLIS = 5_000L
+        const val EDIT_MAX_WAIT_MILLIS = 60_000L
         const val PERIODIC_MILLIS = 15 * 60_000L
         const val KEY_HOME = "home-networks"
     }
