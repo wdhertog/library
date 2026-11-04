@@ -87,7 +87,7 @@ Het ontwerp staat in [`docs/ONTWERP.md`](docs/ONTWERP.md), met de keuzes, het da
 
 ## Status
 
-**Versie 1.5** is uitgebracht, met een nieuwe vormgeving (eigen groen-crème palet met donkere variant, Literata voor titels, bibliotheek als lijst of raster, boekpagina met kaarten, leesdoel als ring), een auteurspagina, ontbrekende delen van series, de taal uit het ISBN en instellingen voor bronnen en de plank-modus. Synchroniseren tussen telefoons zit er sinds 1.4 in. Wat nog op de lijst staat: zie [§10 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10).
+**Versie 1.6** is uitgebracht, met een jaaroverzicht ("je jaar in boeken", te delen als afbeelding of tekst), een widget "Nu aan het lezen" op het beginscherm, boeken delen en uitgeleende boeken navragen, en ontbrekende delen van een serie op je leeslijst. In 1.5 kwam de nieuwe vormgeving, de auteurspagina, ontbrekende delen van series, de taal uit het ISBN en instellingen. Synchroniseren tussen telefoons zit er sinds 1.4 in. Wat nog op de lijst staat: zie [§10 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10).
 
 Fouten of ideeën zijn welkom als [issue](https://github.com/wdhertog/library/issues).
 
