@@ -56,6 +56,8 @@ fun ReadingSection(
     onAddPast: () -> Unit,
     onEdit: (ReadingSession) -> Unit,
     onToggleWantToRead: () -> Unit,
+    /** Beginnen en voortgang staan al als hoofdknop bovenaan de boekpagina. */
+    hidePrimary: Boolean = false,
 ) {
     val current = sessions.firstOrNull { it.session.status == ReadingStatus.READING && it.session.bookId == bookId }?.session
     Column {
@@ -74,13 +76,13 @@ fun ReadingSection(
             }
             Spacer(Modifier.height(8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { onProgress(current) }) { Text("Voortgang…") }
+                if (!hidePrimary) OutlinedButton(onClick = { onProgress(current) }) { Text("Voortgang…") }
                 Button(onClick = { onFinish(current, ReadingStatus.FINISHED) }) { Text("Uitgelezen…") }
                 TextButton(onClick = { onFinish(current, ReadingStatus.ABANDONED) }) { Text("Gestopt…") }
             }
         } else {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.Center) {
-                OutlinedButton(onClick = onStart) {
+                if (!hidePrimary) OutlinedButton(onClick = onStart) {
                     Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(if (sessions.any { it.session.status == ReadingStatus.FINISHED }) "Herlezen" else "Begin met lezen")

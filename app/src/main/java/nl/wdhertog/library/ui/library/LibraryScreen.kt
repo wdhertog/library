@@ -55,6 +55,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.ui.theme.Gold
 import nl.wdhertog.library.ui.components.BookGridItem
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -176,8 +177,8 @@ fun LibraryScreen(
             if (selection.isEmpty()) ExtendedFloatingActionButton(
                 onClick = onScan,
                 // Goud, zoals in de schetsen: de belangrijkste actie springt eruit.
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = Gold.container,
+                contentColor = Gold.onContainer,
                 icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
                 text = { Text("Scannen") },
             )
@@ -318,13 +319,8 @@ private fun FilterRow(state: LibraryUiState, viewModel: LibraryViewModel, onOpen
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun FilterSheet(state: LibraryUiState, viewModel: LibraryViewModel, onPickLocation: () -> Unit, onDismiss: () -> Unit) {
-    // Gekozen filters groen, net als de chips in de filterrij (standaard zouden ze goud zijn).
-    val colors = MaterialTheme.colorScheme.copy(
-        secondaryContainer = MaterialTheme.colorScheme.primaryContainer,
-        onSecondaryContainer = MaterialTheme.colorScheme.onPrimaryContainer,
-    )
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        MaterialTheme(colorScheme = colors) { Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Filters", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                 if (state.anyFilter) TextButton(onClick = viewModel::clearFilters) { Text("Alles wissen") }
@@ -385,7 +381,7 @@ private fun FilterSheet(state: LibraryUiState, viewModel: LibraryViewModel, onPi
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        } }
+        }
     }
 }
 

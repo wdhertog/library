@@ -30,6 +30,7 @@ import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.BookStatus
 import nl.wdhertog.library.data.repository.cover
 import nl.wdhertog.library.data.repository.displayTitle
+import nl.wdhertog.library.ui.theme.Gold
 import nl.wdhertog.library.ui.theme.Literata
 
 /**
@@ -61,10 +62,10 @@ fun BookGridItem(
                     Icon(Icons.Default.CheckCircle, contentDescription = "Gelezen", tint = Color(0xFF2E4A3F), modifier = Modifier.size(18.dp))
                 }
                 is BookStatus.Lent -> Box(
-                    Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+                    Modifier.align(Alignment.TopEnd).padding(4.dp).size(20.dp).background(Gold.container, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.CallMade, contentDescription = "Uitgeleend", tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(13.dp))
+                    Icon(Icons.AutoMirrored.Filled.CallMade, contentDescription = "Uitgeleend", tint = Gold.onContainer, modifier = Modifier.size(13.dp))
                 }
                 is BookStatus.Reading -> status.percent?.let { percent ->
                     Box(

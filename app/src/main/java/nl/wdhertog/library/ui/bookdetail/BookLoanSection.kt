@@ -66,6 +66,8 @@ fun LoanSection(
     onDispose: () -> Unit,
     onDelete: (LoanRow) -> Unit,
     disposal: String? = null,
+    /** Uitlenen en teruggekregen staan al als knop bovenaan de boekpagina. */
+    hidePrimary: Boolean = false,
 ) {
     val today = LocalDate.now()
     val active = loans.firstOrNull { it.returnedAt == null }
@@ -89,11 +91,11 @@ fun LoanSection(
                     }
                     active.note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }
-                OutlinedButton(onClick = { onReturned(active.loanId) }) { Text("Teruggekregen") }
+                if (!hidePrimary) OutlinedButton(onClick = { onReturned(active.loanId) }) { Text("Teruggekregen") }
                 DeleteButton { onDelete(active) }
             }
             ownership == Ownership.OWNED -> FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onLend) { Text("Uitlenen…") }
+                if (!hidePrimary) OutlinedButton(onClick = onLend) { Text("Uitlenen…") }
                 TextButton(onClick = onMarkBorrowed) { Text("Dit boek is geleend…") }
                 TextButton(onClick = onDispose) { Text("Weggedaan…") }
             }

@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.ui.components.AppCard
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -101,80 +102,95 @@ fun BookEditScreen(
                 .fillMaxSize()
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            TextInput("Titel *", draft.title, { v -> viewModel.update { it.copy(title = v) } },
-                error = state.titleError.takeIf { errors })
-            TextInput("Ondertitel", draft.subtitle, { v -> viewModel.update { it.copy(subtitle = v) } })
+            EditCard("Titel en auteurs") {
+                TextInput("Titel *", draft.title, { v -> viewModel.update { it.copy(title = v) } },
+                    error = state.titleError.takeIf { errors })
+                TextInput("Ondertitel", draft.subtitle, { v -> viewModel.update { it.copy(subtitle = v) } })
 
-            draft.authors.forEachIndexed { index, author ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SuggestionTextField(
-                        label = if (index == 0) "Auteur" else "Auteur ${index + 1}",
-                        value = author,
-                        suggestions = authorSuggestions,
-                        onValueChange = { v ->
-                            viewModel.update { d -> d.copy(authors = d.authors.toMutableList().also { it[index] = v }) }
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (draft.authors.size > 1) {
-                        IconButton(onClick = {
-                            viewModel.update { d -> d.copy(authors = d.authors.toMutableList().also { it.removeAt(index) }) }
-                        }) { Icon(Icons.Default.Close, contentDescription = "Auteur verwijderen") }
+                draft.authors.forEachIndexed { index, author ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SuggestionTextField(
+                            label = if (index == 0) "Auteur" else "Auteur ${index + 1}",
+                            value = author,
+                            suggestions = authorSuggestions,
+                            onValueChange = { v ->
+                                viewModel.update { d -> d.copy(authors = d.authors.toMutableList().also { it[index] = v }) }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (draft.authors.size > 1) {
+                            IconButton(onClick = {
+                                viewModel.update { d -> d.copy(authors = d.authors.toMutableList().also { it.removeAt(index) }) }
+                            }) { Icon(Icons.Default.Close, contentDescription = "Auteur verwijderen") }
+                        }
+                    }
+                }
+                TextButton(onClick = { viewModel.update { it.copy(authors = it.authors + "") } }) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Auteur toevoegen")
+                }
+                TextInput("Oorspronkelijke titel", draft.originalTitle, { v -> viewModel.update { it.copy(originalTitle = v) } })
+            }
+            EditCard("Uitgave") {
+                TextInput("ISBN", draft.isbn, { v -> viewModel.update { it.copy(isbn = v) } },
+                    keyboardType = KeyboardType.Number,
+                    error = state.isbnError.takeIf { errors },
+                    supporting = if (state.duplicateBookId != null) "Dit ISBN staat al in je collectie" else null)
+                LanguageInput(draft.language) { v -> viewModel.update { it.copy(language = v) } }
+                TextInput("Uitgever", draft.publisher, { v -> viewModel.update { it.copy(publisher = v) } })
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TextInput("Jaar", draft.publishedYear, { v -> viewModel.update { it.copy(publishedYear = v) } },
+                        Modifier.weight(1f), keyboardType = KeyboardType.Number, error = state.yearError.takeIf { errors })
+                    TextInput("Pagina's", draft.pages, { v -> viewModel.update { it.copy(pages = v) } },
+                        Modifier.weight(1f), keyboardType = KeyboardType.Number, error = state.pagesError.takeIf { errors })
+                }
+
+                Text("Formaat", style = MaterialTheme.typography.labelLarge)
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BookFormat.entries.forEach { format ->
+                        FilterChip(
+                            selected = draft.format == format,
+                            onClick = { viewModel.update { it.copy(format = if (it.format == format) null else format) } },
+                            label = { Text(format.label) },
+                        )
                     }
                 }
             }
-            TextButton(onClick = { viewModel.update { it.copy(authors = it.authors + "") } }) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(4.dp))
-                Text("Auteur toevoegen")
-            }
-
-            TextInput("ISBN", draft.isbn, { v -> viewModel.update { it.copy(isbn = v) } },
-                keyboardType = KeyboardType.Number,
-                error = state.isbnError.takeIf { errors },
-                supporting = if (state.duplicateBookId != null) "Dit ISBN staat al in je collectie" else null)
-            LanguageInput(draft.language) { v -> viewModel.update { it.copy(language = v) } }
-            TextInput("Oorspronkelijke titel", draft.originalTitle, { v -> viewModel.update { it.copy(originalTitle = v) } })
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SuggestionTextField("Serie", draft.seriesName, seriesSuggestions,
-                    { v -> viewModel.update { it.copy(seriesName = v) } }, Modifier.weight(2f))
-                TextInput("Deel", draft.seriesIndex, { v -> viewModel.update { it.copy(seriesIndex = v) } },
-                    Modifier.weight(1f))
-            }
-
-            TextInput("Uitgever", draft.publisher, { v -> viewModel.update { it.copy(publisher = v) } })
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                TextInput("Jaar", draft.publishedYear, { v -> viewModel.update { it.copy(publishedYear = v) } },
-                    Modifier.weight(1f), keyboardType = KeyboardType.Number, error = state.yearError.takeIf { errors })
-                TextInput("Pagina's", draft.pages, { v -> viewModel.update { it.copy(pages = v) } },
-                    Modifier.weight(1f), keyboardType = KeyboardType.Number, error = state.pagesError.takeIf { errors })
-            }
-
-            Text("Formaat", style = MaterialTheme.typography.labelLarge)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BookFormat.entries.forEach { format ->
-                    FilterChip(
-                        selected = draft.format == format,
-                        onClick = { viewModel.update { it.copy(format = if (it.format == format) null else format) } },
-                        label = { Text(format.label) },
-                    )
+            EditCard("Serie") {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SuggestionTextField("Serie", draft.seriesName, seriesSuggestions,
+                        { v -> viewModel.update { it.copy(seriesName = v) } }, Modifier.weight(2f))
+                    TextInput("Deel", draft.seriesIndex, { v -> viewModel.update { it.copy(seriesIndex = v) } },
+                        Modifier.weight(1f))
                 }
             }
+            EditCard("Collectie") {
+                TextInput("Tags (gescheiden door komma's)", draft.tags, { v -> viewModel.update { it.copy(tags = v) } })
+                TextInput("Beschrijving", draft.description, { v -> viewModel.update { it.copy(description = v) } },
+                    singleLine = false)
+                TextInput("Notities", draft.notes, { v -> viewModel.update { it.copy(notes = v) } }, singleLine = false)
 
-            TextInput("Tags (gescheiden door komma's)", draft.tags, { v -> viewModel.update { it.copy(tags = v) } })
-            TextInput("Beschrijving", draft.description, { v -> viewModel.update { it.copy(description = v) } },
-                singleLine = false)
-            TextInput("Notities", draft.notes, { v -> viewModel.update { it.copy(notes = v) } }, singleLine = false)
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Op mijn leeslijst", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = draft.wantToRead, onCheckedChange = { v -> viewModel.update { it.copy(wantToRead = v) } })
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Op mijn leeslijst", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    Switch(checked = draft.wantToRead, onCheckedChange = { v -> viewModel.update { it.copy(wantToRead = v) } })
+                }
             }
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+/** Een groep velden in een kaart, zoals op de boekpagina. */
+@Composable
+private fun EditCard(title: String, content: @Composable () -> Unit) {
+    AppCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            content()
         }
     }
 }
