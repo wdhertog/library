@@ -59,6 +59,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,6 +92,7 @@ fun LibraryScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val query by viewModel.queryText.collectAsStateWithLifecycle()
     val awaitingLookup by viewModel.awaitingLookup.collectAsStateWithLifecycle()
+    val autoLookup by (LocalContext.current.applicationContext as nl.wdhertog.library.LibraryApp).container.settings.autoLookup.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var pickingLocation by remember { mutableStateOf(false) }
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
@@ -221,7 +224,7 @@ fun LibraryScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
-            if (awaitingLookup > 0) {
+            if (awaitingLookup > 0 && autoLookup) {
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
@@ -230,6 +233,17 @@ fun LibraryScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            } else if (awaitingLookup > 0) {
+                // Automatisch opzoeken staat uit: niets draait vanzelf; hier kun je het starten.
+                Row(Modifier.padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "$awaitingLookup ${if (awaitingLookup == 1) "boek" else "boeken"} nog niet opgezocht",
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = viewModel::updateLibrary) { Text("Nu opzoeken") }
                 }
             }
             when {

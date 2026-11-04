@@ -87,7 +87,7 @@ class AppContainer(val app: Application) {
         )
     }
     val settings = AppSettings(app)
-    val enrichScheduler = EnrichScheduler(app, wifiOnly = { settings.wifiOnly.value })
+    val enrichScheduler = EnrichScheduler(app, wifiOnly = { settings.wifiOnly.value }, automatic = { settings.autoLookup.value })
     val bookSearch by lazy { BookSearch(http, settings::isSourceEnabled) }
 }
 

@@ -35,10 +35,19 @@ class EnrichWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     }
 }
 
-class EnrichScheduler(private val context: Context, private val wifiOnly: () -> Boolean = { false }) {
+class EnrichScheduler(
+    private val context: Context,
+    private val wifiOnly: () -> Boolean = { false },
+    /** Instelling "Automatisch opzoeken"; uit = alleen als de gebruiker erom vraagt ([manual]). */
+    private val automatic: () -> Boolean = { true },
+) {
 
-    /** Start (of verlengt) de achtergrondronde. Aanroepen na elke scan of import is goedkoop. */
-    fun schedule() {
+    /**
+     * Start (of verlengt) de achtergrondronde. Aanroepen na elke scan of import is goedkoop.
+     * [manual]: de gebruiker vraagt erom ("Bibliotheek bijwerken"), dus ook als automatisch opzoeken uit staat.
+     */
+    fun schedule(manual: Boolean = false) {
+        if (!manual && !automatic()) return
         val request = OneTimeWorkRequestBuilder<EnrichWorker>()
             .setConstraints(
                 Constraints.Builder()

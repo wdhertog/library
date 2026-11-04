@@ -115,7 +115,7 @@ class LibraryViewModel(
     fun updateLibrary() {
         viewModelScope.launch {
             val requeued = repository.requeueFailed()
-            scheduler.schedule()
+            scheduler.schedule(manual = true)
             val pending = awaitingLookup.value + requeued
             _messages.send(
                 if (pending == 0) "Alle boeken zijn al bijgewerkt"
