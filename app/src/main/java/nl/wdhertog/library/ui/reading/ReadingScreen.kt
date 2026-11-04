@@ -33,6 +33,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import java.time.LocalDate
+import nl.wdhertog.library.ui.components.AppCard
+import androidx.compose.material3.AssistChip
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,8 +96,11 @@ fun ReadingScreen(
             return@Scaffold
         }
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+            // Schets 4: leesdoel als ring bovenaan, dan wat je leest, je leeslijst als covers, en de maanden.
+            item { GoalCard(s.stats, isCurrentYear = year == LocalDate.now().year, onEdit = { editingGoal = true }) }
+
             if (s.current.isNotEmpty()) {
-                item { Header("Nu aan het lezen (${s.current.size})") }
+                item { Header("Nu aan het lezen") }
                 item {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(s.current, key = { it.session.id }) { entry -> CurrentBook(entry, onClick = { onOpenBook(entry.item.book.id) }) }
@@ -100,20 +108,32 @@ fun ReadingScreen(
                 }
             }
 
-            item {
-                Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { Header("Wil ik lezen (${s.wantToRead.size})") }
-                    if (s.wantToRead.isNotEmpty()) {
-                        TextButton(onClick = { showWantToRead = !showWantToRead }) { Text(if (showWantToRead) "Verbergen" else "Toon") }
+            if (s.wantToRead.isNotEmpty()) {
+                item {
+                    Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { Header("Wil ik lezen · ${s.wantToRead.size}") }
+                        TextButton(onClick = { showWantToRead = !showWantToRead }) { Text(if (showWantToRead) "Minder" else "Alles") }
+                    }
+                }
+                if (showWantToRead) {
+                    items(s.wantToRead, key = { "want-${it.book.id}" }) { item -> BookRow(item, onClick = { onOpenBook(item.book.id) }) }
+                } else {
+                    item {
+                        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(s.wantToRead, key = { "want-row-${it.book.id}" }) { item ->
+                                CoverImage(
+                                    item.book.title, item.book.cover,
+                                    Modifier.size(width = 56.dp, height = 84.dp).clickable { onOpenBook(item.book.id) },
+                                    showTitle = false,
+                                )
+                            }
+                        }
                     }
                 }
             }
-            if (showWantToRead) {
-                items(s.wantToRead, key = { "want-${it.book.id}" }) { item -> BookRow(item, onClick = { onOpenBook(item.book.id) }) }
-            }
 
-            item { Goal(s.stats, onEdit = { editingGoal = true }) }
-            item { Statistics(s.stats) }
+            item { Statistics(s.stats, highlightMonth = if (year == LocalDate.now().year) LocalDate.now().monthValue - 1 else null) }
+            if (s.stats.finished.isNotEmpty()) item { Header("Gelezen in ${s.stats.year} · ${s.stats.finished.size}") }
             items(s.stats.finished, key = { "read-${it.session.id}" }) { entry ->
                 FinishedRow(entry, onClick = { onOpenBook(entry.item.book.id) })
             }
@@ -143,11 +163,12 @@ fun ReadingScreen(
 @Composable
 private fun YearPicker(year: Int, years: List<Int>, onSelect: (Int) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    Box {
-        TextButton(onClick = { open = true }) {
-            Text(year.toString())
-            Icon(Icons.Default.ArrowDropDown, contentDescription = "Jaar kiezen")
-        }
+    Box(Modifier.padding(end = 12.dp)) {
+        AssistChip(
+            onClick = { open = true },
+            label = { Text(year.toString()) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Jaar kiezen", Modifier.size(18.dp)) },
+        )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             years.forEach { y -> DropdownMenuItem(text = { Text(y.toString()) }, onClick = { onSelect(y); open = false }) }
         }
@@ -173,59 +194,96 @@ private fun CurrentBook(entry: ReadEntry, onClick: () -> Unit) {
         CoverImage(book.title, book.cover, Modifier.size(width = 96.dp, height = 144.dp))
         Spacer(Modifier.height(6.dp))
         if (fraction != null) {
-            LinearProgressIndicator(progress = { fraction }, Modifier.fillMaxWidth())
-            Spacer(Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = { fraction },
+                Modifier.fillMaxWidth().height(4.dp),
+                trackColor = MaterialTheme.colorScheme.outlineVariant,
+                drawStopIndicator = {},
+            )
+            Text("${(fraction * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(book.displayTitle, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
+/** Leesdoel als ring, met hoe je ervoor staat, en de pagina's en je gemiddelde beoordeling. */
 @Composable
-private fun Goal(stats: YearStats, onEdit: () -> Unit) {
-    Column(Modifier.fillMaxWidth().clickable(onClick = onEdit).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        val goal = stats.goal
-        if (goal == null) {
-            Text("Leesdoel ${stats.year} instellen…", color = MaterialTheme.colorScheme.primary)
-        } else {
-            val done = stats.finished.size
-            Text(
-                "Leesdoel ${stats.year}: $done van $goal" + if (done >= goal) " — gehaald!" else "",
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Spacer(Modifier.height(6.dp))
-            LinearProgressIndicator(progress = { (done.toFloat() / goal).coerceAtMost(1f) }, Modifier.fillMaxWidth().height(8.dp))
+private fun GoalCard(stats: YearStats, isCurrentYear: Boolean, onEdit: () -> Unit) {
+    val done = stats.finished.size
+    val goal = stats.goal
+    AppCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), onClick = onEdit) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            GoalRing(done, goal)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(if (goal != null) "Leesdoel ${stats.year}" else "Gelezen in ${stats.year}", style = MaterialTheme.typography.titleMedium)
+                val status = when {
+                    goal == null -> "Tik om een leesdoel in te stellen"
+                    done >= goal -> "Gehaald!"
+                    !isCurrentYear -> "${goal - done} te weinig"
+                    else -> {
+                        val today = LocalDate.now()
+                        val expected = goal * today.dayOfYear / today.lengthOfYear()
+                        "Nog ${goal - done} ${if (goal - done == 1) "boek" else "boeken"} · " +
+                            if (done >= expected) "je ligt op schema" else "je loopt wat achter"
+                    }
+                }
+                Text(status, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val parts = listOfNotNull(
+                    stats.pages.takeIf { it > 0 }?.let { NumberFormat.getIntegerInstance(dutch).format(it) + " pagina's" },
+                    stats.averageRating?.let { "gem. ★ " + formatRating((it * 10).toInt() / 10.0) },
+                )
+                if (parts.isNotEmpty()) {
+                    Text(parts.joinToString(" · "), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun Statistics(stats: YearStats) {
-    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+private fun GoalRing(done: Int, goal: Int?) {
+    val track = MaterialTheme.colorScheme.outlineVariant
+    val arc = MaterialTheme.colorScheme.primary
+    Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = Stroke(width = 9.dp.toPx(), cap = StrokeCap.Round)
+            val inset = stroke.width / 2
+            val arcSize = Size(size.width - stroke.width, size.height - stroke.width)
+            drawArc(track, 0f, 360f, false, topLeft = Offset(inset, inset), size = arcSize, style = stroke)
+            val fraction = if (goal != null && goal > 0) (done.toFloat() / goal).coerceIn(0f, 1f) else 0f
+            if (fraction > 0f) drawArc(arc, -90f, 360f * fraction, false, topLeft = Offset(inset, inset), size = arcSize, style = stroke)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$done", style = MaterialTheme.typography.titleLarge)
+            goal?.let { Text("van $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+    }
+}
+
+/** Per maand in een kaart, met de talen eronder. */
+@Composable
+private fun Statistics(stats: YearStats, highlightMonth: Int?) {
+    if (stats.finished.isEmpty()) return
+    AppCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text("Gelezen in ${stats.year}: ${stats.finished.size}", style = MaterialTheme.typography.titleMedium)
-            if (stats.finished.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                MonthBars(stats.perMonth)
-                if (stats.yearOnly > 0) {
-                    Text(
-                        "+ ${stats.yearOnly} waarvan alleen het jaar bekend is",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                val parts = listOfNotNull(
-                    stats.pages.takeIf { it > 0 }?.let { NumberFormat.getIntegerInstance(dutch).format(it) + " pagina's" },
-                    stats.averageRating?.let { "gemiddeld ★ " + formatRating((it * 10).toInt() / 10.0) },
+            Text("Per maand", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(12.dp))
+            MonthBars(stats.perMonth, highlightMonth)
+            if (stats.yearOnly > 0) {
+                Text(
+                    "+ ${stats.yearOnly} waarvan alleen het jaar bekend is",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (parts.isNotEmpty()) Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
-                if (stats.languages.isNotEmpty()) {
-                    Text(
-                        stats.languages.joinToString(" · ") { (code, count) -> "${code.uppercase()} $count" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            }
+            if (stats.languages.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    stats.languages.joinToString(" · ") { (code, count) -> "${code.uppercase()} $count" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -233,9 +291,11 @@ private fun Statistics(stats: YearStats) {
 
 /** Staafjes per maand, met de beginletter van de maand eronder. */
 @Composable
-private fun MonthBars(perMonth: List<Int>) {
-    val color = MaterialTheme.colorScheme.primary
-    val empty = MaterialTheme.colorScheme.surfaceVariant
+private fun MonthBars(perMonth: List<Int>, highlightMonth: Int?) {
+    // Schets: lichtgroen, de huidige maand donkergroen.
+    val strong = MaterialTheme.colorScheme.primary
+    val color = MaterialTheme.colorScheme.secondaryContainer
+    val empty = MaterialTheme.colorScheme.outlineVariant
     val max = perMonth.maxOrNull()?.coerceAtLeast(1) ?: 1
     Column {
         Canvas(Modifier.fillMaxWidth().height(64.dp)) {
@@ -244,7 +304,11 @@ private fun MonthBars(perMonth: List<Int>) {
             perMonth.forEachIndexed { i, count ->
                 val height = if (count == 0) 2.dp.toPx() else size.height * count / max
                 drawRoundRect(
-                    color = if (count == 0) empty else color,
+                    color = when {
+                        count == 0 -> empty
+                        i == highlightMonth -> strong
+                        else -> color
+                    },
                     topLeft = Offset(i * slot + (slot - barWidth) / 2, size.height - height),
                     size = Size(barWidth, height),
                     cornerRadius = CornerRadius(3.dp.toPx()),
