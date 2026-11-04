@@ -122,6 +122,9 @@ object SeriesListRoute
 @Serializable
 data class SeriesDetailRoute(val seriesId: Long)
 
+@Serializable
+data class YearOverviewRoute(val year: Int)
+
 private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector)
 
 private val topLevel = listOf(
@@ -248,7 +251,16 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                 BackupScreen(onBack = { navController.popFrom(entry) })
             }
             composable<ReadingRoute> {
-                ReadingScreen(onOpenBook = { navController.navigate(BookDetailRoute(it)) })
+                ReadingScreen(
+                    onOpenBook = { navController.navigate(BookDetailRoute(it)) },
+                    onYearOverview = { navController.navigate(YearOverviewRoute(it)) },
+                )
+            }
+            composable<YearOverviewRoute> { entry ->
+                nl.wdhertog.library.ui.reading.YearOverviewScreen(
+                    onBack = { navController.popFrom(entry) },
+                    onOpenBook = { navController.navigate(BookDetailRoute(it)) },
+                )
             }
             composable<AuthorListRoute> { entry ->
                 nl.wdhertog.library.ui.authors.AuthorListScreen(

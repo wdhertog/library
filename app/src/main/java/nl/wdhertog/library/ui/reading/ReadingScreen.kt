@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -75,6 +76,7 @@ private val monthLetters = listOf("j", "f", "m", "a", "m", "j", "j", "a", "s", "
 @Composable
 fun ReadingScreen(
     onOpenBook: (Long) -> Unit,
+    onYearOverview: (Int) -> Unit,
     viewModel: ReadingViewModel = appViewModel { container, _ -> ReadingViewModel(container.bookRepository, container.readingRepository) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -98,6 +100,9 @@ fun ReadingScreen(
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
             // Schets 4: leesdoel als ring bovenaan, dan wat je leest, je leeslijst als covers, en de maanden.
             item { GoalCard(s.stats, isCurrentYear = year == LocalDate.now().year, onEdit = { editingGoal = true }) }
+            if (s.stats.finished.isNotEmpty()) {
+                item { YearOverviewLink(s.stats.year, onClick = { onYearOverview(s.stats.year) }) }
+            }
 
             if (s.current.isNotEmpty()) {
                 item { Header("Nu aan het lezen") }
@@ -237,6 +242,20 @@ private fun GoalCard(stats: YearStats, isCurrentYear: Boolean, onEdit: () -> Uni
                     Text(parts.joinToString(" · "), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+    }
+}
+
+/** Ingang naar het jaaroverzicht: dikste boek, favorieten, drukste maand, om te delen. */
+@Composable
+private fun YearOverviewLink(year: Int, onClick: () -> Unit) {
+    AppCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), onClick = onClick) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Jouw $year in boeken", style = MaterialTheme.typography.titleSmall)
+                Text("Hoogtepunten bekijken en delen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
