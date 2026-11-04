@@ -52,6 +52,10 @@ enum class ScanOutcome {
     UNDONE,
     /** Plank-modus: staat op een andere plek en is (nog) niet verplaatst. */
     KEPT,
+    /** Staat als niet (meer) in bezit; met "In bezit" wordt het weer een eigen boek. */
+    NOT_OWNED,
+    /** Was niet in bezit, nu weer wel (in plank-modus ook op deze plank gezet). */
+    RECLAIMED,
 }
 
 /**
@@ -98,7 +102,12 @@ class ScanViewModel(
     private val mayLookUpNow: () -> Boolean = { true },
     /** Instelling: wat te doen met een boek dat al op een andere plek staat. */
     private val shelfExisting: () -> ShelfExisting = { ShelfExisting.MOVE },
+    /** Weer eigen boek: bezit terug, gegevens over weggedaan gewist (LoanRepository.markOwned). */
+    private val markOwned: suspend (Long) -> Unit = {},
 ) : ViewModel() {
+
+    /** Plank-modus: een boek dat als niet in bezit staat; eerst vragen of het weer van jou is. */
+    val askReclaim = MutableStateFlow<SessionRow?>(null)
 
     /** "Eerst vragen": het boek waarover nu een vraag openstaat; scannen wacht zolang. */
     val askMove = MutableStateFlow<SessionRow?>(null)
@@ -160,7 +169,7 @@ class ScanViewModel(
             _signals.trySend(ScanSignal.NOT_AN_ISBN)
             return
         }
-        if (askMove.value != null) return
+        if (askMove.value != null || askReclaim.value != null) return
         if (entries.value.any { it.isbn13 == isbn13 } || !inFlight.add(isbn13)) return
 
         viewModelScope.launch {
@@ -185,7 +194,10 @@ class ScanViewModel(
                 ScannedEntry(isbn13, result.bookId, ScanOutcome.ADDED)
             }
             is ScanAddResult.AlreadyPresent -> {
-                if (shelf == null) {
+                if (result.notOwned) {
+                    // Niet (meer) in bezit: niets vanzelf veranderen; in de lijst (of in plank-modus via de vraag) kiezen.
+                    ScannedEntry(isbn13, result.bookId, ScanOutcome.NOT_OWNED, previous = locations.placementOf(result.bookId))
+                } else if (shelf == null) {
                     ScannedEntry(isbn13, result.bookId, ScanOutcome.ALREADY_PRESENT)
                 } else {
                     val current = locations.placementOf(result.bookId)
@@ -201,6 +213,9 @@ class ScanViewModel(
             }
         }
         record(entry)
+        if (entry.outcome == ScanOutcome.NOT_OWNED && shelf != null) {
+            askReclaim.value = session.value.firstOrNull { it.entry.isbn13 == entry.isbn13 } ?: SessionRow(entry, null, null)
+        }
         if (entry.outcome == ScanOutcome.KEPT && shelfExisting() == ShelfExisting.ASK) {
             askMove.value = session.value.firstOrNull { it.entry.isbn13 == entry.isbn13 } ?: SessionRow(entry, null, null)
         }
@@ -216,6 +231,23 @@ class ScanViewModel(
             val before = locations.moveBook(entry.bookId, shelf)
             entries.update { list -> list.map { if (it == entry) it.copy(outcome = ScanOutcome.MOVED, previous = before) else it } }
         }
+    }
+
+    /** Weer in bezit nemen; in plank-modus meteen op deze plank. */
+    fun reclaim(isbn13: String) {
+        askReclaim.value = null
+        val entry = entries.value.firstOrNull { it.isbn13 == isbn13 && it.outcome == ScanOutcome.NOT_OWNED } ?: return
+        val shelf = shelfId.value
+        viewModelScope.launch {
+            markOwned(entry.bookId)
+            val before = shelf?.let { locations.moveBook(entry.bookId, it) } ?: entry.previous
+            entries.update { list -> list.map { if (it == entry) it.copy(outcome = ScanOutcome.RECLAIMED, previous = before) else it } }
+        }
+    }
+
+    /** Vraag beantwoord met "niet in bezit laten". */
+    fun keepNotOwned() {
+        askReclaim.value = null
     }
 
     /** Vraag beantwoord met "laten staan". */
