@@ -31,6 +31,10 @@ private val placeholderColors = listOf(
     Color(0xFF7B3B2E), Color(0xFF4A5A2A), Color(0xFF3D3D5C), Color(0xFF6B4B33),
 )
 
+/** De kleur van de plaatshouder voor deze titel (ook voor het kleurvlak op de boekpagina). */
+fun placeholderColor(title: String): Color =
+    if (title.isBlank()) Color(0xFFD8D2C6) else placeholderColors[title.hashCode().absoluteValue % placeholderColors.size]
+
 /**
  * Cover van het boek, of een gekleurd vlak met de titel zolang er geen cover is.
  * [cover] is een URL of de bestandsnaam van een eigen foto (zie Book.cover).
@@ -60,7 +64,7 @@ fun CoverImage(title: String, cover: String?, modifier: Modifier = Modifier, sho
 @Composable
 private fun Placeholder(title: String, showTitle: Boolean, author: String?) {
     val empty = title.isBlank()
-    val color = if (empty) Color(0xFFD8D2C6) else placeholderColors[title.hashCode().absoluteValue % placeholderColors.size]
+    val color = placeholderColor(title)
     Box(
         Modifier
             .fillMaxSize()

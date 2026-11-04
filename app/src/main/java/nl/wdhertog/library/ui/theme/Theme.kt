@@ -26,8 +26,9 @@ private val LightColors = lightColorScheme(
     onPrimaryContainer = Color(0xFF0B2018),
     secondary = Color(0xFF7A5A12),
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFFFDEA1),
-    onSecondaryContainer = Color(0xFF261900),
+    // Geselecteerde chips en dergelijke groen (zoals de schetsen); goud alleen bewust, zie Gold.
+    secondaryContainer = Color(0xFFC7E3D5),
+    onSecondaryContainer = Color(0xFF0B2018),
     tertiary = Color(0xFF7A5A12),
     tertiaryContainer = Color(0xFFFFDEA1),
     onTertiaryContainer = Color(0xFF261900),
@@ -53,8 +54,8 @@ private val DarkColors = darkColorScheme(
     onPrimaryContainer = Color(0xFFC7E3D5),
     secondary = Color(0xFFEAC16C),
     onSecondary = Color(0xFF402D00),
-    secondaryContainer = Color(0xFF5C4300),
-    onSecondaryContainer = Color(0xFFFFDEA1),
+    secondaryContainer = Color(0xFF2E4A3F),
+    onSecondaryContainer = Color(0xFFC7E3D5),
     tertiary = Color(0xFFEAC16C),
     tertiaryContainer = Color(0xFF5C4300),
     onTertiaryContainer = Color(0xFFFFDEA1),
@@ -72,6 +73,12 @@ private val DarkColors = darkColorScheme(
     outline = Color(0xFF8F887C),
     outlineVariant = Color(0xFF3A372F),
 )
+
+/** Goud voor wat eruit moet springen: de knop Scannen en "uitgeleend". */
+object Gold {
+    val container: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFF5C4300) else Color(0xFFFFDEA1)
+    val onContainer: Color @Composable get() = if (isSystemInDarkTheme()) Color(0xFFFFDEA1) else Color(0xFF261900)
+}
 
 /** Literata (SIL Open Font License, zie assets/licenses): serif voor titels, zoals in de schetsen. */
 @OptIn(ExperimentalTextApi::class)

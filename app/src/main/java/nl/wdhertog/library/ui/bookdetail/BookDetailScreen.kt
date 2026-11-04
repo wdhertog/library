@@ -43,6 +43,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.ui.theme.Literata
+import nl.wdhertog.library.ui.components.rememberCoverTint
+import nl.wdhertog.library.ui.components.AppCard
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Button
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,11 +142,16 @@ fun BookDetailScreen(
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
 
+    val loadedBook = (state as? BookDetailUiState.Loaded)?.detail?.book
+    // Kleurvlak uit de cover, doorlopend achter de titelbalk (schetsen).
+    val tint = rememberCoverTint(loadedBook?.title.orEmpty(), loadedBook?.cover)
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {},
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = if (loadedBook != null) tint else MaterialTheme.colorScheme.surface),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Terug")
@@ -145,7 +163,7 @@ fun BookDetailScreen(
                             Icon(
                                 if (book.favorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = if (book.favorite) "Geen favoriet meer" else "Favoriet",
-                                tint = if (book.favorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                                tint = if (book.favorite) MaterialTheme.colorScheme.secondary else LocalContentColor.current,
                             )
                         }
                     }
@@ -215,6 +233,24 @@ fun BookDetailScreen(
                 BookDetailUiState.NotFound -> Text("Dit boek bestaat niet meer.", Modifier.align(Alignment.Center))
                 is BookDetailUiState.Loaded -> DetailContent(
                     detail = s.detail,
+                    tint = tint,
+                    primaryAction = run {
+                        // Eén hoofdknop die meebeweegt met waar je bent met dit boek.
+                        val current = sessions.firstOrNull { it.session.status == ReadingStatus.READING && it.session.bookId == s.detail.book.id }?.session
+                        when {
+                            current != null -> "Voortgang bijwerken" to { progressFor = current }
+                            sessions.any { it.session.status == ReadingStatus.FINISHED } -> "Opnieuw lezen" to viewModel::startReading
+                            else -> "Beginnen met lezen" to viewModel::startReading
+                        }
+                    },
+                    secondaryAction = run {
+                        val active = bookLoans.firstOrNull { it.returnedAt == null }
+                        when (s.detail.book.ownership) {
+                            Ownership.OWNED -> if (active != null) "Teruggekregen" to { viewModel.markReturned(active.loanId) } else "Uitlenen" to { loanDialog = "lend" }
+                            Ownership.BORROWED -> "Teruggebracht…" to { loanDialog = "returned" }
+                            Ownership.NOT_OWNED -> null
+                        }
+                    },
                     locationLabel = { id -> id?.let { locationIndex[it]?.pathLabel } },
                     onOpenBook = onOpenBook,
                     onOpenLocation = onOpenLocation,
@@ -244,6 +280,7 @@ fun BookDetailScreen(
                             },
                             onEdit = { sessionDialog = "Leessessie" to it },
                             onToggleWantToRead = viewModel::toggleWantToRead,
+                            hidePrimary = true,
                         )
                     },
                     // Een geleend boek leen je niet uit; zonder geschiedenis valt er dan niets te tonen.
@@ -261,6 +298,7 @@ fun BookDetailScreen(
                                 onDispose = { loanDialog = "dispose" },
                                 onDelete = { loanToDelete = it },
                                 disposal = disposalText(s.detail.book),
+                                hidePrimary = true,
                             )
                         }
                     },
@@ -397,6 +435,9 @@ fun BookDetailScreen(
 @Composable
 private fun DetailContent(
     detail: BookDetail,
+    tint: Color,
+    primaryAction: Pair<String, () -> Unit>,
+    secondaryAction: Pair<String, () -> Unit>?,
     locationLabel: (Long?) -> String?,
     onOpenBook: (Long) -> Unit,
     onOpenLocation: (Long) -> Unit,
@@ -412,17 +453,18 @@ private fun DetailContent(
     loanSection: (@Composable () -> Unit)?,
 ) {
     val book = detail.book
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-    ) {
-        banner()
-        Row {
-            // Tik op de cover om (opnieuw) te fotograferen.
-            Box(Modifier.clickable(onClick = onPhotoCover)) {
-                CoverImage(book.title, book.cover, Modifier.size(width = 104.dp, height = 156.dp))
+    var descriptionOpen by remember(book.id) { mutableStateOf(false) }
+    var dataOpen by remember(book.id) { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        // Kleurvlak met de cover er half overheen.
+        Box(Modifier.fillMaxWidth().height(232.dp)) {
+            Box(Modifier.fillMaxWidth().height(96.dp).background(tint))
+            Box(
+                Modifier.align(Alignment.BottomCenter)
+                    .shadow(8.dp, RoundedCornerShape(4.dp))
+                    .clickable(onClick = onPhotoCover), // tik op de cover om (opnieuw) te fotograferen
+            ) {
+                CoverImage(book.title, book.cover, Modifier.size(width = 136.dp, height = 204.dp), author = detail.authors.firstOrNull())
                 if (book.cover == null) {
                     Icon(
                         Icons.Default.AddAPhoto,
@@ -432,103 +474,170 @@ private fun DetailContent(
                     )
                 }
             }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(book.displayTitle, style = MaterialTheme.typography.headlineSmall)
-                book.subtitle?.let {
-                    Text(it, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(book.displayTitle, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            val seriesLine = detail.series.firstOrNull()?.let { it.seriesName + (it.seriesIndex?.let { i -> ", deel $i" } ?: "") }
+            listOfNotNull(book.subtitle, seriesLine).forEach { line ->
+                Text(
+                    line,
+                    Modifier.then(
+                        if (line == seriesLine) Modifier.clickable { detail.series.firstOrNull()?.let { onOpenSeries(it.seriesId) } } else Modifier,
+                    ),
+                    style = MaterialTheme.typography.titleSmall.copy(fontFamily = Literata),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            if (detail.authors.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                // Elke naam opent de auteurspagina.
+                FlowRow(horizontalArrangement = Arrangement.Center) {
+                    detail.authors.forEachIndexed { index, name ->
+                        Text(
+                            name + if (index < detail.authors.lastIndex) ", " else "",
+                            Modifier.clickable { onOpenAuthor(name) },
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
-                if (detail.authors.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    // Elke naam opent de auteurspagina.
-                    FlowRow {
-                        detail.authors.forEachIndexed { index, name ->
+            }
+            Spacer(Modifier.height(4.dp))
+            MetaLine(
+                listOfNotNull(
+                    book.publisher, book.publishedYear?.toString(), book.pages?.let { "$it p." },
+                    book.language?.let(Languages::displayName), book.format?.label,
+                ),
+                center = true,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = primaryAction.second) { Text(primaryAction.first) }
+                secondaryAction?.let { (label, action) -> OutlinedButton(onClick = action) { Text(label) } }
+            }
+        }
+
+        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            banner()
+            DetailCard("Lezen") { readingSection() }
+            AppCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                    LocationLine(
+                        label = locationLabel(book.locationId),
+                        onOpen = book.locationId?.let { id -> { onOpenLocation(id) } },
+                        onChange = onPickLocation,
+                    )
+                    OwnerLine(book.owner, onEdit = onEditOwner)
+                }
+            }
+            loanSection?.let { DetailCard("Bezit en uitlenen") { it() } }
+
+            val original = detail.works.firstOrNull()?.originalTitle?.takeIf { it != book.title }
+            val tags = book.tags?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty()
+            if (book.description != null || original != null || tags.isNotEmpty() || book.notes != null) {
+                DetailCard("Beschrijving") {
+                    book.description?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = if (descriptionOpen) Int.MAX_VALUE else 4,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (it.length > 220) {
                             Text(
-                                name + if (index < detail.authors.lastIndex) ", " else "",
-                                Modifier.clickable { onOpenAuthor(name) },
-                                style = MaterialTheme.typography.titleMedium,
+                                if (descriptionOpen) "Minder" else "Meer lezen",
+                                Modifier.clickable { descriptionOpen = !descriptionOpen }.padding(top = 4.dp),
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
-                }
-                Spacer(Modifier.height(8.dp))
-                MetaLine(listOfNotNull(book.publisher, book.publishedYear?.toString(), book.pages?.let { "$it p." }))
-                MetaLine(listOfNotNull(book.language?.let(Languages::displayName), book.format?.label))
-            }
-        }
-
-        LocationLine(
-            label = locationLabel(book.locationId),
-            onOpen = book.locationId?.let { id -> { onOpenLocation(id) } },
-            onChange = onPickLocation,
-        )
-        OwnerLine(book.owner, onEdit = onEditOwner)
-
-        detail.series.forEach { s ->
-            Spacer(Modifier.height(16.dp))
-            AssistChip(
-                onClick = { onOpenSeries(s.seriesId) },
-                label = { Text("Serie: ${s.seriesName}" + (s.seriesIndex?.let { " · deel $it" } ?: "")) },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = null) },
-            )
-        }
-
-        Section("Lezen") { readingSection() }
-
-        loanSection?.let { Section("Bezit en uitlenen") { it() } }
-
-        detail.works.firstOrNull()?.originalTitle?.takeIf { it != book.title }?.let {
-            Section("Oorspronkelijke titel") { Text(it) }
-        }
-        book.description?.let { Section("Beschrijving") { Text(it, style = MaterialTheme.typography.bodyMedium) } }
-
-        if (detail.otherEditions.isNotEmpty()) {
-            Section("Andere edities in je collectie") {
-                detail.otherEditions.forEach { EditionRow(it, locationLabel(it.locationId), onClick = { onOpenBook(it.id) }) }
-            }
-        }
-
-        Section("Details") {
-            DetailRow("ISBN", book.isbn13 ?: book.isbn10)
-            DetailRow("Vertaling", book.translators)
-            DetailRow("Origineel", detail.works.firstOrNull()?.originalLanguage?.let(Languages::displayName))
-            DetailRow("Tags", book.tags)
-        }
-        book.notes?.let { Section("Notities") { Text(it, style = MaterialTheme.typography.bodyMedium) } }
-
-        if (book.isbn13 != null) {
-            Section("Gegevens") {
-                Text(book.enrichStatus.label, style = MaterialTheme.typography.bodyMedium)
-                book.enrichedSources?.let {
-                    Text("Bronnen: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onRefresh, enabled = !refreshing) {
-                    if (refreshing) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
+                    original?.let {
+                        Text("Oorspronkelijke titel: $it", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall)
                     }
-                    Text("Gegevens opnieuw ophalen")
+                    book.notes?.let {
+                        Text("Notities: $it", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (tags.isNotEmpty()) {
+                        FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            tags.forEach { tag -> SuggestionChip(onClick = {}, label = { Text(tag) }) }
+                        }
+                    }
                 }
-                Text(
-                    "Wat je zelf hebt ingevuld, blijft staan.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
+
+            if (detail.otherEditions.isNotEmpty()) {
+                DetailCard("Andere edities in je collectie") {
+                    detail.otherEditions.forEach { EditionRow(it, locationLabel(it.locationId), onClick = { onOpenBook(it.id) }) }
+                }
+            }
+
+            // Gegevens en bronnen: standaard dicht.
+            AppCard(Modifier.fillMaxWidth(), onClick = { dataOpen = !dataOpen }) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Gegevens en bronnen", Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            if (dataOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (dataOpen) "Dichtklappen" else "Openklappen",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (dataOpen) {
+                        Spacer(Modifier.height(8.dp))
+                        DetailRow("ISBN", book.isbn13 ?: book.isbn10)
+                        DetailRow("Vertaling", book.translators)
+                        DetailRow("Origineel", detail.works.firstOrNull()?.originalLanguage?.let(Languages::displayName))
+                        if (book.isbn13 != null) {
+                            DetailRow("Status", book.enrichStatus.label)
+                            DetailRow("Bronnen", book.enrichedSources)
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(onClick = onRefresh, enabled = !refreshing) {
+                                if (refreshing) {
+                                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                Text("Gegevens opnieuw ophalen")
+                            }
+                            Text(
+                                "Wat je zelf hebt ingevuld, blijft staan.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
         }
-        Spacer(Modifier.height(32.dp))
+    }
+}
+
+/** Een kaart met een kleine kop, zoals in de schetsen. */
+@Composable
+private fun DetailCard(title: String, content: @Composable () -> Unit) {
+    AppCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(8.dp))
+            content()
+        }
     }
 }
 
 @Composable
-private fun MetaLine(parts: List<String>) {
+private fun MetaLine(parts: List<String>, center: Boolean = false) {
     if (parts.isEmpty()) return
     Text(
         parts.joinToString(" · "),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = if (center) TextAlign.Center else null,
     )
 }
 
@@ -591,7 +700,6 @@ private fun OwnerLine(owner: String?, onEdit: () -> Unit) {
 /** Waar het boek staat; tik op de plek om erheen te gaan, op Wijzig om te verplaatsen. */
 @Composable
 private fun LocationLine(label: String?, onOpen: (() -> Unit)?, onChange: () -> Unit) {
-    Spacer(Modifier.height(12.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Default.Place, contentDescription = "Locatie", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
