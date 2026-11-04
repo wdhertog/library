@@ -21,16 +21,21 @@ import java.net.URLEncoder
  * Zoeken op titel en auteur (voor cover-herkenning): de KB voor Nederlandstalige boeken en
  * Open Library voor de rest, tegelijk. De KB zoekt per woord in de titel; dat duurt een paar seconden.
  */
-class BookSearch(private val http: LookupHttp) {
+class BookSearch(
+    private val http: LookupHttp,
+    /** Instellingen: KB en Open Library kunnen uit staan. */
+    private val enabled: (nl.wdhertog.library.lookup.LookupSource) -> Boolean = { true },
+) {
 
     /**
      * Eerst nauwkeurig: per woord een titel met dat woord én een van de andere woorden in titel of auteur.
      * Levert de KB zo niets op, dan breder: alleen het woord in de titel.
      */
     suspend fun search(query: String, words: List<String>): List<SearchCandidate> = coroutineScope {
-        val openLibrary = async { safe { openLibrary(query) } }
-        var kb = words.map { word -> async { safe { kb(word, words - word) } } }.awaitAll().flatten()
-        if (kb.isEmpty() && words.size > 1) kb = words.map { word -> async { safe { kb(word, emptyList()) } } }.awaitAll().flatten()
+        val useKb = enabled(nl.wdhertog.library.lookup.LookupSource.KB)
+        val openLibrary = async { if (enabled(nl.wdhertog.library.lookup.LookupSource.OPEN_LIBRARY)) safe { openLibrary(query) } else emptyList() }
+        var kb = if (!useKb) emptyList() else words.map { word -> async { safe { kb(word, words - word) } } }.awaitAll().flatten()
+        if (useKb && kb.isEmpty() && words.size > 1) kb = words.map { word -> async { safe { kb(word, emptyList()) } } }.awaitAll().flatten()
         CoverText.rank(kb + openLibrary.await(), query)
     }
 

@@ -19,6 +19,8 @@ class SeriesRepository(
     private val db: LibraryDatabase,
     private val bookRepository: BookRepository,
     private val wikidata: WikidataSource? = null,
+    /** Instellingen: Wikidata kan uit staan. */
+    private val wikidataEnabled: () -> Boolean = { true },
 ) {
     private val dao = db.seriesDao()
     private val books = db.bookDao()
@@ -50,7 +52,7 @@ class SeriesRepository(
      * Geeft het aantal gevonden delen, of null als het nu niet lukte (geen verbinding).
      */
     suspend fun refreshParts(seriesId: Long, force: Boolean = false): Int? {
-        val source = wikidata ?: return null
+        val source = wikidata?.takeIf { wikidataEnabled() } ?: return null
         val series = dao.get(seriesId) ?: return null
         val fetched = series.partsFetchedAt
         if (!force && fetched != null && fetched.isAfter(Instant.now().minus(PARTS_MAX_AGE))) return null
