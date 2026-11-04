@@ -481,7 +481,7 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
 ### Gepland (na 1.5)
 - **Delen** (gebouwd): een boek delen via het deelmenu van Android (titel, auteur, jaar, ISBN en een link naar Open Library), en bij een uitgeleend boek "Navragen…" met een kant-en-klaar berichtje (op de boekpagina en in Uitleen). De app stuurt zelf niets.
 - **Ontbrekend deel op je leeslijst** (gebouwd): in het venster van een ontbrekend deel "Op mijn leeslijst". Dat wordt een boek "niet in bezit" in die serie, met de auteur van de andere delen, en verschijnt in Lezen onder "Wil ik lezen".
-- **Jaaroverzicht** (gebouwd): op Lezen onder het leesdoel "Jouw {jaar} in boeken" (voor elk jaar met gelezen boeken). Totaal, pagina's en gemiddelden, dikste boek, meest gelezen auteur (vanaf twee boeken), favorieten (hoogste beoordeling, vanaf vier sterren, hooguit drie), drukste maand, snelst uitgelezen (begin- en einddatum bekend), eerste en laatste boek, talen. Delen als platte tekst via het deelmenu.
+- **Jaaroverzicht** (gebouwd): op Lezen onder het leesdoel "Jouw {jaar} in boeken" (voor elk jaar met gelezen boeken). Totaal, pagina's en gemiddelden, dikste boek, meest gelezen auteur (vanaf twee boeken), favorieten (hoogste beoordeling, vanaf vier sterren, hooguit drie), drukste maand, snelst uitgelezen (begin- en einddatum bekend), eerste en laatste boek, talen. Delen als afbeelding (1080 × 1350, lichte kleuren: jaartal, aantal, covers, hoogtepunten; via een FileProvider op `cache/gedeeld`) of als platte tekst.
 - **Widget "Nu aan het lezen"** op het beginscherm.
 
 ### Gebouwd in 1.5 (4 november 2026)

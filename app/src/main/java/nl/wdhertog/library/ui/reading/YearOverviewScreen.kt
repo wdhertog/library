@@ -26,6 +26,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import nl.wdhertog.library.data.repository.YearStats
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -60,9 +70,9 @@ import nl.wdhertog.library.util.Share
 class YearOverviewViewModel(handle: SavedStateHandle, books: BookRepository, reading: ReadingRepository) : ViewModel() {
     val year = handle.toRoute<YearOverviewRoute>().year
 
-    val overview: StateFlow<YearOverview?> =
+    val stats: StateFlow<YearStats?> =
         combine(books.observeLibrary(), reading.observeSessions(), reading.observeGoals()) { library, sessions, goals ->
-            YearOverview.of(ReadingStats.forYear(year, sessions, library.associateBy { it.book.id }, goals.firstOrNull { it.year == year }?.target))
+            ReadingStats.forYear(year, sessions, library.associateBy { it.book.id }, goals.firstOrNull { it.year == year }?.target)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
@@ -76,8 +86,12 @@ fun YearOverviewScreen(
         YearOverviewViewModel(handle, container.bookRepository, container.readingRepository)
     },
 ) {
-    val overview by viewModel.overview.collectAsStateWithLifecycle()
+    val stats by viewModel.stats.collectAsStateWithLifecycle()
+    val overview = remember(stats) { stats?.let { YearOverview.of(it) } }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var shareMenu by remember { mutableStateOf(false) }
+    var rendering by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -85,7 +99,31 @@ fun YearOverviewScreen(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Terug") } },
                 actions = {
                     overview?.takeIf { it.count > 0 }?.let { o ->
-                        IconButton(onClick = { Share.open(context, o.shareText()) }) { Icon(Icons.Default.Share, contentDescription = "Delen") }
+                        Box {
+                            if (rendering) {
+                                CircularProgressIndicator(Modifier.padding(12.dp).size(24.dp), strokeWidth = 2.dp)
+                            } else {
+                                IconButton(onClick = { shareMenu = true }) { Icon(Icons.Default.Share, contentDescription = "Delen") }
+                            }
+                            DropdownMenu(expanded = shareMenu, onDismissRequest = { shareMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Als afbeelding") },
+                                    onClick = {
+                                        shareMenu = false
+                                        rendering = true
+                                        scope.launch {
+                                            try {
+                                                val image = YearImage.render(context, o, stats?.finished.orEmpty())
+                                                withContext(Dispatchers.IO) { Share.image(context, image, "jaar-in-boeken-${o.year}") }
+                                            } finally {
+                                                rendering = false
+                                            }
+                                        }
+                                    },
+                                )
+                                DropdownMenuItem(text = { Text("Als tekst") }, onClick = { shareMenu = false; Share.open(context, o.shareText()) })
+                            }
+                        }
                     }
                 },
             )
