@@ -281,6 +281,11 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
                     updatedAt = Instant.now(),
                 ),
             )
+            // Wikidata-id van de serie bewaren, voor het ophalen van de (ontbrekende) delen.
+            val finalSeriesId = series?.id ?: work.seriesId
+            if (metadata.seriesWikidataId != null && finalSeriesId != null && (takeSeries || sameSeries)) {
+                dao.setSeriesWikidataIfMissing(finalSeriesId, metadata.seriesWikidataId, Instant.now())
+            }
             // Zelf losgekoppeld: niet automatisch weer aan andere edities hangen.
             if (WORK_LOCK !in locked) linkToExistingWork(bookId, work.id, metadata)
             refreshSearchText(bookId)

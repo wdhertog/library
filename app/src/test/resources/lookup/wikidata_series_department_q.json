@@ -1,0 +1,2336 @@
+{
+ "head": {
+  "vars": [
+   "series",
+   "seriesLabel",
+   "part",
+   "ord",
+   "label",
+   "lang",
+   "published"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Miséricorde"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Miséricorde"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Miséricorde"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erbarmen"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erbarmen"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erbarmen"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Keeper of Lost Causes"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Keeper of Lost Causes"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1348207"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "1"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Keeper of Lost Causes"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2007-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Dossier 64"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Dossier 64"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Dossier 64"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Purity of Vengeance"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Purity of Vengeance"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Purity of Vengeance"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Verachtung"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Verachtung"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12320382"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "4"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Verachtung"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2010-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Fasandræberne"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Fasandræberne"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Fasandræberne"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Profanation"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Profanation"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Profanation"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Absent One"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Absent One"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15846927"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "2"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Absent One"
+    },
+    "published": {
+     "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+     "type": "literal",
+     "value": "2008-01-01T00:00:00Z"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Delivrance"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Delivrance"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Delivrance"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erlösung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erlösung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erlösung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "A Conspiracy of Faith"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "A Conspiracy of Faith"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q17540212"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "3"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "A Conspiracy of Faith"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "L'effet papillon"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "L'effet papillon"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "L'effet papillon"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Marco Effect"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Marco Effect"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Marco Effect"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erwartung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erwartung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q18552230"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "5"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Erwartung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Hanging Girl"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Hanging Girl"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Hanging Girl"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Promesse"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Promesse"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Promesse"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Verheißung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Verheißung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q22956279"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "6"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Verheißung"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Selfies"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Selfies"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Selfies"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Scarred Woman"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Scarred Woman"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Scarred Woman"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Selfies"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Selfies"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q28835903"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "7"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Selfies"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Victime 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Victime 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "fr",
+     "type": "literal",
+     "value": "Victime 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "fr"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Victim 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Victim 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Victim 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Opfer 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Opfer 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567193"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "8"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Opfer 2117"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q109729158"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "9"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Shadow Murders"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q109729158"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "9"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Shadow Murders"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q109729158"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "9"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "The Shadow Murders"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "en"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q109729158"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "9"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Natrium Chlorid"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q109729158"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "9"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Natrium Chlorid"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   },
+   {
+    "series": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q86567441"
+    },
+    "part": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q109729158"
+    },
+    "ord": {
+     "type": "literal",
+     "value": "9"
+    },
+    "seriesLabel": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Department Q"
+    },
+    "label": {
+     "xml:lang": "de",
+     "type": "literal",
+     "value": "Natrium Chlorid"
+    },
+    "lang": {
+     "type": "literal",
+     "value": "de"
+    }
+   }
+  ]
+ }
+}

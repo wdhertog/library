@@ -40,6 +40,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import nl.wdhertog.library.data.repository.SeriesDuplicate
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
@@ -68,7 +70,11 @@ fun SeriesListScreen(
     onBack: () -> Unit,
     onOpenSeries: (Long) -> Unit,
     viewModel: SeriesListViewModel = appViewModel { container, _ ->
-        SeriesListViewModel(container.seriesRepository, container.app.getSharedPreferences("series", android.content.Context.MODE_PRIVATE))
+        SeriesListViewModel(
+            container.seriesRepository,
+            container.app.getSharedPreferences("series", android.content.Context.MODE_PRIVATE),
+            container.settings::mayLookUpNow,
+        )
     },
 ) {
     val summaries by viewModel.summaries.collectAsStateWithLifecycle()
@@ -141,7 +147,9 @@ private fun summaryLine(summary: SeriesSummary): String {
 fun SeriesDetailScreen(
     onBack: () -> Unit,
     onOpenBook: (Long) -> Unit,
-    viewModel: SeriesDetailViewModel = appViewModel { container, handle -> SeriesDetailViewModel(handle, container.seriesRepository) },
+    viewModel: SeriesDetailViewModel = appViewModel { container, handle ->
+        SeriesDetailViewModel(handle, container.seriesRepository, container.settings::mayLookUpNow)
+    },
 ) {
     val detail by viewModel.detail.collectAsStateWithLifecycle()
     val others by viewModel.others.collectAsStateWithLifecycle()
@@ -150,6 +158,8 @@ fun SeriesDetailScreen(
     var editingTotal by remember { mutableStateOf(false) }
     var merging by remember { mutableStateOf(false) }
     var editingVolume by remember { mutableStateOf<SeriesVolume.Present?>(null) }
+    val lookingUp by viewModel.lookingUp.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -163,6 +173,14 @@ fun SeriesDetailScreen(
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             DropdownMenuItem(text = { Text("Aantal delen…") }, onClick = { menuOpen = false; editingTotal = true })
                             DropdownMenuItem(text = { Text("Samenvoegen met…") }, onClick = { menuOpen = false; merging = true })
+                            DropdownMenuItem(
+                                text = { Text("Delen opzoeken op Wikidata") },
+                                enabled = !lookingUp,
+                                onClick = {
+                                    menuOpen = false
+                                    viewModel.lookUpParts { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+                                },
+                            )
                         }
                     }
                 },
@@ -280,7 +298,16 @@ private fun PresentVolume(volume: SeriesVolume.Present, onOpenBook: (Long) -> Un
 private fun MissingVolume(volume: SeriesVolume.Missing) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(volume.index, Modifier.width(40.dp), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline)
-        Text("Ontbreekt in je collectie", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+        Column {
+            if (volume.title != null) {
+                Text(volume.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
+            }
+            Text(
+                listOfNotNull(volume.year?.toString(), "ontbreekt in je collectie").joinToString(" · ").replaceFirstChar(Char::uppercase),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
     }
 }
 

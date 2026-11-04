@@ -39,7 +39,16 @@ interface SeriesDao {
 
     @Query(
         """
-        SELECT s.id, s.name, s.totalVolumes,
+        SELECT s.id, s.name,
+               -- Zonder eigen opgave: het laatste deel volgens Wikidata, als dat minstens de helft van de nummers kent
+               -- (zelfde regel als SeriesOrder.completeTotal).
+               COALESCE(s.totalVolumes, (
+                   SELECT CASE WHEN COUNT(DISTINCT n) * 2 >= MAX(n) THEN MAX(n) END FROM (
+                       SELECT CAST(p.ordinal AS INTEGER) AS n FROM series_part p
+                       WHERE p.seriesId = s.id AND p.ordinal GLOB '[0-9]*' AND p.ordinal NOT GLOB '*[^0-9]*'
+                         AND CAST(p.ordinal AS INTEGER) BETWEEN 1 AND 100
+                   )
+               )) AS totalVolumes,
                COUNT(DISTINCT w.id) AS works,
                COUNT(DISTINCT CASE WHEN b.ownership = 'OWNED' THEN w.id END) AS owned,
                COUNT(DISTINCT CASE WHEN rs.status = 'FINISHED' THEN w.id END) AS read,
@@ -103,4 +112,24 @@ interface SeriesDao {
 
     @Query("SELECT bookId FROM book_work WHERE workId = :workId")
     suspend fun bookIdsOfWork(workId: Long): List<Long>
+
+    // --- Delen volgens Wikidata ---
+
+    @Query("SELECT * FROM series_part WHERE seriesId = :seriesId")
+    fun observeParts(seriesId: Long): Flow<List<SeriesPart>>
+
+    @Query("DELETE FROM series_part WHERE seriesId = :seriesId")
+    suspend fun clearParts(seriesId: Long)
+
+    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun insertParts(parts: List<SeriesPart>)
+
+    @Query("SELECT DISTINCT wikidataId FROM work WHERE seriesId = :seriesId AND wikidataId IS NOT NULL")
+    suspend fun workWikidataIds(seriesId: Long): List<String>
+
+    @Query("UPDATE series SET partsFetchedAt = :at WHERE id = :id")
+    suspend fun setPartsFetched(id: Long, at: java.time.Instant)
+
+    @Query("SELECT id FROM series WHERE partsFetchedAt IS NULL OR partsFetchedAt < :before ORDER BY name COLLATE NOCASE")
+    suspend fun seriesNeedingParts(before: java.time.Instant): List<Long>
 }

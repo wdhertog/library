@@ -2,6 +2,7 @@ package nl.wdhertog.library.data.repository
 
 import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.db.SeriesBookRow
+import nl.wdhertog.library.data.db.SeriesPart
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -36,5 +37,34 @@ class SeriesOrderTest {
         assertEquals(listOf(10L, 11L), first.books.map { it.bookId })
         assertEquals(true, first.read)
         assertEquals(listOf("2", "4"), volumes.filterIsInstance<SeriesVolume.Missing>().map { it.index })
+    }
+
+    @Test
+    fun `missing volumes get titles from Wikidata, up to its last part`() {
+        val parts = listOf(
+            SeriesPart(1, "1", "Erbarmen", 2007, "Q1"),
+            SeriesPart(1, "2", "De fazantenmoordenaars", 2008, "Q2"),
+            SeriesPart(1, "2.5", "Een novelle", 2009, "Q25"),
+            SeriesPart(1, "4", "Dossier 64", 2010, "Q4"),
+        )
+        val volumes = SeriesOrder.volumes(listOf(row(1, "1"), row(3, "3")), totalVolumes = null, parts = parts)
+        assertEquals(listOf("1", "2", "2.5", "3", "4"), volumes.map { it.index })
+        val missing = volumes.filterIsInstance<SeriesVolume.Missing>()
+        assertEquals(listOf("De fazantenmoordenaars", "Een novelle", "Dossier 64"), missing.map { it.title })
+        assertEquals(2010, missing.last().year)
+    }
+
+    @Test
+    fun `without Wikidata a gap has no title`() {
+        val missing = SeriesOrder.volumes(listOf(row(1, "1"), row(3, "3")), totalVolumes = null).filterIsInstance<SeriesVolume.Missing>()
+        assertEquals(listOf(SeriesVolume.Missing("2")), missing)
+    }
+
+    @Test
+    fun `a sparse Wikidata series is no reliable total`() {
+        assertEquals(null, SeriesOrder.completeTotal(listOf(SeriesPart(1, "13", "Poirot", null, null))))
+        assertEquals(4, SeriesOrder.completeTotal((1..4).map { SeriesPart(1, "$it", "Deel $it", null, null) }))
+        val volumes = SeriesOrder.volumes(listOf(row(1, "1")), totalVolumes = null, parts = listOf(SeriesPart(1, "13", "Poirot", null, null)))
+        assertEquals(listOf("1"), volumes.map { it.index })
     }
 }

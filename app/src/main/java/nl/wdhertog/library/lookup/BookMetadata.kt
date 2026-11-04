@@ -27,6 +27,8 @@ data class BookMetadata(
     val openLibraryEditionId: String? = null,
     val openLibraryWorkId: String? = null,
     val workWikidataId: String? = null,
+    /** Wikidata-id van de serie (bij [seriesName]). */
+    val seriesWikidataId: String? = null,
 ) {
     val hasContent: Boolean get() = title != null || authors.isNotEmpty()
 }
