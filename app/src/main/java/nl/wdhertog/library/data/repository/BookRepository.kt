@@ -259,7 +259,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
             }
             val seriesLocked = "series" in locked
             val takeSeries = !seriesLocked && metadata.seriesName != null && (refresh || work.seriesId == null)
-            val series = if (takeSeries) findOrCreateSeries(metadata.seriesName!!) else null
+            val series = if (takeSeries) findOrCreateSeries(metadata.seriesName) else null
             // Zelfde serie, maar nog zonder deelnummer: dat nummer alsnog overnemen.
             val sameSeries = !seriesLocked && work.seriesId != null &&
                 work.seriesId.let { dao.getSeries(it)?.name }.equals(metadata.seriesName, ignoreCase = true)

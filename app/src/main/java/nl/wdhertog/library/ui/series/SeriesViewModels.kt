@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +45,7 @@ class SeriesListViewModel(private val series: SeriesRepository, private val pref
     }
 }
 
+@OptIn(ExperimentalCoroutinesApi::class) // flatMapLatest
 class SeriesDetailViewModel(savedStateHandle: SavedStateHandle, private val series: SeriesRepository) : ViewModel() {
 
     /** Kan veranderen: na samenvoegen ga je verder met de serie die overblijft. */
