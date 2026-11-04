@@ -550,7 +550,7 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 
 ## 11. Synchronisatie tussen telefoons (plan)
 
-Stand 3 november 2026: S1–S5 gebouwd (alleen in testversies), S6 (test met twee telefoons) loopt; zie Voortgang.
+Stand 4 november 2026: gebouwd en uitgebracht in versie 1.4; zie Voortgang.
 
 ### Besloten (3 november 2026)
 
@@ -704,4 +704,4 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
     - **Dubbel opzoeken:** boeken die via synchroniseren binnenkwamen (status "nog op te zoeken"), gingen op de andere telefoon óók in de opzoekrij. Die rij werd daar niet gestart, dus de teller bleef staan tot vernieuwen. Nu zoekt alleen de telefoon die de status als laatste zette een boek op; zo staat het in de veldklok van `enrichStatus`. Die boeken tellen op de andere telefoon ook niet mee.
     - **Vertraging tijdens importeren:** doorgeven wachtte tot het 15 seconden stil was, en dat werd het tijdens importeren en opzoeken nooit. Nu na 5 seconden stilte, en bij aanhoudende wijzigingen minstens elke minuut.
     - **Eigenaar wijzigen** duurde 10–20 seconden; nu ongeveer 5.
-  - **Na een geslaagde test:** `BuildConfig.SYNC` aanzetten in release en versie 1.4 uitbrengen.
+  - **Uitgebracht in 1.4 (4 november 2026):** `BuildConfig.SYNC` staat ook in de gewone app aan (de vlag blijft als noodrem). De waarschuwing "Testversie" staat alleen nog in testversies. Test2 is door je zus nog niet nagelopen; dit is uitgebracht op jouw verzoek.

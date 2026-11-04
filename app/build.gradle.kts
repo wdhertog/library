@@ -41,8 +41,8 @@ android {
             buildConfigField("boolean", "SYNC", "true")
         }
         release {
-            // Synchroniseren is in aanbouw (ontwerp §11) en blijft uit de gewone app tot het af is.
-            buildConfigField("boolean", "SYNC", "false")
+            // Synchroniseren (ontwerp §11) zit sinds 1.4 in de gewone app; de vlag blijft voor een eventuele noodrem.
+            buildConfigField("boolean", "SYNC", "true")
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")

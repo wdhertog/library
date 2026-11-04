@@ -13,7 +13,7 @@ De app is in het Nederlands en gemaakt voor eigen gebruik, maar iedereen mag hem
   - wat je nu leest, met je voortgang;
   - je leeslijst en je leesdoel per jaar;
   - per jaar wat je las, met beoordelingen (in halve sterren) en recensies.
-- **Series:** welke delen je hebt, welke je gelezen hebt en welke nog ontbreken.
+- **Series:** welke delen je hebt, welke je gelezen hebt en welke nog ontbreken, met titels uit Wikidata. Zelf een ontbrekend deel toevoegen kan ook, en de app wijst series aan die dubbel lijken.
 - **Edities en vertalingen** van hetzelfde werk horen bij elkaar. Lees je de Engelse editie, dan telt de Nederlandse ook als gelezen.
 - **Covers:** fotografeer zelf de cover als er geen in de open bronnen staat; dat geldt voor de meeste Nederlandse boeken.
 - **Importeren:**
@@ -22,6 +22,7 @@ De app is in het Nederlands en gemaakt voor eigen gebruik, maar iedereen mag hem
   - Vooraf zie je welke boeken er al staan, en elke import is ongedaan te maken.
 - **Back-up:** automatisch elke week naar een map die je kiest (bijvoorbeeld in Nextcloud), handmatig als ZIP, terugzetten op een nieuwe telefoon, en exporteren naar CSV voor Excel.
 - **Delen met huisgenoten:** geef per boek de eigenaar aan en filter daarop.
+- **Synchroniseren tussen telefoons:** via de wifi thuis, rechtstreeks en versleuteld van telefoon naar telefoon, zonder server of account. Koppelen gaat met een QR-code. De eerste keer voeg je twee bestaande bibliotheken samen met een controlescherm. De collectie is gedeeld; wat je gelezen hebt, beoordelingen, favorieten en je leeslijst blijven per telefoon.
 
 ## Installeren
 
@@ -84,7 +85,7 @@ Het ontwerp staat in [`docs/ONTWERP.md`](docs/ONTWERP.md), met de keuzes, het da
 
 ## Status
 
-**Versie 1.3** is uitgebracht. Daarin zitten de volledige Have I Read That-import, het bewerken van meerdere boeken tegelijk, en edities: een filter voor boeken die je in meerdere edities hebt, en edities zelf koppelen of loskoppelen. Wat nog gepland staat, waaronder synchronisatie tussen telefoons: zie [§10 en §11 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10).
+**Versie 1.4** is uitgebracht. Daarin zitten synchroniseren tussen telefoons, ontbrekende delen van series (uit Wikidata of zelf toegevoegd), de taal herkennen aan het ISBN, en instellingen voor bronnen en de plank-modus. Wat nog op de lijst staat: zie [§10 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10); het ontwerp van synchroniseren staat in §11.
 
 Fouten of ideeën zijn welkom als [issue](https://github.com/wdhertog/library/issues).
 

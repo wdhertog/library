@@ -142,7 +142,8 @@ fun SyncScreen(onBack: () -> Unit) {
                     "favorieten en je leeslijst blijven op je eigen telefoon.",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+            // Alleen in een testversie (eigen app-id naast de gewone app).
+            if (nl.wdhertog.library.BuildConfig.APPLICATION_ID != "nl.wdhertog.library") Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                 Text(
                     "Testversie van synchroniseren. Dit is een aparte app: je gewone Bibliotheek doet niet mee en blijft onaangeroerd.",
                     Modifier.padding(12.dp),
