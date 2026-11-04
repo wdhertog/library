@@ -33,6 +33,29 @@ class SeriesRepository(
         }
 
     /**
+     * Een deel dat je nog niet hebt op je leeslijst zetten: een boek "niet in bezit" in deze serie, met de
+     * auteur van de andere delen. Het staat dan in Lezen onder "Wil ik lezen" en telt niet als eigen boek.
+     * Een zelf toegevoegd ontbrekend deel met hetzelfde nummer is daarna overbodig en verdwijnt.
+     */
+    suspend fun addToWishlist(seriesId: Long, ordinal: String, title: String): Long = db.withTransaction {
+        val series = dao.get(seriesId) ?: error("Serie bestaat niet")
+        val author = dao.mainAuthor(seriesId)
+        val bookId = bookRepository.save(
+            0,
+            BookDraft(
+                title = title.trim(),
+                authors = listOf(author.orEmpty()),
+                seriesName = series.name,
+                seriesIndex = ordinal.trim(),
+                wantToRead = true,
+            ),
+        )
+        dao.markNotOwned(bookId, Instant.now())
+        setManualPart(seriesId, ordinal, "")
+        bookId
+    }
+
+    /**
      * Een ontbrekend deel zelf toevoegen of de titel aanpassen; een lege titel haalt het weg.
      * [previousOrdinal] bij het wijzigen van het nummer.
      */

@@ -68,6 +68,8 @@ fun LoanSection(
     disposal: String? = null,
     /** Uitlenen en teruggekregen staan al als knop bovenaan de boekpagina. */
     hidePrimary: Boolean = false,
+    /** Een berichtje sturen om naar het uitgeleende boek te vragen. */
+    onAsk: ((LoanRow) -> Unit)? = null,
 ) {
     val today = LocalDate.now()
     val active = loans.firstOrNull { it.returnedAt == null }
@@ -91,6 +93,7 @@ fun LoanSection(
                     }
                     active.note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }
+                onAsk?.let { ask -> TextButton(onClick = { ask(active) }) { Text("Navragen…") } }
                 if (!hidePrimary) OutlinedButton(onClick = { onReturned(active.loanId) }) { Text("Teruggekregen") }
                 DeleteButton { onDelete(active) }
             }

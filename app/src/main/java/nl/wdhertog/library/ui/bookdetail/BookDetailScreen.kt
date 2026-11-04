@@ -43,6 +43,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import nl.wdhertog.library.util.Share
+import androidx.compose.material.icons.filled.Share
 import nl.wdhertog.library.ui.theme.Literata
 import nl.wdhertog.library.ui.components.rememberCoverTint
 import nl.wdhertog.library.ui.components.AppCard
@@ -140,6 +143,7 @@ fun BookDetailScreen(
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
 
     val loadedBook = (state as? BookDetailUiState.Loaded)?.detail?.book
@@ -176,6 +180,14 @@ fun BookDetailScreen(
                                 Icon(Icons.Default.MoreVert, contentDescription = "Meer")
                             }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Delen…") },
+                                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        (state as? BookDetailUiState.Loaded)?.detail?.let { Share.open(context, Share.book(it.book, it.authors)) }
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Cover fotograferen") },
                                     leadingIcon = { Icon(Icons.Default.AddAPhoto, contentDescription = null) },
@@ -299,6 +311,12 @@ fun BookDetailScreen(
                                 onDelete = { loanToDelete = it },
                                 disposal = disposalText(s.detail.book),
                                 hidePrimary = true,
+                                onAsk = { loan ->
+                                    Share.open(
+                                        context,
+                                        Share.askAboutLoan(s.detail.book.displayTitle, s.detail.authors, loan.personName, loan.lentAt, loan.dueAt),
+                                    )
+                                },
                             )
                         }
                     },

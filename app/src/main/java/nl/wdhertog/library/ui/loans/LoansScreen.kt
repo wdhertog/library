@@ -30,6 +30,10 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.util.Share
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -133,6 +137,7 @@ fun LoansScreen(
 
 @Composable
 private fun LentOutList(state: LoansUiState, today: LocalDate, onOpenBook: (Long) -> Unit, onReturned: (Long) -> Unit) {
+    val context = LocalContext.current
     if (state.active.isEmpty() && state.returned.isEmpty()) {
         Empty("Je hebt nog niets uitgeleend.\nTik op Uitlenen, of leen een boek uit vanaf de boekpagina.")
         return
@@ -148,6 +153,7 @@ private fun LentOutList(state: LoansUiState, today: LocalDate, onOpenBook: (Long
                 action = "Teruggekregen",
                 onAction = { onReturned(loan.loanId) },
                 onClick = { onOpenBook(loan.bookId) },
+                onAsk = { Share.open(context, Share.askAboutLoan(loan.displayTitle, emptyList(), loan.personName, loan.lentAt, loan.dueAt)) },
             )
             HorizontalDivider(Modifier.padding(start = 68.dp))
         }
@@ -200,6 +206,8 @@ private fun ItemRow(
     onClick: () -> Unit,
     action: String? = null,
     onAction: () -> Unit = {},
+    /** Uitgeleend: een berichtje sturen om ernaar te vragen. */
+    onAsk: (() -> Unit)? = null,
 ) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
@@ -223,6 +231,7 @@ private fun ItemRow(
                 )
             }
         }
+        onAsk?.let { IconButton(onClick = it) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Navragen", tint = MaterialTheme.colorScheme.primary) } }
         action?.let { OutlinedButton(onClick = onAction) { Text(it) } }
     }
 }

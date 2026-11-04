@@ -478,8 +478,11 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
-### Gepland
-- Niets gepland; zie "Later, misschien".
+### Gepland (na 1.5)
+- **Delen** (gebouwd): een boek delen via het deelmenu van Android (titel, auteur, jaar, ISBN en een link naar Open Library), en bij een uitgeleend boek "Navragen…" met een kant-en-klaar berichtje (op de boekpagina en in Uitleen). De app stuurt zelf niets.
+- **Ontbrekend deel op je leeslijst** (gebouwd): in het venster van een ontbrekend deel "Op mijn leeslijst". Dat wordt een boek "niet in bezit" in die serie, met de auteur van de andere delen, en verschijnt in Lezen onder "Wil ik lezen".
+- **Jaaroverzicht**: "je jaar in boeken" op Lezen, ook te delen.
+- **Widget "Nu aan het lezen"** op het beginscherm.
 
 ### Gebouwd in 1.5 (4 november 2026)
 - **Nieuwe vormgeving** naar de schetsen van 4 november 2026 (lokaal: `samples/bibliotheek_app_schetsen.html`).
