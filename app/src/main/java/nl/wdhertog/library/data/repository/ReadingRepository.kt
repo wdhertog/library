@@ -24,6 +24,10 @@ class ReadingRepository(private val db: LibraryDatabase) {
 
     fun observeReadingBookIds(): Flow<List<Long>> = dao.observeBookIdsWithStatus(ReadingStatus.READING)
 
+    fun observeLastFinished() = dao.observeLastFinished()
+
+    fun observeProgress() = dao.observeProgress()
+
     /** Beginnen met lezen; haalt het boek van de leeslijst. */
     suspend fun start(bookId: Long, date: LocalDate = LocalDate.now()) = db.withTransaction {
         dao.insert(ReadingSession(bookId = bookId, startedAt = date, status = ReadingStatus.READING))

@@ -20,6 +20,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import nl.wdhertog.library.data.repository.BookStatus
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.CallMade
 import nl.wdhertog.library.ui.theme.BookTitleStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +45,8 @@ fun BookRow(
     item: BookListItem,
     onClick: () -> Unit,
     locationLabel: String? = null,
+    /** Uitgeleend, bezig of gelezen; samen met de plek op één regel (schetsen). */
+    status: BookStatus? = null,
     leadingLabel: String? = null,
     trailing: @Composable () -> Unit = {},
     /** Meervoudige selectie: lang drukken begint, tikken wisselt (zie SelectionTopBar). */
@@ -116,24 +125,59 @@ fun BookRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            locationLabel?.let {
+            if (item.book.isAwaitingLookup) {
                 Text(
-                    "📍 $it",
+                    "Gegevens worden opgezocht…",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
-        }
-        if (item.book.isAwaitingLookup) {
-            Icon(
-                Icons.Default.HourglassEmpty,
-                contentDescription = "Gegevens worden opgehaald",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
-            )
+            StatusLine(status, locationLabel)
         }
         trailing()
+    }
+}
+
+/** "✓ Gelezen in 2024 · 📍 Kast 2 › P3", "↗ Uitgeleend aan Anna · 3 mnd", "Aan het lezen · 42%". */
+@Composable
+private fun StatusLine(status: BookStatus?, locationLabel: String?) {
+    val location = locationLabel?.let { "📍 $it" }
+    if (status == null && location == null) return
+    val (icon, text, color) = when (status) {
+        is BookStatus.Lent -> Triple(
+            Icons.AutoMirrored.Filled.CallMade,
+            listOfNotNull("Uitgeleend" + (status.person?.let { " aan $it" } ?: ""), status.since?.let { BookStatus.durationSince(it) }).joinToString(" · "),
+            MaterialTheme.colorScheme.secondary,
+        )
+        is BookStatus.Reading -> Triple(
+            Icons.AutoMirrored.Filled.MenuBook,
+            "Aan het lezen" + (status.percent?.let { " · $it%" } ?: ""),
+            MaterialTheme.colorScheme.primary,
+        )
+        is BookStatus.Read -> Triple(
+            Icons.Default.CheckCircleOutline,
+            "Gelezen" + (status.year?.let { " in $it" } ?: ""),
+            MaterialTheme.colorScheme.primary,
+        )
+        null -> Triple(null, "", MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+        }
+        Text(
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = color)) { append(text) }
+                if (location != null) {
+                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) {
+                        append(if (text.isEmpty()) location else " · $location")
+                    }
+                }
+            },
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

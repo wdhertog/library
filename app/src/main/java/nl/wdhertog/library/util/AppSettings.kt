@@ -21,6 +21,7 @@ class AppSettings(private val context: Context) {
 
     private val _wifiOnly = flag(KEY_WIFI_ONLY, false)
     private val _autoLookup = flag(KEY_AUTO_LOOKUP, true)
+    private val _libraryGrid = flag(KEY_LIBRARY_GRID, false)
     private val _scanSound = flag(KEY_SCAN_SOUND, true)
     private val _scanVibrate = flag(KEY_SCAN_VIBRATE, true)
     private val _loanReminders = flag(KEY_LOAN_REMINDERS, true)
@@ -62,6 +63,10 @@ class AppSettings(private val context: Context) {
 
     fun setWifiOnly(value: Boolean) = set(KEY_WIFI_ONLY, _wifiOnly, value)
     fun setAutoLookup(value: Boolean) = set(KEY_AUTO_LOOKUP, _autoLookup, value)
+
+    /** Bibliotheek als raster van covers in plaats van een lijst. */
+    val libraryGrid: StateFlow<Boolean> = _libraryGrid
+    fun setLibraryGrid(value: Boolean) = set(KEY_LIBRARY_GRID, _libraryGrid, value)
     fun setScanSound(value: Boolean) = set(KEY_SCAN_SOUND, _scanSound, value)
     fun setScanVibrate(value: Boolean) = set(KEY_SCAN_VIBRATE, _scanVibrate, value)
     fun setLoanReminders(value: Boolean) = set(KEY_LOAN_REMINDERS, _loanReminders, value)
@@ -83,6 +88,7 @@ class AppSettings(private val context: Context) {
     private companion object {
         const val KEY_WIFI_ONLY = "lookup-wifi-only"
         const val KEY_AUTO_LOOKUP = "lookup-auto"
+        const val KEY_LIBRARY_GRID = "library-grid"
         const val KEY_SCAN_SOUND = "scan-sound"
         const val KEY_SCAN_VIBRATE = "scan-vibrate"
         const val KEY_LOAN_REMINDERS = "loan-reminders"
