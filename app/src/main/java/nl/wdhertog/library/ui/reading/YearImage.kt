@@ -8,22 +8,13 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.text.TextPaint
 import android.text.TextUtils
-import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.res.ResourcesCompat
-import coil3.SingletonImageLoader
-import coil3.request.ImageRequest
-import coil3.request.allowHardware
-import coil3.toBitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import nl.wdhertog.library.R
-import nl.wdhertog.library.covers.CoverStore
 import nl.wdhertog.library.data.repository.ReadEntry
 import nl.wdhertog.library.data.repository.YearOverview
-import nl.wdhertog.library.data.repository.cover
 import nl.wdhertog.library.data.repository.displayTitle
+import nl.wdhertog.library.ui.components.CoverBitmap
 import nl.wdhertog.library.ui.components.formatRating
-import nl.wdhertog.library.ui.components.placeholderColor
 import nl.wdhertog.library.util.Languages
 
 /**
@@ -52,7 +43,7 @@ object YearImage {
         val gap = 16f
         val coverWidth = (WIDTH - 2 * MARGIN - (columns - 1) * gap) / columns
         val coverHeight = coverWidth * 1.5f
-        val covers = shown.map { loadCover(context, it, coverWidth.toInt(), coverHeight.toInt()) }
+        val covers = shown.map { CoverBitmap.of(context, it.item.book, coverWidth.toInt(), coverHeight.toInt(), textSize = 22f) }
 
         val bitmap = Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -83,29 +74,13 @@ object YearImage {
 
         // Covers
         y += 48f
-        val placeholderText = paint(22f, 0xF2FFFFFF.toInt(), serif).apply { textLocale = java.util.Locale.forLanguageTag("nl") }
         covers.forEachIndexed { i, cover ->
             val x = MARGIN + (i % columns) * (coverWidth + gap)
             val top = y + (i / columns) * (coverHeight + gap)
             val rect = RectF(x, top, x + coverWidth, top + coverHeight)
-            val path = android.graphics.Path().apply { addRoundRect(rect, 8f, 8f, android.graphics.Path.Direction.CW) }
             canvas.save()
-            canvas.clipPath(path)
-            if (cover != null) {
-                canvas.drawBitmap(cover, null, centerCrop(cover, rect), Paint(Paint.FILTER_BITMAP_FLAG))
-            } else {
-                val title = shown[i].item.book.title
-                canvas.drawColor(placeholderColor(title).toArgb())
-                val text = android.text.StaticLayout.Builder
-                    .obtain(title.trim(), 0, title.trim().length, placeholderText, (coverWidth - 24f).toInt())
-                    .setMaxLines(5).setEllipsize(TextUtils.TruncateAt.END)
-                    .setHyphenationFrequency(android.text.Layout.HYPHENATION_FREQUENCY_NORMAL).setLineSpacing(0f, 1.05f).build()
-                canvas.save()
-                canvas.translate(x + 14f, top + 14f)
-                text.draw(canvas)
-                canvas.restore()
-                canvas.drawRect(x, top, x + 5f, top + coverHeight, Paint().apply { color = 0x2E000000 })
-            }
+            canvas.clipPath(android.graphics.Path().apply { addRoundRect(rect, 8f, 8f, android.graphics.Path.Direction.CW) })
+            canvas.drawBitmap(cover, null, rect, Paint(Paint.FILTER_BITMAP_FLAG))
             canvas.restore()
         }
         val rows = (covers.size + columns - 1) / columns
@@ -135,27 +110,7 @@ object YearImage {
             line(text, value, y + 98f)
             y += 110f
         }
-        covers.forEach { it?.recycle() }
+        covers.forEach { it.recycle() }
         return bitmap
-    }
-
-    private fun centerCrop(bitmap: Bitmap, target: RectF): RectF {
-        val scale = maxOf(target.width() / bitmap.width, target.height() / bitmap.height)
-        val w = bitmap.width * scale
-        val h = bitmap.height * scale
-        return RectF(target.centerX() - w / 2, target.centerY() - h / 2, target.centerX() + w / 2, target.centerY() + h / 2)
-    }
-
-    private suspend fun loadCover(context: Context, entry: ReadEntry, width: Int, height: Int): Bitmap? {
-        val cover = entry.item.book.cover ?: return null
-        val request = ImageRequest.Builder(context)
-            .data(CoverStore.model(context, cover))
-            .size(width * 2, height * 2)
-            .allowHardware(false)
-            .build()
-        return runCatching {
-            SingletonImageLoader.get(context).execute(request).image?.toBitmap()
-                ?.let { withContext(Dispatchers.Default) { it.copy(Bitmap.Config.ARGB_8888, false) } }
-        }.getOrNull()
     }
 }

@@ -162,17 +162,31 @@ private fun NavController.popFrom(entry: NavBackStackEntry) {
     if (entry.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) popBackStack()
 }
 
+/** Van buiten de app gevraagd: uitleenherinnering, of de widget "Nu aan het lezen". */
+sealed interface Launch {
+    data object Loans : Launch
+    data object Reading : Launch
+    data class Book(val bookId: Long) : Launch
+}
+
 @Composable
-fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) {
+fun AppNavHost(launch: Launch? = null, onLaunchHandled: () -> Unit = {}) {
     val navController = rememberNavController()
-    LaunchedEffect(openLoans) {
-        if (openLoans) {
-            navController.navigate(LoansRoute) {
-                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                launchSingleTop = true
-            }
-            onOpenLoansHandled()
+    LaunchedEffect(launch) {
+        fun tab(route: Any) = navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
         }
+        when (launch) {
+            null -> return@LaunchedEffect
+            Launch.Loans -> tab(LoansRoute)
+            Launch.Reading -> tab(ReadingRoute)
+            is Launch.Book -> {
+                tab(ReadingRoute)
+                navController.navigate(BookDetailRoute(launch.bookId))
+            }
+        }
+        onLaunchHandled()
     }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
