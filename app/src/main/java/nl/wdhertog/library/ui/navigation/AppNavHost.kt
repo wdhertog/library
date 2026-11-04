@@ -4,9 +4,10 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -25,8 +26,8 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.Lifecycle
@@ -106,6 +107,9 @@ object SettingsRoute
 object SyncRoute
 
 @Serializable
+object MoreRoute
+
+@Serializable
 object AuthorListRoute
 
 /** Op id (uit de lijst) of op naam (vanaf de boekpagina). */
@@ -123,8 +127,9 @@ private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label
 private val topLevel = listOf(
     TopLevel(LibraryRoute, LibraryRoute::class, "Bibliotheek", Icons.AutoMirrored.Filled.LibraryBooks),
     TopLevel(ReadingRoute, ReadingRoute::class, "Lezen", Icons.AutoMirrored.Filled.MenuBook),
-    TopLevel(LocationsRoute, LocationsRoute::class, "Locaties", Icons.Default.Place),
+    TopLevel(SeriesListRoute, SeriesListRoute::class, "Series", Icons.Default.CollectionsBookmark),
     TopLevel(LoansRoute, LoansRoute::class, "Uitleen", Icons.Default.SwapHoriz),
+    TopLevel(MoreRoute, MoreRoute::class, "Meer", Icons.Default.Menu),
 )
 
 /** Gegevens voor de menubalk zelf: het aantal te late uitleningen als badge. */
@@ -217,10 +222,15 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onBookClick = { navController.navigate(BookDetailRoute(it)) },
                     onAddBook = { navController.navigate(BookEditRoute()) },
                     onScan = { navController.navigate(ScanRoute()) },
-                    onImport = { navController.navigate(ImportRoute) },
-                    onSeries = { navController.navigate(SeriesListRoute) },
+                )
+            }
+            composable<MoreRoute> {
+                nl.wdhertog.library.ui.more.MoreScreen(
+                    onLocations = { navController.navigate(LocationsRoute) },
                     onAuthors = { navController.navigate(AuthorListRoute) },
+                    onImport = { navController.navigate(ImportRoute) },
                     onBackup = { navController.navigate(BackupRoute) },
+                    onSync = { navController.navigate(SyncRoute) },
                     onSettings = { navController.navigate(SettingsRoute) },
                 )
             }
@@ -253,9 +263,9 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onOpenSeries = { navController.navigate(SeriesDetailRoute(it)) },
                 )
             }
-            composable<SeriesListRoute> { entry ->
+            composable<SeriesListRoute> {
                 SeriesListScreen(
-                    onBack = { navController.popFrom(entry) },
+                    onBack = null,
                     onOpenSeries = { navController.navigate(SeriesDetailRoute(it)) },
                 )
             }
@@ -265,8 +275,11 @@ fun AppNavHost(openLoans: Boolean = false, onOpenLoansHandled: () -> Unit = {}) 
                     onOpenBook = { navController.navigate(BookDetailRoute(it)) },
                 )
             }
-            composable<LocationsRoute> {
-                LocationsScreen(onOpenLocation = { navController.navigate(LocationDetailRoute(it)) })
+            composable<LocationsRoute> { entry ->
+                LocationsScreen(
+                    onOpenLocation = { navController.navigate(LocationDetailRoute(it)) },
+                    onBack = { navController.popFrom(entry) },
+                )
             }
             composable<LoansRoute> {
                 LoansScreen(onOpenBook = { navController.navigate(BookDetailRoute(it)) })

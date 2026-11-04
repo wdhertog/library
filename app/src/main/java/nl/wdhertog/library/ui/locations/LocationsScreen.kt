@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory2
@@ -59,6 +60,8 @@ val LocationType.icon: ImageVector
 @Composable
 fun LocationsScreen(
     onOpenLocation: (Long) -> Unit,
+    /** Sinds de nieuwe onderbalk via "Meer" bereikt. */
+    onBack: (() -> Unit)? = null,
     viewModel: LocationsViewModel = appViewModel { container, _ -> LocationsViewModel(container.locationRepository) },
 ) {
     val tree by viewModel.tree.collectAsStateWithLifecycle()
@@ -70,6 +73,7 @@ fun LocationsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Locaties") },
+                navigationIcon = { onBack?.let { IconButton(onClick = it) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Terug") } } },
                 actions = {
                     IconButton(onClick = { adding = true }) { Icon(Icons.Default.Add, contentDescription = "Locatie toevoegen") }
                 },

@@ -16,14 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -33,7 +29,6 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.AssistChip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.SnackbarHost
@@ -60,19 +55,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.ui.navigation.appViewModel
 import nl.wdhertog.library.util.Languages
 
@@ -82,11 +76,6 @@ fun LibraryScreen(
     onBookClick: (Long) -> Unit,
     onAddBook: () -> Unit,
     onScan: () -> Unit,
-    onImport: () -> Unit,
-    onSeries: () -> Unit,
-    onAuthors: () -> Unit,
-    onBackup: () -> Unit,
-    onSettings: () -> Unit,
     viewModel: LibraryViewModel = appViewModel { container, _ ->
         LibraryViewModel(container.bookRepository, container.locationRepository, container.enrichScheduler, container.readingRepository)
     },
@@ -116,7 +105,7 @@ fun LibraryScreen(
                 title = { Text("Bibliotheek") },
                 actions = {
                     SortMenu(state.sort, viewModel::setSort)
-                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary, onImport = onImport, onSeries = onSeries, onAuthors = onAuthors, onBackup = onBackup, onSettings = onSettings)
+                    OverflowMenu(onAddBook = onAddBook, onUpdateLibrary = viewModel::updateLibrary)
                 },
             )
         },
@@ -303,15 +292,8 @@ private fun countLabel(state: LibraryUiState): String {
 }
 
 @Composable
-private fun OverflowMenu(
-    onAddBook: () -> Unit,
-    onUpdateLibrary: () -> Unit,
-    onImport: () -> Unit,
-    onSeries: () -> Unit,
-    onAuthors: () -> Unit,
-    onBackup: () -> Unit,
-    onSettings: () -> Unit,
-) {
+private fun OverflowMenu(onAddBook: () -> Unit, onUpdateLibrary: () -> Unit) {
+    // Series, Auteurs, Importeren, Back-up en Instellingen staan onder "Meer" in de onderbalk.
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Meer") }
@@ -325,31 +307,6 @@ private fun OverflowMenu(
                 text = { Text("Bibliotheek bijwerken") },
                 leadingIcon = { Icon(Icons.Default.Sync, contentDescription = null) },
                 onClick = { open = false; onUpdateLibrary() },
-            )
-            DropdownMenuItem(
-                text = { Text("Series") },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = null) },
-                onClick = { open = false; onSeries() },
-            )
-            DropdownMenuItem(
-                text = { Text("Auteurs") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                onClick = { open = false; onAuthors() },
-            )
-            DropdownMenuItem(
-                text = { Text("Importeren…") },
-                leadingIcon = { Icon(Icons.Default.FileOpen, contentDescription = null) },
-                onClick = { open = false; onImport() },
-            )
-            DropdownMenuItem(
-                text = { Text("Back-up en export…") },
-                leadingIcon = { Icon(Icons.Default.Backup, contentDescription = null) },
-                onClick = { open = false; onBackup() },
-            )
-            DropdownMenuItem(
-                text = { Text("Instellingen") },
-                leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                onClick = { open = false; onSettings() },
             )
         }
     }
