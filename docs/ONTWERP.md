@@ -479,6 +479,9 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
 ### Gepland
+- Niets gepland; zie "Later, misschien".
+
+### Gebouwd in 1.5 (4 november 2026)
 - **Nieuwe vormgeving** naar de schetsen van 4 november 2026 (lokaal: `samples/bibliotheek_app_schetsen.html`).
   - **Besloten (4 november 2026):**
     - altijd het eigen groen-crème palet, niet de kleuren van de achtergrond (Material You);
@@ -497,7 +500,7 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
     4. **Boekpagina:** cover op een kleurvlak (kleur uit de cover), titel in serif gecentreerd, één hoofdknop die met de status meebeweegt, plus Uitlenen; kaarten (Lezen, Plek en eigenaar, Beschrijving ingeklapt met tags als chips, Gegevens en bronnen dicht). Ook het bewerkscherm in dezelfde stijl: velden in kaarten per onderwerp. *Gebouwd:* kleurvlak uit de gemiddelde kleur van de cover (op de telefoon berekend, voor een derde gemengd met de achtergrond); hoofdknop "Beginnen met lezen" / "Voortgang bijwerken" / "Opnieuw lezen", tweede knop "Uitlenen" / "Teruggekregen" / "Teruggebracht…"; die knoppen staan niet nog eens in de kaarten. Bewerkscherm in de kaarten Titel en auteurs · Uitgave · Serie · Collectie. Geselecteerde chips zijn overal groen; goud (`Gold`) alleen voor Scannen en uitgeleend.
     5. **Lezen:** jaarkeuze, leesdoel als ring, "Nu aan het lezen" als covers met voortgang, "Wil ik lezen" als rij covers met "Alles", maandgrafiek in een kaart. *Gebouwd:* de ring zegt ook of je op schema ligt (naar rato van de dag in het jaar), met pagina's en gemiddelde beoordeling; de balken zijn lichtgroen en de huidige maand donkergroen.
 
-### Gebouwd na 1.4
+- **Ook in 1.5:**
 - **Auteurspagina.**
   - **Lijst Auteurs** via ⋮ in de bibliotheek: op achternaam, met een zoekveld en het aantal boeken en werken.
   - **Per auteur:** gegevens uit Wikidata (jaren, land, omschrijving; database versie 6, per telefoon), aantal boeken, werken, gelezen en je gemiddelde beoordeling. De series met "x van y delen", en de boeken per werk (edities bij elkaar, op serievolgorde en jaar) met een vinkje bij gelezen.
