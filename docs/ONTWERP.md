@@ -479,6 +479,9 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
 ### Gepland
+- **Auteurspagina** (gevraagd 4 november 2026): per auteur je boeken en werken, wat je gelezen hebt, en series. Uitwerking volgt.
+
+### Gebouwd in 1.4
 - **Synchronisatie tussen telefoons:** zie §11.
 
 ### Gebouwd na v1.2
@@ -521,7 +524,7 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
 ### Uit het ontwerp, nog niet gebouwd
 - **Achtergrond-verrijking "alleen handmatig"** (§6.12): nu is er automatisch, of alleen via wifi.
 
-### Eigenaar voor meerdere boeken tegelijk
+### Eigenaar voor meerdere boeken tegelijk (gebouwd in 1.2)
 Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijkheden:
 
 | Optie | Hoe | Voor | Tegen |
@@ -538,7 +541,7 @@ Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijk
 - **Roemeens** (geparkeerd, 3 november 2026): de Biblioteca Națională a României heeft alleen Z39.50 (UNIMARC) en een Aleph-webcatalogus op aleph.bibnat.ro, die vanaf hier niet bereikbaar was. Tot er een open HTTP-dienst gevonden is: Open Library en Wikidata.
 
 ### Later, misschien
-- **Synchronisatie tussen telefoons.** Records hebben al een UUID en een `updatedAt` (§6.12).
+- **Eigenaar-modus bij scannen** (optie C hierboven), als die gemist wordt.
 - **F-Droid-variant zonder ML Kit** (§2).
 
 ### Losse eindjes
