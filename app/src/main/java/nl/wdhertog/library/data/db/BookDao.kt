@@ -62,6 +62,10 @@ interface BookDao {
     @Query("UPDATE book SET enrichStatus = :status, updatedAt = :now WHERE id = :id")
     suspend fun setEnrichStatus(id: Long, status: EnrichStatus, now: java.time.Instant)
 
+    /** Nu bekend: de delen opnieuw ophalen (partsFetchedAt leeg). */
+    @Query("UPDATE series SET wikidataId = :wikidataId, partsFetchedAt = NULL, updatedAt = :now WHERE id = :id AND wikidataId IS NULL")
+    suspend fun setSeriesWikidataIfMissing(id: Long, wikidataId: String, now: java.time.Instant)
+
     @Query("UPDATE book SET coverFile = :coverFile, updatedAt = :now WHERE id = :id")
     suspend fun setCoverFile(id: Long, coverFile: String?, now: java.time.Instant)
 

@@ -1,25 +1,70 @@
 package nl.wdhertog.library.data.repository
 
+import android.util.Log
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.db.Series
+import nl.wdhertog.library.data.db.SeriesPart
 import nl.wdhertog.library.data.db.SeriesSummary
+import nl.wdhertog.library.lookup.LookupException
+import nl.wdhertog.library.lookup.sources.WikidataSource
+import java.time.Duration
 import java.time.Instant
 
 data class SeriesDetail(val series: Series, val volumes: List<SeriesVolume>)
 
-class SeriesRepository(private val db: LibraryDatabase, private val bookRepository: BookRepository) {
+class SeriesRepository(
+    private val db: LibraryDatabase,
+    private val bookRepository: BookRepository,
+    private val wikidata: WikidataSource? = null,
+) {
     private val dao = db.seriesDao()
     private val books = db.bookDao()
 
     fun observeSummaries(): Flow<List<SeriesSummary>> = dao.observeSummaries()
 
     fun observeDetail(seriesId: Long): Flow<SeriesDetail?> =
-        combine(dao.observeSeries(seriesId), dao.observeBooks(seriesId)) { series, rows ->
-            series?.let { SeriesDetail(it, SeriesOrder.volumes(rows, it.totalVolumes)) }
+        combine(dao.observeSeries(seriesId), dao.observeBooks(seriesId), dao.observeParts(seriesId)) { series, rows, parts ->
+            series?.let { SeriesDetail(it, SeriesOrder.volumes(rows, it.totalVolumes, parts)) }
         }
+
+    /**
+     * De delen van een serie bij Wikidata ophalen (hooguit eens per [PARTS_MAX_AGE], tenzij [force]).
+     * Geeft het aantal gevonden delen, of null als het nu niet lukte (geen verbinding).
+     */
+    suspend fun refreshParts(seriesId: Long, force: Boolean = false): Int? {
+        val source = wikidata ?: return null
+        val series = dao.get(seriesId) ?: return null
+        val fetched = series.partsFetchedAt
+        if (!force && fetched != null && fetched.isAfter(Instant.now().minus(PARTS_MAX_AGE))) return null
+        val result = try {
+            source.seriesParts(series.wikidataId, dao.workWikidataIds(seriesId), series.name)
+        } catch (e: LookupException) {
+            Log.i(TAG, "Delen van ${series.name} niet opgehaald: ${e.message}")
+            null
+        } ?: return null
+        db.withTransaction {
+            dao.clearParts(seriesId)
+            dao.insertParts(result.parts.map { SeriesPart(seriesId, it.ordinal, it.title, it.year, it.wikidataId) })
+            if (result.seriesId.isNotEmpty()) books.setSeriesWikidataIfMissing(seriesId, result.seriesId, Instant.now())
+            dao.setPartsFetched(seriesId, Instant.now())
+        }
+        return result.parts.size
+    }
+
+    /**
+     * Voor alle series waarvan de delen nog niet (of lang geleden) zijn opgehaald. Eén mislukking (bijv. een
+     * time-out bij Wikidata) slaat die serie over; na drie op rij is er waarschijnlijk geen verbinding.
+     */
+    suspend fun refreshStaleParts() {
+        var failures = 0
+        for (id in dao.seriesNeedingParts(Instant.now().minus(PARTS_MAX_AGE))) {
+            failures = if (refreshParts(id) == null) failures + 1 else 0
+            if (failures >= 3) return
+        }
+    }
 
     /**
      * Naam wijzigen. Bestaat er al een serie met die naam (bijv. dezelfde serie uit een andere bron),
@@ -82,5 +127,12 @@ class SeriesRepository(private val db: LibraryDatabase, private val bookReposito
             val locked = book.lockedFields?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty().toSet()
             if ("series" !in locked) books.updateBook(book.copy(lockedFields = (locked + "series").sorted().joinToString(",")))
         }
+    }
+
+    companion object {
+        private const val TAG = "SeriesRepository"
+
+        /** Wikidata wordt aangevuld; eens per maand opnieuw kijken is genoeg. */
+        val PARTS_MAX_AGE: Duration = Duration.ofDays(30)
     }
 }

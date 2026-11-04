@@ -140,6 +140,25 @@ data class Series(
     val totalVolumes: Int? = null,
     val wikidataId: String? = null,
     val updatedAt: Instant = Instant.now(),
+    /** Wanneer de delen voor het laatst bij Wikidata zijn opgehaald (alleen op deze telefoon). */
+    val partsFetchedAt: Instant? = null,
+)
+
+/**
+ * Een deel van een serie volgens Wikidata: nummer, titel en jaar. Afgeleid en per telefoon opgehaald,
+ * dus niet gesynchroniseerd; vult de ontbrekende delen in het serie-scherm aan.
+ */
+@Entity(
+    tableName = "series_part",
+    primaryKeys = ["seriesId", "ordinal"],
+    foreignKeys = [ForeignKey(entity = Series::class, parentColumns = ["id"], childColumns = ["seriesId"], onDelete = ForeignKey.CASCADE)],
+)
+data class SeriesPart(
+    val seriesId: Long,
+    val ordinal: String,
+    val title: String,
+    val year: Int?,
+    val wikidataId: String?,
 )
 
 @Entity(

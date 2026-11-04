@@ -485,8 +485,17 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
 - **Filter "Meerdere edities"**: alleen boeken waarvan je (binnen de bezit-filter) minstens twee edities of vertalingen van hetzelfde werk hebt; de edities staan in de lijst bij elkaar.
 - **Werken handmatig samenvoegen en splitsen** (§5): op de boekpagina "Koppelen aan andere editie…" en "Loskoppelen van andere edities". Losgekoppelde boeken worden niet meer automatisch gekoppeld (`lockedFields` bevat dan `work`); opnieuw koppelen heft dat op.
 
+- **Ontbrekende delen uit Wikidata** (§6.8). Gebouwd 4 november 2026.
+  - **Ophalen:** de delen van een serie (nummer, titel, jaar) komen uit Wikidata, via de serie-id of via de Wikidata-id's van je werken. De serie-id wordt voortaan bewaard bij het aanvullen van gegevens.
+  - **Opslag:** de delen staan in `series_part` (database versie 5). Dat is afgeleide data per telefoon, niet gesynchroniseerd.
+  - **Wanneer:** bij het openen van de serielijst of een serie, hooguit eens per 30 dagen, en via ⋮ → "Delen opzoeken op Wikidata".
+  - **Serie-scherm:** ontbrekende delen tonen titel en jaar.
+  - **Serielijst:** het totaal komt uit Wikidata als je zelf geen aantal hebt opgegeven, maar alleen als Wikidata minstens de helft van de nummers kent. Kent Wikidata alleen deel 13 van Poirot, dan is 13 geen totaal.
+  - **Uitgeversreeksen** met meer dan 100 nummers worden genegeerd.
+  - **In jouw bibliotheek** leverde dit delen op voor 19 van de 52 series (bijv. Department Q 9, Mma Ramotswe 21, Montalbano 35). Titels zijn vaak Engels, als Wikidata geen Nederlandse kent.
+
 ### Uit het ontwerp, nog niet gebouwd
-- **Series: ontbrekend deel zelf toevoegen of uit Wikidata halen** (§6.8). Nu verschijnt alleen een gat tussen de genummerde delen die je hebt.
+- **Series: ontbrekend deel zelf toevoegen** (§6.8), voor series die Wikidata niet (goed) kent.
 - **Instellingen** (§6.12):
   - databronnen aan/uit en volgorde;
   - gedrag in plank-modus bij een boek dat er al is (verplaatsen of eerst vragen).

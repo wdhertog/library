@@ -44,7 +44,7 @@ class AppContainer(val app: Application) {
     val locationRepository by lazy { LocationRepository(database) }
     val loanRepository by lazy { LoanRepository(database, bookRepository) }
     val readingRepository by lazy { ReadingRepository(database) }
-    val seriesRepository by lazy { SeriesRepository(database, bookRepository) }
+    val seriesRepository by lazy { SeriesRepository(database, bookRepository, WikidataSource(http)) }
     val syncRepository by lazy { SyncRepository(database) }
     val syncManager by lazy {
         nl.wdhertog.library.sync.SyncManager(
