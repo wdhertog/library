@@ -105,6 +105,11 @@ class SeriesDetailViewModel(
         }
     }
 
+    /** Een ontbrekend deel zelf invullen of aanpassen; een lege titel haalt het weg. */
+    fun setManualPart(ordinal: String, title: String, previousOrdinal: String? = null) {
+        viewModelScope.launch { series.setManualPart(seriesId.value, ordinal, title, previousOrdinal) }
+    }
+
     fun setTotal(total: Int?) {
         viewModelScope.launch { series.setTotalVolumes(seriesId.value, total) }
     }

@@ -67,4 +67,32 @@ class SeriesOrderTest {
         val volumes = SeriesOrder.volumes(listOf(row(1, "1")), totalVolumes = null, parts = listOf(SeriesPart(1, "13", "Poirot", null, null)))
         assertEquals(listOf("1"), volumes.map { it.index })
     }
+
+    @Test
+    fun `own missing parts extend the series and beat Wikidata titles`() {
+        val parts = listOf(SeriesPart(1, "2", "Wikidata-titel", 2008, "Q2"))
+        val manual = listOf(ManualPart("2", "Mijn titel"), ManualPart("5", "Deel vijf"))
+        val volumes = SeriesOrder.volumes(listOf(row(1, "1")), totalVolumes = null, parts = parts, manual = manual)
+        assertEquals(listOf("1", "2", "3", "4", "5"), volumes.map { it.index })
+        val missing = volumes.filterIsInstance<SeriesVolume.Missing>().associateBy { it.index }
+        assertEquals("Mijn titel", missing.getValue("2").title)
+        assertEquals(true, missing.getValue("2").manual)
+        assertEquals(null, missing.getValue("3").title)
+        assertEquals("Deel vijf", missing.getValue("5").title)
+    }
+
+    @Test
+    fun `an own part you now have disappears`() {
+        val volumes = SeriesOrder.volumes(listOf(row(1, "1"), row(2, "2")), totalVolumes = null, manual = listOf(ManualPart("2", "Deel twee")))
+        assertEquals(0, volumes.filterIsInstance<SeriesVolume.Missing>().size)
+    }
+
+    @Test
+    fun `manual parts survive encoding, empty is null`() {
+        val parts = listOf(ManualPart("10", "Tien"), ManualPart("2", "Twee \"quote\""))
+        assertEquals(parts.sortedBy { SeriesOrder.sortKey(it.ordinal) }, ManualParts.decode(ManualParts.encode(parts)))
+        assertEquals(null, ManualParts.encode(emptyList()))
+        assertEquals(emptyList<ManualPart>(), ManualParts.decode("rommel"))
+        assertEquals(10, ManualParts.highest(ManualParts.encode(parts)))
+    }
 }

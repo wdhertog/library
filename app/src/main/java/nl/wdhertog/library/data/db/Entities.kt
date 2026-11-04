@@ -142,6 +142,11 @@ data class Series(
     val updatedAt: Instant = Instant.now(),
     /** Wanneer de delen voor het laatst bij Wikidata zijn opgehaald (alleen op deze telefoon). */
     val partsFetchedAt: Instant? = null,
+    /**
+     * Zelf toegevoegde ontbrekende delen (nummer en titel), als JSON; zie ManualParts. Gedeeld via
+     * synchroniseren, anders dan de delen uit Wikidata.
+     */
+    val manualParts: String? = null,
 )
 
 /**

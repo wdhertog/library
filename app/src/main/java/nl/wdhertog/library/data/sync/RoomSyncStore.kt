@@ -75,7 +75,9 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                 "wikidataId" to w.wikidataId, "authors" to bookDao.getAuthorNames(w.id),
             )
         }
-        SERIES -> dao.series(uuid)?.let { obj("name" to it.name, "totalVolumes" to it.totalVolumes, "wikidataId" to it.wikidataId) }
+        SERIES -> dao.series(uuid)?.let {
+            obj("name" to it.name, "totalVolumes" to it.totalVolumes, "wikidataId" to it.wikidataId, "manualParts" to it.manualParts)
+        }
         LOCATION -> dao.location(uuid)?.let { l ->
             obj("parent" to l.parentId?.let { dao.locationUuid(it) }, "name" to l.name, "type" to l.type.name, "sortOrder" to l.sortOrder)
         }
@@ -145,7 +147,7 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                 val existing = dao.series(uuid)
                 val s = (existing ?: Series(uuid = uuid, name = "")).let {
                     it.copy(name = f.str("name", it.name) ?: "", totalVolumes = f.int("totalVolumes", it.totalVolumes),
-                        wikidataId = f.str("wikidataId", it.wikidataId), updatedAt = now)
+                        wikidataId = f.str("wikidataId", it.wikidataId), manualParts = f.str("manualParts", it.manualParts), updatedAt = now)
                 }
                 if (existing == null) dao.insertSeries(s) else dao.updateSeries(s)
             }
