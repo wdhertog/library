@@ -86,6 +86,12 @@ interface BookDao {
     @Query("UPDATE series SET wikidataId = :wikidataId, partsFetchedAt = NULL, updatedAt = :now WHERE id = :id AND wikidataId IS NULL")
     suspend fun setSeriesWikidataIfMissing(id: Long, wikidataId: String, now: java.time.Instant)
 
+    @Query("SELECT id, isbn13, language FROM book WHERE isbn13 IS NOT NULL")
+    suspend fun isbnLanguages(): List<IsbnLanguageRow>
+
+    @Query("UPDATE book SET language = :language, updatedAt = :now WHERE id = :id")
+    suspend fun setLanguage(id: Long, language: String, now: java.time.Instant)
+
     @Query("UPDATE book SET coverFile = :coverFile, updatedAt = :now WHERE id = :id")
     suspend fun setCoverFile(id: Long, coverFile: String?, now: java.time.Instant)
 
@@ -296,3 +302,5 @@ interface BookDao {
     @Query("SELECT name FROM series ORDER BY name COLLATE NOCASE")
     fun observeSeriesNames(): Flow<List<String>>
 }
+
+data class IsbnLanguageRow(val id: Long, val isbn13: String?, val language: String?)

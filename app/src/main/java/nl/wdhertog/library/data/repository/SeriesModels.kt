@@ -16,8 +16,29 @@ sealed interface SeriesVolume {
         val read: Boolean,
     ) : SeriesVolume
 
-    /** Een deel dat je niet hebt; titel en jaar als Wikidata ze kent. */
-    data class Missing(override val index: String, val title: String? = null, val year: Int? = null) : SeriesVolume
+    /** Een deel dat je niet hebt; titel en jaar als Wikidata ze kent, of zelf toegevoegd ([manual]). */
+    data class Missing(override val index: String, val title: String? = null, val year: Int? = null, val manual: Boolean = false) : SeriesVolume
+}
+
+/** Een zelf toegevoegd ontbrekend deel. */
+@kotlinx.serialization.Serializable
+data class ManualPart(val ordinal: String, val title: String)
+
+/** Opslag van zelf toegevoegde delen in Series.manualParts. */
+object ManualParts {
+    private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+    private val serializer = kotlinx.serialization.builtins.ListSerializer(ManualPart.serializer())
+
+    fun decode(text: String?): List<ManualPart> =
+        text?.let { runCatching { json.decodeFromString(serializer, it) }.getOrNull() }.orEmpty()
+
+    /** Leeg wordt null, zodat een serie zonder eigen delen geen veld heeft. */
+    fun encode(parts: List<ManualPart>): String? =
+        parts.takeIf { it.isNotEmpty() }?.sortedBy { SeriesOrder.sortKey(it.ordinal) }?.let { json.encodeToString(serializer, it) }
+
+    /** Hoogste hele nummer, voor het totaal in de serielijst. */
+    fun highest(text: String?): Int? =
+        decode(text).mapNotNull { it.ordinal.trim().toIntOrNull() }.filter { it in 1..SeriesOrder.MAX_PLAUSIBLE_INDEX }.maxOrNull()
 }
 
 object SeriesOrder {
@@ -68,7 +89,12 @@ object SeriesOrder {
      * aantal delen, of het laatste deel volgens Wikidata) als gat. [parts] geeft die gaten een titel,
      * en voegt delen met een tussennummer (bijv. 2.5) toe die je niet hebt.
      */
-    fun volumes(rows: List<SeriesBookRow>, totalVolumes: Int?, parts: List<SeriesPart> = emptyList()): List<SeriesVolume> {
+    fun volumes(
+        rows: List<SeriesBookRow>,
+        totalVolumes: Int?,
+        parts: List<SeriesPart> = emptyList(),
+        manual: List<ManualPart> = emptyList(),
+    ): List<SeriesVolume> {
         val present = rows.groupBy { it.workId }.map { (workId, books) ->
             val first = books.first()
             SeriesVolume.Present(
@@ -83,15 +109,28 @@ object SeriesOrder {
         val numbers = present.map { sortKey(it.index) }.filter { it != Double.MAX_VALUE }
         val highestNumber = numbers.maxOrNull()?.toInt()?.takeIf { it <= MAX_PLAUSIBLE_INDEX } ?: 0
         val partsByNumber = parts.filter { sortKey(it.ordinal) != Double.MAX_VALUE }.associateBy { sortKey(it.ordinal) }
+        val manualByNumber = manual.filter { sortKey(it.ordinal) != Double.MAX_VALUE }.associateBy { sortKey(it.ordinal) }
         val highestPart = completeTotal(parts) ?: 0
-        val highest = maxOf(highestNumber, totalVolumes ?: 0, highestPart)
-        val gaps = (1..highest).filter { n -> numbers.none { it == n.toDouble() } }.map { n ->
-            val part = partsByNumber[n.toDouble()]
-            SeriesVolume.Missing(n.toString(), part?.title?.ifBlank { null }, part?.year)
+        val highestManual = manualByNumber.keys.filter { it == Math.floor(it) && it <= MAX_PLAUSIBLE_INDEX }.maxOrNull()?.toInt() ?: 0
+        val highest = maxOf(highestNumber, totalVolumes ?: 0, highestPart, highestManual)
+        // Een zelf ingevulde titel gaat voor die van Wikidata.
+        fun missing(number: Double, ordinal: String): SeriesVolume.Missing {
+            manualByNumber[number]?.let { return SeriesVolume.Missing(it.ordinal, it.title.ifBlank { null }, null, manual = true) }
+            val part = partsByNumber[number]
+            return SeriesVolume.Missing(ordinal, part?.title?.ifBlank { null }, part?.year)
         }
+        // Geen enkel deel met een nummer: dan is niet te zien welke nummers je mist. Toon alleen wat je zelf als
+        // ontbrekend opgaf. (Eén los boek zonder nummer naast genummerde delen is gewoon een bijdeel.)
+        if (present.isNotEmpty() && numbers.isEmpty()) {
+            val own = manual.filter { m -> sortKey(m.ordinal) !in numbers }
+                .map { SeriesVolume.Missing(it.ordinal, it.title.ifBlank { null }, null, manual = true) }
+            return (present + own).sortedWith(compareBy<SeriesVolume> { sortKey(it.index) }.thenBy { (it as? SeriesVolume.Present)?.title })
+        }
+        val gaps = (1..highest).filter { n -> numbers.none { it == n.toDouble() } }.map { n -> missing(n.toDouble(), n.toString()) }
         // Tussennummers (bijv. een novelle 2.5) die je niet hebt.
-        val between = partsByNumber.filter { (number, _) -> number != Math.floor(number) && number <= MAX_PLAUSIBLE_INDEX && number !in numbers }
-            .map { (_, part) -> SeriesVolume.Missing(part.ordinal, part.title.ifBlank { null }, part.year) }
+        val between = (partsByNumber.keys + manualByNumber.keys)
+            .filter { number -> number != Math.floor(number) && number <= MAX_PLAUSIBLE_INDEX && number !in numbers }
+            .map { number -> missing(number, manualByNumber[number]?.ordinal ?: partsByNumber.getValue(number).ordinal) }
         val missing = gaps + between
         return (present + missing).sortedWith(compareBy<SeriesVolume> { sortKey(it.index) }.thenBy { (it as? SeriesVolume.Present)?.title })
     }

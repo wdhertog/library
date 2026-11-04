@@ -27,8 +27,23 @@ class SeriesRepository(
 
     fun observeDetail(seriesId: Long): Flow<SeriesDetail?> =
         combine(dao.observeSeries(seriesId), dao.observeBooks(seriesId), dao.observeParts(seriesId)) { series, rows, parts ->
-            series?.let { SeriesDetail(it, SeriesOrder.volumes(rows, it.totalVolumes, parts)) }
+            series?.let { SeriesDetail(it, SeriesOrder.volumes(rows, it.totalVolumes, parts, ManualParts.decode(it.manualParts))) }
         }
+
+    /**
+     * Een ontbrekend deel zelf toevoegen of de titel aanpassen; een lege titel haalt het weg.
+     * [previousOrdinal] bij het wijzigen van het nummer.
+     */
+    suspend fun setManualPart(seriesId: Long, ordinal: String, title: String, previousOrdinal: String? = null) = db.withTransaction {
+        val series = dao.get(seriesId) ?: return@withTransaction
+        val number = ordinal.trim()
+        val keep = ManualParts.decode(series.manualParts).filter {
+            SeriesOrder.sortKey(it.ordinal) != SeriesOrder.sortKey(number) &&
+                (previousOrdinal == null || SeriesOrder.sortKey(it.ordinal) != SeriesOrder.sortKey(previousOrdinal))
+        }
+        val parts = if (title.isBlank() || number.isEmpty()) keep else keep + ManualPart(number, title.trim())
+        dao.update(series.copy(manualParts = ManualParts.encode(parts), updatedAt = Instant.now()))
+    }
 
     /**
      * De delen van een serie bij Wikidata ophalen (hooguit eens per [PARTS_MAX_AGE], tenzij [force]).

@@ -4,6 +4,7 @@ import android.app.Application
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import nl.wdhertog.library.covers.CoverStore
 import nl.wdhertog.library.data.backup.AutoBackupSettings
 import nl.wdhertog.library.data.backup.AutoBackupWorker
@@ -97,5 +98,17 @@ class LibraryApp : Application() {
         container.enrichScheduler.schedule()
         if (container.settings.loanReminders.value) LoanReminderWorker.schedule(this)
         if (AutoBackupSettings(this).folder != null) AutoBackupWorker.schedule(this)
+        // Eenmalig: talen aanvullen en controleren aan de hand van het ISBN (sinds 1.4).
+        val maintenance = getSharedPreferences("onderhoud", MODE_PRIVATE)
+        if (!maintenance.getBoolean(KEY_ISBN_LANGUAGES, false)) {
+            container.appScope.launch {
+                container.bookRepository.checkLanguagesFromIsbn()
+                maintenance.edit().putBoolean(KEY_ISBN_LANGUAGES, true).apply()
+            }
+        }
+    }
+
+    private companion object {
+        const val KEY_ISBN_LANGUAGES = "isbn-talen-1"
     }
 }

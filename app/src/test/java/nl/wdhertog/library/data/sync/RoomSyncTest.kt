@@ -214,4 +214,17 @@ class RoomSyncTest {
         assertEquals(emptyList<Long>(), b.db.bookDao().booksAwaitingEnrichment(10))
         assertEquals(0, b.db.bookDao().observeAwaitingEnrichmentCount().first())
     }
+
+    @Test
+    fun `own missing parts of a series go to the other phone`() = runBlocking {
+        a.books.save(0, BookDraft(title = "Dictator", authors = listOf("Robert Harris"), seriesName = "Cicero", seriesIndex = "3"))
+        val series = a.db.seriesDao().observeSummaries().first().single()
+        nl.wdhertog.library.data.repository.SeriesRepository(a.db, a.books).setManualPart(series.id, "1", "Imperium")
+        sync()
+        val other = b.db.seriesDao().observeSummaries().first().single()
+        assertEquals(
+            listOf(nl.wdhertog.library.data.repository.ManualPart("1", "Imperium")),
+            nl.wdhertog.library.data.repository.ManualParts.decode(other.manualParts),
+        )
+    }
 }

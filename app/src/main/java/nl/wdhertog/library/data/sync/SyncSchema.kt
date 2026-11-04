@@ -27,7 +27,7 @@ object SyncSchema {
             "title", "originalTitle", "originalLanguage", "firstPublishedYear", "series", "seriesIndex", "awards",
             "openLibraryWorkId", "wikidataId", "authors",
         ),
-        SERIES to listOf("name", "totalVolumes", "wikidataId"),
+        SERIES to listOf("name", "totalVolumes", "wikidataId", "manualParts"),
         LOCATION to listOf("parent", "name", "type", "sortOrder"),
         PERSON to listOf("name", "contactUri"),
         LOAN to listOf("book", "person", "lentAt", "dueAt", "returnedAt", "note"),

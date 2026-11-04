@@ -16,6 +16,7 @@ import nl.wdhertog.library.data.db.Work
 import nl.wdhertog.library.data.repository.BookRepository
 import nl.wdhertog.library.data.repository.LocationRepository
 import nl.wdhertog.library.scan.Isbn
+import nl.wdhertog.library.util.IsbnLanguage
 import java.time.Instant
 import java.time.ZoneId
 
@@ -28,7 +29,14 @@ sealed interface ImportDecision {
     data class Merge(val bookId: Long, val overwrite: Boolean) : ImportDecision
 }
 
-data class ImportResult(val runId: Long, val added: Int, val updated: Int, val skipped: Int)
+data class ImportResult(
+    val runId: Long,
+    val added: Int,
+    val updated: Int,
+    val skipped: Int,
+    /** Boeken met de tag "taal controleren": de taal uit het bestand past niet bij het ISBN. */
+    val languageChecks: Int = 0,
+)
 
 /**
  * Schrijft geïmporteerde boeken weg. Gegevens gaan via BookRepository.applyMetadata, zodat
@@ -61,7 +69,12 @@ class ImportService(
         val runId = run.id
         var added = 0
         var updated = 0
-        items.forEachIndexed { index, (book, decision) ->
+        var languageChecks = 0
+        items.forEachIndexed { index, (imported, decision) ->
+            // Taal uit het bestand die het ISBN tegenspreekt (bijv. Engels ISBN met "nl"): markeren voor controle.
+            val flag = decision != ImportDecision.Skip && IsbnLanguage.conflicts(imported.isbn13, imported.language)
+            val book = if (flag) imported.copy(tags = imported.tags + IsbnLanguage.CHECK_TAG) else imported
+            if (flag) languageChecks++
             db.withTransaction {
                 when (decision) {
                     ImportDecision.Add -> add(runId, source, book).also { added++ }
@@ -73,7 +86,7 @@ class ImportService(
         }
         goals.forEach { (year, target) -> if (dao.goal(year) == null) dao.upsertGoal(ReadingGoal(year, target)) }
         dao.updateRun(run.copy(added = added, updated = updated))
-        return ImportResult(runId, added, updated, skipped = items.size - added - updated)
+        return ImportResult(runId, added, updated, skipped = items.size - added - updated, languageChecks = languageChecks)
     }
 
     /** Haalt de boeken weg die deze import heeft toegevoegd; aanvullingen op bestaande boeken blijven. */
