@@ -45,7 +45,9 @@ class AppContainer(val app: Application) {
     val locationRepository by lazy { LocationRepository(database) }
     val loanRepository by lazy { LoanRepository(database, bookRepository) }
     val readingRepository by lazy { ReadingRepository(database) }
-    val seriesRepository by lazy { SeriesRepository(database, bookRepository, WikidataSource(http)) }
+    val seriesRepository by lazy {
+        SeriesRepository(database, bookRepository, WikidataSource(http)) { settings.isSourceEnabled(nl.wdhertog.library.lookup.LookupSource.WIKIDATA) }
+    }
     val syncRepository by lazy { SyncRepository(database) }
     val syncManager by lazy {
         nl.wdhertog.library.sync.SyncManager(
@@ -78,13 +80,15 @@ class AppContainer(val app: Application) {
                 BnfSource(http),
                 BneSource(http),
                 SbnSource(http),
+                enabled = settings::isSourceEnabled,
             ),
             wikidata = WikidataSource(http),
+            wikidataEnabled = { settings.isSourceEnabled(nl.wdhertog.library.lookup.LookupSource.WIKIDATA) },
         )
     }
     val settings = AppSettings(app)
     val enrichScheduler = EnrichScheduler(app, wifiOnly = { settings.wifiOnly.value })
-    val bookSearch by lazy { BookSearch(http) }
+    val bookSearch by lazy { BookSearch(http, settings::isSourceEnabled) }
 }
 
 class LibraryApp : Application() {

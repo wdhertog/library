@@ -86,4 +86,18 @@ class MetadataMergerTest {
         assertEquals("fr", LanguageCodes.toIso1("fr"))
         assertNull(LanguageCodes.toIso1("xx-yy"))
     }
+
+    @Test
+    fun `sources switched off in the settings are skipped`() {
+        fun source(name: String) = object : BookSource {
+            override val name = name
+            override suspend fun lookup(isbn13: String): BookMetadata? = null
+        }
+        val off = setOf(LookupSource.KB, LookupSource.WIKIDATA)
+        val router = SourceRouter(source("KB"), source("OL"), source("DNB"), source("BnF"), source("BNE"), source("SBN")) { it !in off }
+        assertEquals(listOf("OL"), router.sourcesFor("9789023495635").map { it.name })
+        assertEquals(listOf("DNB", "OL"), router.sourcesFor("9783499246128").map { it.name })
+        val nothing = SourceRouter(source("KB"), source("OL"), source("DNB"), source("BnF"), source("BNE"), source("SBN")) { false }
+        assertEquals(emptyList<String>(), nothing.sourcesFor("9789023495635").map { it.name })
+    }
 }

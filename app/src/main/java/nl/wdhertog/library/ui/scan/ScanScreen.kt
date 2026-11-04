@@ -111,6 +111,7 @@ fun ScanScreen(
             container.coverStore,
             container.bookSearch,
             mayLookUpNow = container.settings::mayLookUpNow,
+            shelfExisting = { container.settings.shelfExisting.value },
         )
     },
 ) {
@@ -138,6 +139,20 @@ fun ScanScreen(
     var pickingShelf by remember { mutableStateOf(false) }
     val mode by viewModel.mode.collectAsStateWithLifecycle()
     val coverSearch by viewModel.coverSearch.collectAsStateWithLifecycle()
+    val askMove by viewModel.askMove.collectAsStateWithLifecycle()
+    askMove?.let { row ->
+        AlertDialog(
+            onDismissRequest = viewModel::keepWhereItIs,
+            title = { Text(row.item?.book?.displayTitle ?: "Dit boek staat al ergens") },
+            text = {
+                Text(
+                    "Staat nu in ${row.previousLocation ?: "een andere plek"}. Naar ${shelfLabel ?: "deze plank"} verplaatsen?",
+                )
+            },
+            confirmButton = { TextButton(onClick = { viewModel.moveHere(row.entry.isbn13) }) { Text("Verplaatsen") } },
+            dismissButton = { TextButton(onClick = viewModel::keepWhereItIs) { Text("Laten staan") } },
+        )
+    }
     val scope = rememberCoroutineScope()
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -196,6 +211,7 @@ fun ScanScreen(
                     session,
                     onOpenBook,
                     viewModel::undoMove,
+                    viewModel::moveHere,
                     onPhotoCover,
                     emptyHint = if (mode == ScanMode.COVER) "Fotografeer de voorkant van een boek zonder (leesbare) barcode."
                     else "Richt de camera op de barcode achterop het boek.",
@@ -394,6 +410,7 @@ private fun SessionList(
     rows: List<SessionRow>,
     onOpenBook: (Long) -> Unit,
     onUndo: (String) -> Unit,
+    onMoveHere: (String) -> Unit,
     onPhotoCover: (Long) -> Unit,
     emptyHint: String,
     modifier: Modifier,
@@ -411,6 +428,7 @@ private fun SessionList(
                     row,
                     onClick = { onOpenBook(row.entry.bookId) },
                     onUndo = { onUndo(row.entry.isbn13) },
+                    onMoveHere = { onMoveHere(row.entry.isbn13) },
                     onPhotoCover = { onPhotoCover(row.entry.bookId) },
                 )
                 HorizontalDivider(Modifier.padding(start = 68.dp))
@@ -420,7 +438,7 @@ private fun SessionList(
 }
 
 @Composable
-private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> Unit, onPhotoCover: () -> Unit) {
+private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> Unit, onMoveHere: () -> Unit, onPhotoCover: () -> Unit) {
     val book = row.item?.book
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -441,6 +459,7 @@ private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> U
                 ScanOutcome.ALREADY_HERE -> "Stond al op deze plek"
                 ScanOutcome.MOVED -> row.previousLocation?.let { "Verplaatst van $it" } ?: "Op deze plek gezet (had nog geen plek)"
                 ScanOutcome.UNDONE -> row.previousLocation?.let { "Teruggezet naar $it" } ?: "Teruggezet: weer zonder plek"
+                ScanOutcome.KEPT -> row.previousLocation?.let { "Staat in $it — niet verplaatst" } ?: "Niet verplaatst"
                 ScanOutcome.ADDED -> when {
                     book == null -> ""
                     book.enrichStatus == EnrichStatus.NEW -> "Zoeken…"
@@ -460,6 +479,8 @@ private fun SessionRowItem(row: SessionRow, onClick: () -> Unit, onUndo: () -> U
         }
         if (row.entry.outcome == ScanOutcome.MOVED) {
             TextButton(onClick = onUndo) { Text("Ongedaan maken") }
+        } else if (row.entry.outcome == ScanOutcome.KEPT) {
+            TextButton(onClick = onMoveHere) { Text("Hierheen") }
         } else if (book?.enrichStatus == EnrichStatus.NEW && row.entry.outcome == ScanOutcome.ADDED) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         } else if (book != null && book.cover == null) {

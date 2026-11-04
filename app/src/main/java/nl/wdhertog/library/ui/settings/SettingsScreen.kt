@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -31,7 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.BuildConfig
 import nl.wdhertog.library.LibraryApp
+import nl.wdhertog.library.lookup.LookupSource
 import nl.wdhertog.library.reminders.LoanReminderWorker
+import nl.wdhertog.library.util.ShelfExisting
 
 /** Instellingen en "over de app" (ontwerp §6.12). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,6 +47,8 @@ fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit, onSync: () -> Unit)
     val sound by settings.scanSound.collectAsStateWithLifecycle()
     val vibrate by settings.scanVibrate.collectAsStateWithLifecycle()
     val reminders by settings.loanReminders.collectAsStateWithLifecycle()
+    val disabledSources by settings.disabledSources.collectAsStateWithLifecycle()
+    val shelfExisting by settings.shelfExisting.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -65,9 +70,44 @@ fun SettingsScreen(onBack: () -> Unit, onBackup: () -> Unit, onSync: () -> Unit)
                 },
             )
 
+            Header("Bronnen")
+            Text(
+                "De volgorde gaat vanzelf: eerst de nationale bibliotheek van het land van de uitgever (aan het ISBN te zien), " +
+                    "dan Open Library. Zet een bron uit als je die niet wilt gebruiken; boeken die daardoor niet gevonden " +
+                    "worden, pakt \"Bibliotheek bijwerken\" weer op als je hem aanzet.",
+                Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LookupSource.entries.forEach { source ->
+                SwitchRow(
+                    title = source.label,
+                    text = source.description,
+                    checked = source.key !in disabledSources,
+                    onChange = { settings.setSourceEnabled(source, it) },
+                )
+            }
+
             Header("Scannen")
             SwitchRow("Geluid", "Piep bij een gescand boek.", sound, settings::setScanSound)
             SwitchRow("Trillen", "Korte trilling bij een gescand boek.", vibrate, settings::setScanVibrate)
+            Text(
+                "Plank-modus: een boek dat al op een andere plek staat",
+                Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            ShelfExisting.entries.forEach { option ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { settings.setShelfExisting(option) }.padding(horizontal = 8.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = shelfExisting == option, onClick = { settings.setShelfExisting(option) })
+                    Column(Modifier.weight(1f)) {
+                        Text(option.label, style = MaterialTheme.typography.bodyMedium)
+                        Text(option.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
 
             Header("Uitlenen")
             SwitchRow(
