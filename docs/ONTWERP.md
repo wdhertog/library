@@ -505,10 +505,17 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
   - **Importeren:** spreekt de taal in het bestand het ISBN tegen, dan blijft die taal staan, maar krijgt het boek de tag "taal controleren"; de melding na de import noemt het aantal.
   - **Eenmalig voor de bestaande bibliotheek** (bij de eerste start van 1.4, en opnieuw na het terugzetten van een back-up): lege talen invullen en tegenstrijdige taggen. In jouw bibliotheek: 38 talen aangevuld, 1 boek getagd ("A History of Japan to 1334", Engels ISBN met "nl" uit Have I Read That).
 
+- **Instellingen** (§6.12), gebouwd 4 november 2026.
+  - **Bronnen aan/uit:** per bron (KB, DNB, BnF, BNE, SBN, Open Library, Wikidata). Uit betekent overal uit: bij het opzoeken, bij cover-herkenning en bij de delen van een serie. Staan alle bronnen voor een ISBN uit, dan krijgt het boek "niet gevonden"; "Bibliotheek bijwerken" pakt het weer op als je een bron aanzet.
+  - **Volgorde:** bewust niet instelbaar. De volgorde volgt uit het ISBN (eerst de nationale bibliotheek van het land van de uitgever, dan Open Library). Een vaste volgorde voor alle boeken zou slechter werken.
+  - **Plank-modus, een boek dat al op een andere plek staat:**
+    - **verplaatsen** (standaard, zoals voorheen, met ongedaan maken);
+    - **eerst vragen** (venster met de huidige plek; scannen wacht tot je kiest);
+    - **laten staan** (in de lijst "Staat in … — niet verplaatst", met de knop "Hierheen").
+    - Een boek dat nog nergens staat, gaat altijd naar de plank.
+
 ### Uit het ontwerp, nog niet gebouwd
-- **Instellingen** (§6.12):
-  - databronnen aan/uit en volgorde;
-  - gedrag in plank-modus bij een boek dat er al is (verplaatsen of eerst vragen).
+- **Achtergrond-verrijking "alleen handmatig"** (§6.12): nu is er automatisch, of alleen via wifi.
 
 ### Eigenaar voor meerdere boeken tegelijk
 Voor een gedeelde collectie: de eigenaar niet per boek hoeven invullen. Mogelijkheden:

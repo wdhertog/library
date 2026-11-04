@@ -67,6 +67,9 @@ class LocationRepository(private val db: LibraryDatabase) {
         previous
     }
 
+    /** Waar het boek nu staat. */
+    suspend fun placementOf(bookId: Long): Placement? = bookDao.getBook(bookId)?.let { Placement(it.locationId, it.shelfPosition) }
+
     suspend fun restore(bookId: Long, placement: Placement) =
         dao.setBookLocation(bookId, placement.locationId, placement.shelfPosition, Instant.now())
 }

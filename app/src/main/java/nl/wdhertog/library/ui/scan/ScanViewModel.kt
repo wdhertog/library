@@ -38,6 +38,7 @@ import nl.wdhertog.library.data.repository.ScanAddResult
 import nl.wdhertog.library.lookup.EnrichScheduler
 import nl.wdhertog.library.lookup.EnrichmentService
 import nl.wdhertog.library.scan.Isbn
+import nl.wdhertog.library.util.ShelfExisting
 import nl.wdhertog.library.ui.navigation.ScanRoute
 
 enum class ScanOutcome {
@@ -49,6 +50,18 @@ enum class ScanOutcome {
     ALREADY_HERE,
     /** Verplaatsing ongedaan gemaakt. */
     UNDONE,
+    /** Plank-modus: staat op een andere plek en is (nog) niet verplaatst. */
+    KEPT,
+}
+
+/**
+ * Plank-modus, een boek dat je al hebt: staat het hier al, dan niets; staat het nog nergens, of is de
+ * instelling "verplaatsen", dan hierheen; anders blijft het staan (bij "eerst vragen" volgt de vraag).
+ */
+fun shelfOutcome(currentLocation: Long?, shelf: Long, setting: ShelfExisting): ScanOutcome = when {
+    currentLocation == shelf -> ScanOutcome.ALREADY_HERE
+    currentLocation == null || setting == ShelfExisting.MOVE -> ScanOutcome.MOVED
+    else -> ScanOutcome.KEPT
 }
 
 data class ScannedEntry(
@@ -83,7 +96,12 @@ class ScanViewModel(
     private val bookSearch: BookSearch,
     /** Alleen-wifi: op mobiele data wacht het opzoeken tot de achtergrondronde. */
     private val mayLookUpNow: () -> Boolean = { true },
+    /** Instelling: wat te doen met een boek dat al op een andere plek staat. */
+    private val shelfExisting: () -> ShelfExisting = { ShelfExisting.MOVE },
 ) : ViewModel() {
+
+    /** "Eerst vragen": het boek waarover nu een vraag openstaat; scannen wacht zolang. */
+    val askMove = MutableStateFlow<SessionRow?>(null)
 
     val mode = MutableStateFlow(ScanMode.BARCODE)
     val coverSearch = MutableStateFlow<CoverSearchState?>(null)
@@ -142,6 +160,7 @@ class ScanViewModel(
             _signals.trySend(ScanSignal.NOT_AN_ISBN)
             return
         }
+        if (askMove.value != null) return
         if (entries.value.any { it.isbn13 == isbn13 } || !inFlight.add(isbn13)) return
 
         viewModelScope.launch {
@@ -169,14 +188,39 @@ class ScanViewModel(
                 if (shelf == null) {
                     ScannedEntry(isbn13, result.bookId, ScanOutcome.ALREADY_PRESENT)
                 } else {
-                    val before = locations.moveBook(result.bookId, shelf)
-                    if (before?.locationId == shelf) ScannedEntry(isbn13, result.bookId, ScanOutcome.ALREADY_HERE)
-                    else ScannedEntry(isbn13, result.bookId, ScanOutcome.MOVED, previous = before)
+                    val current = locations.placementOf(result.bookId)
+                    when (shelfOutcome(current?.locationId, shelf, shelfExisting())) {
+                        ScanOutcome.ALREADY_HERE -> ScannedEntry(isbn13, result.bookId, ScanOutcome.ALREADY_HERE)
+                        ScanOutcome.MOVED -> {
+                            val before = locations.moveBook(result.bookId, shelf)
+                            ScannedEntry(isbn13, result.bookId, ScanOutcome.MOVED, previous = before)
+                        }
+                        else -> ScannedEntry(isbn13, result.bookId, ScanOutcome.KEPT, previous = current)
+                    }
                 }
             }
         }
         record(entry)
+        if (entry.outcome == ScanOutcome.KEPT && shelfExisting() == ShelfExisting.ASK) {
+            askMove.value = session.value.firstOrNull { it.entry.isbn13 == entry.isbn13 } ?: SessionRow(entry, null, null)
+        }
         return entry
+    }
+
+    /** Een niet-verplaatst boek (laten staan, of de vraag) alsnog naar deze plank. */
+    fun moveHere(isbn13: String) {
+        askMove.value = null
+        val shelf = shelfId.value ?: return
+        val entry = entries.value.firstOrNull { it.isbn13 == isbn13 && it.outcome == ScanOutcome.KEPT } ?: return
+        viewModelScope.launch {
+            val before = locations.moveBook(entry.bookId, shelf)
+            entries.update { list -> list.map { if (it == entry) it.copy(outcome = ScanOutcome.MOVED, previous = before) else it } }
+        }
+    }
+
+    /** Vraag beantwoord met "laten staan". */
+    fun keepWhereItIs() {
+        askMove.value = null
     }
 
     private fun record(entry: ScannedEntry) {

@@ -13,12 +13,13 @@ class EnrichmentService(
     private val repository: BookRepository,
     private val router: SourceRouter,
     private val wikidata: WikidataSource,
+    private val wikidataEnabled: () -> Boolean = { true },
 ) {
 
     /** Eerste bron alleen; fouten worden genegeerd, de volledige ronde volgt toch. */
     suspend fun quickLookup(bookId: Long) {
         val isbn = repository.isbnFor(bookId) ?: return
-        val source = router.sourcesFor(isbn).first()
+        val source = router.sourcesFor(isbn).firstOrNull() ?: return
         val metadata = try {
             source.quickLookup(isbn)
         } catch (e: CancellationException) {
@@ -37,6 +38,12 @@ class EnrichmentService(
     suspend fun enrich(bookId: Long, refresh: Boolean): Boolean {
         val isbn = repository.isbnFor(bookId) ?: return false
         val sources = router.sourcesFor(isbn)
+        // Alle bronnen voor dit ISBN staan uit (instellingen): niet te vinden; zet je er een aan, dan
+        // pakt "Bibliotheek bijwerken" het boek weer op.
+        if (sources.isEmpty()) {
+            repository.markEnrichFailed(bookId)
+            return false
+        }
         var unreachable = 0
         val results = sources.mapNotNull { source ->
             try {
@@ -57,7 +64,7 @@ class EnrichmentService(
             repository.markEnrichFailed(bookId)
             return false
         }
-        val work = try {
+        val work = if (!wikidataEnabled()) null else try {
             wikidata.findWork(
                 titles = listOfNotNull(merged.title, merged.originalTitle),
                 authorIds = merged.authorWikidataIds,

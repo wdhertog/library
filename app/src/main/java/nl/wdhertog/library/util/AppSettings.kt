@@ -3,7 +3,15 @@ package nl.wdhertog.library.util
 import android.content.Context
 import android.net.ConnectivityManager
 import kotlinx.coroutines.flow.MutableStateFlow
+import nl.wdhertog.library.lookup.LookupSource
 import kotlinx.coroutines.flow.StateFlow
+
+/** Plank-modus: wat er gebeurt met een gescand boek dat al op een andere plek staat. */
+enum class ShelfExisting(val label: String, val description: String) {
+    MOVE("Verplaatsen", "Meteen naar deze plank, met de mogelijkheid om het ongedaan te maken."),
+    ASK("Eerst vragen", "Laat zien waar het staat en vraag of het hierheen moet."),
+    KEEP("Laten staan", "Niet verplaatsen; in de lijst kun je het alsnog hierheen zetten."),
+}
 
 /** Instellingen (ontwerp §6.12), bewaard in SharedPreferences en als flow te volgen. */
 class AppSettings(private val context: Context) {
@@ -16,12 +24,34 @@ class AppSettings(private val context: Context) {
     private val _scanVibrate = flag(KEY_SCAN_VIBRATE, true)
     private val _loanReminders = flag(KEY_LOAN_REMINDERS, true)
     private val _syncInBackground = flag(KEY_SYNC_BACKGROUND, true)
+    private val _shelfExisting = MutableStateFlow(
+        prefs.getString(KEY_SHELF_EXISTING, null)?.let { runCatching { ShelfExisting.valueOf(it) }.getOrNull() } ?: ShelfExisting.MOVE,
+    )
+    private val _disabledSources = MutableStateFlow(prefs.getStringSet(KEY_DISABLED_SOURCES, emptySet()).orEmpty())
 
     /** Gegevens opzoeken alleen via wifi (niet via mobiele data). */
     val wifiOnly: StateFlow<Boolean> = _wifiOnly
     val scanSound: StateFlow<Boolean> = _scanSound
     val scanVibrate: StateFlow<Boolean> = _scanVibrate
     val loanReminders: StateFlow<Boolean> = _loanReminders
+
+    val shelfExisting: StateFlow<ShelfExisting> = _shelfExisting
+
+    /** Bronnen die uit staan (op sleutel, zie LookupSource). */
+    val disabledSources: StateFlow<Set<String>> = _disabledSources
+
+    fun setShelfExisting(value: ShelfExisting) {
+        prefs.edit().putString(KEY_SHELF_EXISTING, value.name).apply()
+        _shelfExisting.value = value
+    }
+
+    fun isSourceEnabled(source: LookupSource) = source.key !in _disabledSources.value
+
+    fun setSourceEnabled(source: LookupSource, enabled: Boolean) {
+        val updated = if (enabled) _disabledSources.value - source.key else _disabledSources.value + source.key
+        prefs.edit().putStringSet(KEY_DISABLED_SOURCES, updated).apply()
+        _disabledSources.value = updated
+    }
 
     /** Bereikbaar blijven voor gekoppelde telefoons als de app niet in beeld is (met vaste melding). */
     val syncInBackground: StateFlow<Boolean> = _syncInBackground
@@ -49,6 +79,8 @@ class AppSettings(private val context: Context) {
         const val KEY_SCAN_SOUND = "scan-sound"
         const val KEY_SCAN_VIBRATE = "scan-vibrate"
         const val KEY_LOAN_REMINDERS = "loan-reminders"
+        const val KEY_SHELF_EXISTING = "shelf-existing"
+        const val KEY_DISABLED_SOURCES = "disabled-sources"
         const val KEY_SYNC_BACKGROUND = "sync-background"
     }
 }
