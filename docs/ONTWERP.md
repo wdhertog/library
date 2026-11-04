@@ -486,7 +486,7 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
     - de onderbalk wordt Bibliotheek · Lezen · Series · Uitleen · Meer, met Locaties onder Meer.
   - **Stappen**, elk een eigen PR plus een testversie:
     1. **Basis:** palet licht en donker; Literata (OFL, in de app) voor schermtitels en boektitels; kaartstijl (`AppCard`); covers zonder afbeelding met boekrug en serif; Scannen goud; groene markering in de onderbalk. *Gebouwd.*
-    2. **Navigatie:** de nieuwe onderbalk en een Meer-scherm (Locaties, Auteurs, Importeren, Back-up, Synchroniseren, Instellingen).
+    2. **Navigatie:** de nieuwe onderbalk en een Meer-scherm (Locaties, Auteurs, Importeren, Back-up, Synchroniseren, Instellingen). Het ⋮-menu van de bibliotheek houdt alleen "Handmatig toevoegen" en "Bibliotheek bijwerken". Kaarten zijn in het donker iets lichter dan de achtergrond. *Gebouwd.*
     3. **Bibliotheek:** afgeronde zoekbalk met weergave, sorteren en menu; chip Filters met aantal en actieve filters als chips met ✕; status per boek (gelezen in jaar, uitgeleend aan … en hoe lang, aan het lezen %); rasterweergave (covers 2:3, badges, voortgangsbalk).
     4. **Boekpagina:** cover op een kleurvlak (kleur uit de cover), titel in serif gecentreerd, één hoofdknop die met de status meebeweegt, plus Uitlenen; kaarten (Lezen, Plek en eigenaar, Beschrijving ingeklapt met tags als chips, Gegevens en bronnen dicht). Ook het bewerkscherm in dezelfde stijl: velden in kaarten per onderwerp.
     5. **Lezen:** jaarkeuze, leesdoel als ring, "Nu aan het lezen" als covers met voortgang, "Wil ik lezen" als rij covers met "Alles", maandgrafiek in een kaart.

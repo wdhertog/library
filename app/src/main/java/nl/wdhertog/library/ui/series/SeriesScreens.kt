@@ -68,7 +68,8 @@ import nl.wdhertog.library.ui.navigation.appViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeriesListScreen(
-    onBack: () -> Unit,
+    /** Null als Series een tab in de onderbalk is. */
+    onBack: (() -> Unit)?,
     onOpenSeries: (Long) -> Unit,
     viewModel: SeriesListViewModel = appViewModel { container, _ ->
         SeriesListViewModel(
@@ -84,7 +85,7 @@ fun SeriesListScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Series") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Terug") } },
+                navigationIcon = { onBack?.let { IconButton(onClick = it) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Terug") } } }
             )
         },
     ) { padding ->
