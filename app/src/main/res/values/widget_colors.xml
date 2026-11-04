@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widget "Nu aan het lezen": het eigen groen-crème palet (zie ui/theme/Theme.kt). -->
+    <color name="widget_background">#FBF8F2</color>
+    <color name="widget_border">#E7E1D6</color>
+    <color name="widget_text">#1D1B17</color>
+    <color name="widget_muted">#5E5A52</color>
+    <color name="widget_accent">#2E4A3F</color>
+    <color name="widget_track">#E7E1D6</color>
+</resources>

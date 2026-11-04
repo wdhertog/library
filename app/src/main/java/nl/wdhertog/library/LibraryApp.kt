@@ -4,7 +4,11 @@ import android.app.Application
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import nl.wdhertog.library.data.db.ReadingStatus
+import nl.wdhertog.library.widget.ReadingWidget
 import nl.wdhertog.library.covers.CoverStore
 import nl.wdhertog.library.data.backup.AutoBackupSettings
 import nl.wdhertog.library.data.backup.AutoBackupWorker
@@ -107,6 +111,13 @@ class LibraryApp : Application() {
         container.enrichScheduler.schedule()
         if (container.settings.loanReminders.value) LoanReminderWorker.schedule(this)
         if (AutoBackupSettings(this).folder != null) AutoBackupWorker.schedule(this)
+        // Widget "Nu aan het lezen" bijwerken als je leessessies veranderen (ook door synchroniseren).
+        container.appScope.launch {
+            container.readingRepository.observeSessions()
+                .map { sessions -> sessions.filter { it.status == ReadingStatus.READING } }
+                .distinctUntilChanged()
+                .collect { ReadingWidget.update(this@LibraryApp) }
+        }
         // Eenmalig: talen aanvullen en controleren aan de hand van het ISBN (sinds 1.4).
         val maintenance = getSharedPreferences("onderhoud", MODE_PRIVATE)
         if (!maintenance.getBoolean(KEY_ISBN_LANGUAGES, false)) {
