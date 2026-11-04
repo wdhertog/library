@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import nl.wdhertog.library.data.db.Author
 import nl.wdhertog.library.data.db.Book
+import nl.wdhertog.library.data.db.Ownership
 import nl.wdhertog.library.data.db.BookWork
 import nl.wdhertog.library.data.db.BookWorkRow
 import nl.wdhertog.library.data.db.EnrichStatus
@@ -23,7 +24,8 @@ sealed interface ScanAddResult {
     val bookId: Long
 
     data class Added(override val bookId: Long) : ScanAddResult
-    data class AlreadyPresent(override val bookId: Long) : ScanAddResult
+    /** [notOwned]: het boek staat als niet (meer) in bezit, bijv. gelezen en teruggebracht of weggegeven. */
+    data class AlreadyPresent(override val bookId: Long, val notOwned: Boolean = false) : ScanAddResult
 }
 
 class BookRepository(private val db: LibraryDatabase, private val covers: CoverStore) {
@@ -106,7 +108,7 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
 
     /** Legt een gescand ISBN direct vast; gegevens worden daarna los opgezocht. */
     suspend fun addScannedIsbn(isbn13: String): ScanAddResult = db.withTransaction {
-        dao.findBookByIsbn(isbn13)?.let { return@withTransaction ScanAddResult.AlreadyPresent(it.id) }
+        dao.findBookByIsbn(isbn13)?.let { return@withTransaction ScanAddResult.AlreadyPresent(it.id, it.ownership == Ownership.NOT_OWNED) }
         val bookId = dao.insertBook(
             Book(isbn13 = isbn13, isbn10 = Isbn.toIsbn10(isbn13), title = "", searchText = isbn13),
         )

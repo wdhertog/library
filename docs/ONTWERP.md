@@ -514,6 +514,10 @@ Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste re
     - **laten staan** (in de lijst "Staat in … — niet verplaatst", met de knop "Hierheen").
     - Een boek dat nog nergens staat, gaat altijd naar de plank.
 
+- **Een boek scannen dat als niet in bezit staat**, gebouwd 4 november 2026. Bijvoorbeeld een boek uit de Have I Read That-import dat je ooit leende en nu gekocht hebt.
+  - Er verandert niets vanzelf. In de scanlijst staat "Niet in bezit · Weggegeven aan Jan" (of wat er bekend is), met de knop **In bezit**: weer een eigen boek, en de gegevens over weggedaan vervallen. De leesgeschiedenis blijft.
+  - In plank-modus vraagt de app eerst: "Weer in bezit nemen en op deze plank zetten?" De instelling "verplaatsen / eerst vragen / laten staan" geldt voor boeken die je wél hebt.
+
 ### Uit het ontwerp, nog niet gebouwd
 - **Achtergrond-verrijking "alleen handmatig"** (§6.12): nu is er automatisch, of alleen via wifi.
 
