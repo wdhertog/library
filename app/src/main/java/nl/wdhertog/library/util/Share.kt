@@ -33,6 +33,22 @@ object Share {
         return "$greeting heb je $book nog?$since$due"
     }
 
+    /** Een afbeelding delen (via de cache en een FileProvider; alleen leesrecht voor de ontvanger). */
+    fun image(context: Context, bitmap: android.graphics.Bitmap, name: String) {
+        val dir = java.io.File(context.cacheDir, "gedeeld").apply { mkdirs() }
+        dir.listFiles()?.forEach { it.delete() }
+        val file = java.io.File(dir, "$name.png")
+        file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".files", file)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = android.content.ClipData.newRawUri(name, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(send, "Delen via").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION))
+    }
+
     fun open(context: Context, text: String, subject: String? = null) {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
