@@ -478,6 +478,11 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.7 (5 november 2026)
+- **Leesstreaks** (§12.6): maanden en weken op rij met een uitgelezen boek, en dagen op rij (één vrije dag per week) uit "Voortgang bijwerken" en de begin- en einddatums van sessies; tabel `reading_log`, database versie 7.
+- **Badges** (§12.7): mijlpalen uit je eigen leesgeschiedenis, met datum, ook met terugwerkende kracht; kaart op Lezen en een eigen scherm.
+- **Review op bugs, lekken, beveiliging en efficiëntie**: sync dichtgezet (begrensde berichten, sessie pas na controle, covernamen zonder pad), geen Android-cloudback-up meer, atomair terugzetten, back-up eerst in de app, verrijkingswachtrij die niet meer vastloopt, wijzigingen tijdens een sync gaan niet verloren, outbox wordt opgeruimd, indexen op uuid, en diverse crashes en kleine lekken.
+
 ### Gebouwd in 1.6 (4 november 2026)
 - **Delen** (gebouwd): een boek delen via het deelmenu van Android (titel, auteur, jaar, ISBN en een link naar Open Library), en bij een uitgeleend boek "Navragen…" met een kant-en-klaar berichtje (op de boekpagina en in Uitleen). De app stuurt zelf niets.
 - **Ontbrekend deel op je leeslijst** (gebouwd): in het venster van een ontbrekend deel "Op mijn leeslijst". Dat wordt een boek "niet in bezit" in die serie, met de auteur van de andere delen, en verschijnt in Lezen onder "Wil ik lezen".
