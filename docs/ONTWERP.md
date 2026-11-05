@@ -734,3 +734,211 @@ Elke stap komt in een eigen branch en pull request. Testen gebeurt eerst met de 
     - **Vertraging tijdens importeren:** doorgeven wachtte tot het 15 seconden stil was, en dat werd het tijdens importeren en opzoeken nooit. Nu na 5 seconden stilte, en bij aanhoudende wijzigingen minstens elke minuut.
     - **Eigenaar wijzigen** duurde 10–20 seconden; nu ongeveer 5.
   - **Uitgebracht in 1.4 (4 november 2026):** `BuildConfig.SYNC` staat ook in de gewone app aan (de vlag blijft als noodrem). De waarschuwing "Testversie" staat alleen nog in testversies. Test2 is door je zus nog niet nagelopen; dit is uitgebracht op jouw verzoek.
+
+## 12. Plan na 1.6: zeven ideeën
+
+Stand: 5 november 2026, op basis van `main` (99c3c8a, versie 1.6, database versie 6).
+
+### Overzicht
+
+| # | Idee | Omvang | Database | Sync | Hangt af van |
+|---|------|--------|----------|------|--------------|
+| 1 | JSON-export bij de back-up | S–M | nee | nee | — |
+| 2 | Auteurs samenvoegen | M | nee (v1) | via werk → gaat vanzelf mee | — |
+| 3 | Hoofdeditie aanwijzen | M | ja: `work.primaryBookUuid` | nieuw veld `primaryBook` op werk | — |
+| 4 | Goodreads-import | M–L | ja: `book.externalIds` (of `goodreadsId`) | veld erbij | — |
+| 5 | HIRT-import verwijderen | S | nee (kolom blijft) | nee | 4 (helpers hergebruiken) |
+| 6 | Leesstreaks | S (v1) / M (v2) | v2: tabel `reading_log` | nee (persoonlijk) | — |
+| 7 | Badges | M | nee | nee (persoonlijk) | 6 (streak-badges) |
+
+**Voorgestelde volgorde, elk een eigen PR:**
+1. JSON-export — los, klein, goede opwarmer.
+2. Auteurs samenvoegen — patroon ligt er al (`SeriesRepository.mergeInto`).
+3. Hoofdeditie — met de eerste schema-wijziging (versie 7).
+4. Goodreads-import — dezelfde versie 7 als het kan (één `AutoMigration(6 → 7)`).
+5. HIRT verwijderen — pas als Goodreads de gedeelde stukken heeft overgenomen.
+6. Streaks, daarna 7. Badges — samen het "Lezen"-pakket voor 1.8.
+
+Vanavond haalbaar: 1 en 2, eventueel 3 beginnen.
+
+### 1. JSON-export bij de back-up
+
+**Doel:** een open, leesbare export van alles, naast de ZIP (die alleen de SQLite-database bevat) en de CSV (die alleen boeken plat slaat).
+
+**Wat erin:**
+- gedeeld: boeken, werken, auteurs, series (met `manualParts`), locaties (boom via `parent`-uuid), personen, uitleningen;
+- persoonlijk: leessessies, leesdoelen, favoriet en "wil ik lezen";
+- verwijzingen als uuid's, niet als lokale id's.
+
+**Hergebruik:** `RoomSyncStore` zet gedeelde records al om naar veld-maps met uuid-verwijzingen (zie `SyncSchema.fields`). De export kan daar grotendeels op leunen; alleen sessies, doelen en auteur-info komen er los bij.
+
+**Vorm:**
+```json
+{
+  "app": "nl.wdhertog.library", "format": 1, "schemaVersion": 6,
+  "exportedAt": "2026-11-05T20:00:00Z",
+  "books": [...], "works": [...], "authors": [...], "series": [...],
+  "locations": [...], "persons": [...], "loans": [...],
+  "readingSessions": [...], "readingGoals": {"2026": 16}
+}
+```
+
+**Waar:**
+- `data/backup/JsonExport.kt` (naast `CsvExport.kt`), puur, met een unit-test zoals `BackupFormatTest`;
+- Back-up-scherm: knop "Exporteren als JSON" naast CSV;
+- **Keuze:** ook `export.json` in de ZIP stoppen? Kan veilig: `BackupFormat.isKnownEntry` negeert onbekende namen bij terugzetten. Kost wel ruimte in elke wekelijkse back-up.
+
+**Bewust niet:** terugzetten uit JSON. Daarvoor blijft de ZIP; JSON is voor jezelf, scripts en andere apps.
+
+**Open vraag:** alleen als losse knop, of ook automatisch in de (wekelijkse) ZIP?
+
+### 2. Auteurs samenvoegen
+
+**Doel:** "J.R.R. Tolkien", "J. R. R. Tolkien" en "Tolkien, J.R.R." worden één auteur.
+
+**Hoe (naar het voorbeeld van `SeriesRepository.mergeInto`):**
+1. `AuthorRepository.merge(authorId, intoId)` in één transactie:
+   - `work_author` van `authorId` omzetten naar `intoId`; staat `intoId` al bij dat werk (co-auteur-dubbel), dan de regel weghalen in plaats van omzetten (primaire sleutel `workId, authorId`);
+   - Wikidata-gegevens: die van `into` houden, lege velden aanvullen uit de ander;
+   - oude auteur verwijderen;
+   - bij alle geraakte boeken `"authors"` in `lockedFields` zetten (anders zet verrijking de oude spelling terug — `BookRepository.kt:261`) en `refreshSearchText`.
+2. `AuthorRepository.rename(id, name)`: bestaat de naam al (unieke index op `author.name`), dan samenvoegen — net als bij series.
+3. **UI:** auteurspagina → ⋮ → "Naam wijzigen…" en "Samenvoegen met…" (zoeklijst van auteurs).
+4. **Suggesties (optioneel, tweede stap):** `AuthorDuplicates` zoals `SeriesDuplicates`: kaartje "Mogelijk dezelfde auteur" in de lijst Auteurs. Vergelijken op genormaliseerde naam: punten en spaties tussen initialen weg, "Achternaam, Voornaam" omdraaien, accenten weg (`TextNormalizer`). Met Samenvoegen / Negeren.
+
+**Sync:** auteurs hebben geen eigen uuid; ze reizen als namenlijst `authors` op het werk. De triggers op `work_author` (`SyncTriggers.kt:30-31`) markeren het werk als gewijzigd, dus de andere telefoon krijgt de nieuwe naam vanzelf. Daar blijft de oude auteur zonder werken achter; die verschijnt niet in de lijst (`observeSummaries` joint op `work_author`). Opruimen van wezen kan bij dezelfde gelegenheid (`deleteOrphanAuthors`).
+
+**Later, als het nodig blijkt:** tabel `author_alias (name → authorId)` zodat nieuw gescande boeken met de oude spelling meteen bij de juiste auteur komen. Eerst kijken of het slot op `authors` genoeg is.
+
+**Tests:** `AuthorRepositoryTest` uitbreiden: samenvoegen met gedeeld werk, hernoemen naar bestaande naam, slot gezet.
+
+### 3. Een editie aanwijzen als hoofdeditie
+
+**Doel:** van een werk met meerdere edities bepalen welke "de" editie is: die cover en titel tonen in series, op de auteurspagina en in de lijst bij "Meerdere edities".
+
+**Nu:** overal `books.first()` — `SeriesModels.kt:99`, `SeriesScreens.kt:290`, de volgorde op `AuthorScreens.kt`. Dat is willekeurig.
+
+**Datamodel:** `Work.primaryBookUuid: String?` (uuid, geen id/FK: geen kringverwijzing tussen `book` en `work`, en sync werkt al met uuid's). Database versie 7, `AutoMigration(6 → 7)`.
+
+**Sync:** veld `primaryBook` toevoegen aan `SyncSchema.fields[WORK]` en aan `RoomSyncStore`. Gedeeld, want het hoort bij de collectie.
+
+**Logica:** één functie `primaryOf(work, books)`:
+1. de aangewezen editie, als die nog bij het werk hoort;
+2. anders: in bezit > niet in bezit, dan met eigen cover, dan taal van de app (nl), dan oudst toegevoegd.
+Zo is er ook zonder keuze een betere standaard dan `first()`.
+
+**UI:**
+- boekpagina, kaart met andere edities → "Als hoofdeditie instellen" (en ster/markering bij de huidige);
+- serie-scherm en auteurspagina gebruiken `primaryOf` voor cover, titel en volgorde (hoofdeditie bovenaan);
+- in de lijst bij "Meerdere edities" staat de hoofdeditie bovenaan de groep.
+
+**Randgevallen:**
+- hoofdeditie verwijderd, losgekoppeld of naar ander werk → valt terug op regel 2 (uuid wijst nergens heen; bij losmaken het veld leegmaken);
+- werken samenvoegen ("Koppelen aan andere editie…"): keuze van het overblijvende werk houden;
+- omnibus: geldt per werk, niets bijzonders.
+
+**Open vraag:** moet de hoofdeditie ook de **werktitel** bepalen (bijv. "In de ban van de ring" in plaats van "The Lord of the Rings")? Voorstel: ja als optie, maar `Work.title` niet overschrijven — alleen weergave.
+
+### 4. Goodreads-import
+
+**Doel:** de CSV-export van Goodreads ("Export Library") rechtstreeks inlezen, met leesgeschiedenis, net zo vast als nu Have I Read That.
+
+**Formaat (eerst controleren met een eigen export):** kolommen o.a. `Book Id`, `Title`, `Author`, `Author l-f`, `Additional Authors`, `ISBN`, `ISBN13`, `My Rating`, `Publisher`, `Binding`, `Number of Pages`, `Year Published`, `Original Publication Year`, `Date Read`, `Date Added`, `Bookshelves`, `Exclusive Shelf`, `My Review`, `Private Notes`, `Read Count`, `Owned Copies`.
+
+| Goodreads | Wordt | Opmerking |
+|-----------|-------|-----------|
+| `Book Id` | extern id | voor opnieuw importeren zonder dubbelen |
+| `Title` | titel + serie/deel | zelfde patroon als HIRT: `"Duin (Duin, #1)"` |
+| `Author`, `Additional Authors` | auteurs | `Author l-f` niet nodig |
+| `ISBN13` / `ISBN` | isbn13 | staan als `="9781234567890"` → `="` en `"` strippen, door `Isbn` halen |
+| `Binding` | formaat | Paperback/Hardcover/Kindle Edition/Audible Audio… → e-book/luisterboek |
+| `Exclusive Shelf` | status | `read` → sessie gelezen; `currently-reading` → open sessie; `to-read` → wil ik lezen |
+| `Date Read`, `Read Count` | sessies | alleen de laatste leesdatum bekend; `Read Count` > 1 → extra sessies zonder datum |
+| `My Rating` | beoordeling | 0 = geen beoordeling |
+| `My Review`, `Private Notes` | recensie, notities | |
+| `Bookshelves` | tags | `read`, `to-read`, `currently-reading`, `owned` niet als tag |
+| `Owned Copies` / plank `owned` | in bezit | vaak 0 terwijl je het wél hebt → zelfde schakelaar als bij HIRT: "Ook boeken die je niet (meer) hebt" |
+| `Original Publication Year` | werk: eerste jaar | |
+| `Date Added` | toegevoegd | |
+
+**Code:**
+- `importer/GoodreadsParser.kt`: leest met de bestaande `CsvReader`, geeft `List<ImportedBook>`; hergebruikt `ImportService`, `ImportMatcher` (controle vooraf) en ongedaan maken;
+- gedeelde stukken uit `HirtParser` (serie-in-titel-regex, namen splitsen, datumprecisie) naar `importer/ImportText.kt`;
+- herkennen: een CSV met kopregel `Book Id,Title,Author,…` → automatisch Goodreads, anders de gewone kolom-wizard;
+- tests met een kleine voorbeeld-CSV in `app/src/test/resources/import/`.
+
+**Datamodel — keuze:**
+- (a) kolom `goodreadsId` naast `hirtId` — snel, maar bij elke bron een kolom erbij;
+- (b) **voorstel:** `externalIds` (tekst, bijv. `goodreads:12345,hirt:678`) en `ImportMatcher` daarop laten zoeken. Dan kan `hirtId` later daarin opgaan (zie 5). Sync: veld toevoegen aan `SyncSchema.fields[BOOK]`.
+
+**Open vraag:** wil je Goodreads-leesdoelen? Die staan niet in de export, dus nee — tenzij handmatig.
+
+### 5. HIRT-import verwijderen
+
+**Aanname:** de Have I Read That-import heeft zijn werk gedaan (eenmalige overstap) en mag uit de app. (Bedoel je juist "een gedane HIRT-import terugdraaien": dat kan al, elke import is ongedaan te maken.)
+
+**Weg:**
+- `importer/HirtParser.kt` en `HirtParserTest.kt` (na het verhuizen van de helpers, zie 4);
+- in `ImportScreen.kt` / `ImportViewModel.kt`: kaart "Have I Read That", `openHirt`, `hirtIncludeAll`;
+- `MoreScreen.kt:61`: ondertitel wordt "Goodreads, Excel of CSV";
+- README en `ONTWERP.md` §6.11 als "historisch" markeren.
+
+**Blijft (bewust):**
+- kolom `book.hirtId` en `MatchReason.HIRT_ID`: bestaande boeken hebben die waarde, en het veld `hirtId` zit in het sync-protocol (`SyncSchema`, `RoomSyncStore`). Een telefoon met 1.6 stuurt het nog mee. Een kolom laten vallen vraagt een handmatige migratie zonder winst.
+- Met keuze (b) bij 4: in migratie 6 → 7 `hirtId` kopiëren naar `externalIds` als `hirt:<id>`, en het sync-veld pas weghalen als beide telefoons over zijn.
+- Teksten als "bijv. uit de Have I Read That-import" in commentaar mogen blijven.
+
+### 6. Leesstreaks
+
+**Probleem:** de app weet per sessie wanneer je begon en klaar was, en de *laatste* voortgang, maar niet op welke dagen je las. Een dagstreak kan dus niet met de huidige gegevens.
+
+**v1 — zonder schemawijziging (voorstel om mee te beginnen):**
+- **maanden op rij** met minstens één uitgelezen boek (en de langste ooit);
+- **weken op rij** idem;
+- alleen sessies met `datePrecision = DAY` tellen; geen gat-vulling voor sessies van alleen het jaar;
+- werkt meteen met je hele geïmporteerde geschiedenis.
+- Puur rekenwerk in `ReadingStats` (of `ReadingStreaks.kt`), met tests zoals `ReadingStatsTest`.
+- Op Lezen: klein regeltje onder de leesdoelring, bijv. "🔥 7 maanden op rij · langste 11".
+
+**v2 — echte dagstreak:**
+- tabel `reading_log (date, bookId, page?, percent?)`, één regel per dag per boek; geschreven bij "Voortgang bijwerken", beginnen en uitgelezen;
+- persoonlijk, niet gesynchroniseerd (zoals leessessies);
+- optioneel: "Vandaag gelezen" als snelle knop in de widget;
+- streak = aaneengesloten dagen met een log; één dag "vrij" per week als instelling (anders demotiverend).
+
+**Open vraag:** is een dagstreak echt gewenst (dan moet je elke dag iets invullen), of is "maanden op rij" genoeg?
+
+### 7. Badges
+
+**Doel:** mijlpalen zichtbaar maken op Lezen, afgeleid uit bestaande gegevens — niets opslaan.
+
+**Opzet:**
+- `data/repository/Achievements.kt`: lijst van definities, elk `(id, titel, uitleg, check(sessions, books) → behaald op datum?)`. Puur, goed te testen.
+- Behaald-op-datum wordt berekend (bijv. de sessie waarmee je de 100 haalde), dus ook terug in de tijd en na een import of terugzetten meteen goed.
+- Persoonlijk (op basis van eigen leessessies); niet gesynchroniseerd.
+
+**Eerste set (ideeën):**
+- aantallen: 10 / 50 / 100 / 250 / 500 boeken gelezen;
+- pagina's: 10.000 / 50.000 in totaal; een boek van 1.000+ pagina's;
+- leesdoel gehaald (per jaar, telt mee als "×3");
+- talen: in 3 / 5 talen gelezen (`book.language`);
+- series: een serie helemaal uit (alle delen gelezen, met `SeriesModels`);
+- auteur: 10 boeken van dezelfde auteur;
+- herlezer: een boek 3× gelezen;
+- streaks (na 6): 6 / 12 maanden op rij.
+
+**UI:**
+- Lezen → kaart "Badges" met de behaalde (laatste drie) en "Alles", naar een scherm met behaald (datum) en nog niet behaald (grijs, met voortgang "73 van 100");
+- eventueel een korte melding (snackbar) als je net een badge haalt bij "Uitgelezen";
+- jaaroverzicht: badges die dat jaar behaald zijn erbij.
+
+**Open vraag:** pictogrammen zelf tekenen (vector, in het groen-goud palet) of Material Icons? Voorstel: Material Icons in een gouden cirkel, past bij `Gold`.
+
+### Te beslissen vóór het bouwen
+
+1. JSON-export: ook automatisch in de ZIP?
+2. Hoofdeditie: ook de werktitel bepalen?
+3. Goodreads: `externalIds` (voorstel) of losse `goodreadsId`?
+4. HIRT: alleen de import weg, kolom en sync-veld laten staan (voorstel)?
+5. Streaks: v1 (maanden/weken) volstaat, of meteen de dagstreak?
+6. Badges: welke uit de lijst wel/niet?
