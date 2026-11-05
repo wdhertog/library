@@ -33,6 +33,21 @@ class SyncEngineTest {
     }
 
     @Test
+    fun `an edit made during the exchange is not lost`() = runTest {
+        a.store.edit("book", "b1", "title" to "Dictator")
+        sync()
+        // b wijzigt de titel eerder; a klaarzetten, dan wijzigt de gebruiker op a tijdens de uitwisseling.
+        wallB = 1_500; b.store.edit("book", "b1", "title" to "Dictator (b)")
+        a.engine.prepareOutgoing(); b.engine.prepareOutgoing()
+        val fromB = b.engine.changesAfter(a.receivedUpTo)
+        wallA = 2_000; a.store.edit("book", "b1", "title" to "Dictator (a, later)")
+        a.engine.applyIncoming(fromB)
+        assertEquals("Dictator (a, later)", a.store.field("book", "b1", "title"))
+        sync()
+        assertEquals("Dictator (a, later)", b.store.field("book", "b1", "title"))
+    }
+
+    @Test
     fun `a new book arrives on the other phone`() = runTest {
         a.store.edit("book", "b1", "title" to "Dictator", "ownership" to "OWNED")
         sync()

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
@@ -355,7 +356,8 @@ private fun CoverSearchDialog(
                         )
                     }
                     LazyColumn(Modifier.heightIn(max = 380.dp)) {
-                        items(state.candidates, key = { it.source + (it.isbn13 ?: it.title) }) { candidate ->
+                        // Index in de sleutel: twee kandidaten zonder ISBN kunnen dezelfde titel en bron hebben.
+                        itemsIndexed(state.candidates, key = { i, c -> "$i:${c.source}:${c.isbn13 ?: c.title}" }) { _, candidate ->
                             Row(
                                 Modifier.fillMaxWidth().clickable { onPick(candidate) }.padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,

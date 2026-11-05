@@ -8,7 +8,6 @@ import nl.wdhertog.library.data.db.LibraryDatabase
 import nl.wdhertog.library.data.db.Series
 import nl.wdhertog.library.data.db.SeriesPart
 import nl.wdhertog.library.data.db.SeriesSummary
-import nl.wdhertog.library.lookup.LookupException
 import nl.wdhertog.library.lookup.sources.WikidataSource
 import java.time.Duration
 import java.time.Instant
@@ -81,7 +80,9 @@ class SeriesRepository(
         if (!force && fetched != null && fetched.isAfter(Instant.now().minus(PARTS_MAX_AGE))) return null
         val result = try {
             source.seriesParts(series.wikidataId, dao.workWikidataIds(seriesId), series.name)
-        } catch (e: LookupException) {
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
+        } catch (e: Exception) { // ook een onverwacht antwoord (parsefout), niet alleen geen verbinding
             Log.i(TAG, "Delen van ${series.name} niet opgehaald: ${e.message}")
             null
         } ?: return null

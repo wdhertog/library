@@ -20,7 +20,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        launch.value = launchFrom(intent)
+        // Alleen bij een echte start: na draaien of herstel na procesdood is de intent al afgehandeld,
+        // en zou de app anders opnieuw naar het boek uit de widget springen.
+        if (savedInstanceState == null) launch.value = launchFrom(intent)
         setContent {
             LibraryTheme {
                 AppNavHost(launch = launch.value, onLaunchHandled = { launch.value = null })
@@ -35,6 +37,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         launchFrom(intent)?.let { launch.value = it }
     }
 
@@ -43,7 +46,10 @@ class MainActivity : ComponentActivity() {
         if (BuildConfig.SYNC) (application as LibraryApp).container.syncManager.onBackground()
         // Titel, cover of voortgang kan veranderd zijn: de widget bijwerken bij het verlaten van de app.
         val app = application as LibraryApp
-        app.container.appScope.launch { ReadingWidget.update(app) }
+        app.container.appScope.launch {
+            // Een fout in de widget mag de app niet laten crashen.
+            runCatching { ReadingWidget.update(app) }.onFailure { android.util.Log.w("MainActivity", "Widget bijwerken mislukt", it) }
+        }
     }
 
     private fun launchFrom(intent: Intent): Launch? = when {

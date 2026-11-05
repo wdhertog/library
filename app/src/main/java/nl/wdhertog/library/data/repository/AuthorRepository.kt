@@ -7,7 +7,6 @@ import nl.wdhertog.library.data.db.Author
 import nl.wdhertog.library.data.db.AuthorSummary
 import nl.wdhertog.library.data.db.BookWorkLink
 import nl.wdhertog.library.data.db.LibraryDatabase
-import nl.wdhertog.library.lookup.LookupException
 import nl.wdhertog.library.lookup.sources.WikidataSource
 import nl.wdhertog.library.util.TextNormalizer
 import java.time.Duration
@@ -44,7 +43,9 @@ class AuthorRepository(
         if (!force && fetched != null && fetched.isAfter(Instant.now().minus(INFO_MAX_AGE))) return true
         val info = try {
             source.authorInfo(author.wikidataId, dao.workWikidataIds(id), author.name)
-        } catch (e: LookupException) {
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
+        } catch (e: Exception) { // ook een onverwacht antwoord (parsefout), niet alleen geen verbinding
             Log.i(TAG, "Auteur ${author.name} niet opgehaald: ${e.message}")
             return false
         }

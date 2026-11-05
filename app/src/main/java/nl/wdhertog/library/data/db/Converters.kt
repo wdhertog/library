@@ -14,6 +14,7 @@ class Converters {
     @TypeConverter
     fun localDateToText(value: LocalDate?): String? = value?.toString()
 
+    /** Een ongeldige datum (bijv. uit een oude import of van een andere telefoon) wordt leeg, in plaats van elke lijst te laten crashen. */
     @TypeConverter
-    fun textToLocalDate(value: String?): LocalDate? = value?.let(LocalDate::parse)
+    fun textToLocalDate(value: String?): LocalDate? = value?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 }
