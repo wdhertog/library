@@ -31,6 +31,7 @@ import nl.wdhertog.library.data.sync.SyncTriggers
         Loan::class,
         ReadingSession::class,
         ReadingGoal::class,
+        ReadingDay::class,
         ImportRun::class,
         SyncMeta::class,
         SyncDirty::class,
@@ -39,13 +40,15 @@ import nl.wdhertog.library.data.sync.SyncTriggers
         SyncOutbox::class,
         SyncPeer::class,
     ],
-    version = 6,
+    version = 7,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
         AutoMigration(from = 5, to = 6),
+        // Dagstreak (reading_log) en indexen op uuid voor synchronisatie.
+        AutoMigration(from = 6, to = 7),
     ],
     exportSchema = true,
 )

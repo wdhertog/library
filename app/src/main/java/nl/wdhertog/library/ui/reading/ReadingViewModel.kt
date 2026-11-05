@@ -43,17 +43,20 @@ class ReadingViewModel(
 
     val state: StateFlow<ReadingUiState?> =
         combine(
-            books.observeLibrary(), reading.observeSessions(), reading.observeGoals(), series.observeSummaries(), year,
-        ) { library, sessions, goals, seriesSummaries, year ->
+            books.observeLibrary(),
+            combine(reading.observeSessions(), reading.observeLoggedDays()) { sessions, logged -> sessions to logged },
+            reading.observeGoals(), series.observeSummaries(), year,
+        ) { library, (sessions, logged), goals, seriesSummaries, year ->
             val byId = library.associateBy { it.book.id }
+            val days = Streaks.readingDays(sessions, logged)
             ReadingUiState(
                 years = ReadingStats.years(sessions),
                 current = ReadingStats.current(sessions, byId),
                 wantToRead = library.filter { it.book.wantToRead }.sortedByDescending { it.book.addedAt },
                 stats = ReadingStats.forYear(year, sessions, byId, goals.firstOrNull { it.year == year }?.target),
                 undated = ReadingStats.undated(sessions),
-                streaks = Streaks.of(sessions),
-                badges = Achievements.evaluate(sessions, byId, goals, seriesSummaries),
+                streaks = Streaks.of(sessions, days = days),
+                badges = Achievements.evaluate(sessions, byId, goals, seriesSummaries, days),
             )
         }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

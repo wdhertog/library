@@ -88,6 +88,12 @@ interface SyncDao {
     @Query("SELECT * FROM sync_outbox WHERE seq > :seq ORDER BY seq")
     suspend fun outboxAfter(seq: Long): List<SyncOutbox>
 
+    @Query("SELECT COUNT(*) FROM sync_outbox")
+    suspend fun outboxCount(): Int
+
+    @Query("DELETE FROM sync_outbox WHERE seq IN (:seqs)")
+    suspend fun deleteOutbox(seqs: List<Long>)
+
     // --- Records op uuid ---
 
     @Query("SELECT * FROM book WHERE uuid = :uuid") suspend fun book(uuid: String): Book?

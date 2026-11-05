@@ -67,12 +67,18 @@ class InMemorySyncStore : SyncStore {
     }
 
     override suspend fun appendOutbox(entity: String, uuid: String, fields: String, hlc: String, deleted: Boolean): Long {
-        val seq = outbox.size + 1L
+        val seq = maxOf(outbox.maxOfOrNull { it.seq } ?: 0, outboxCleared) + 1
         outbox += SyncChange(seq, entity, uuid, kotlinx.serialization.json.Json.parseToJsonElement(fields) as JsonObject, hlc, deleted)
         return seq
     }
 
     override suspend fun outboxAfter(seq: Long) = outbox.filter { it.seq > seq }
+    override suspend fun outboxCount() = outbox.size
+    override suspend fun deleteOutbox(seqs: List<Long>) {
+        outbox.lastOrNull()?.let { outboxCleared = maxOf(outboxCleared, it.seq) }
+        outbox.removeAll { it.seq in seqs }
+    }
+    private var outboxCleared = 0L
     override suspend fun afterApply(touched: Set<Pair<String, String>>) = Unit
 
     /** updatedAt per record voor het eerste samenvoegen; standaard 0. */

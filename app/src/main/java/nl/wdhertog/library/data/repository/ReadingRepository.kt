@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import nl.wdhertog.library.data.db.DatePrecision
 import nl.wdhertog.library.data.db.LibraryDatabase
+import nl.wdhertog.library.data.db.ReadingDay
 import nl.wdhertog.library.data.db.ReadingGoal
 import nl.wdhertog.library.data.db.ReadingSession
 import nl.wdhertog.library.data.db.ReadingStatus
@@ -34,10 +35,15 @@ class ReadingRepository(private val db: LibraryDatabase) {
         dao.setWantToRead(bookId, false, Instant.now())
     }
 
-    suspend fun updateProgress(sessionId: Long, page: Int?, percent: Int?) {
-        val session = dao.get(sessionId) ?: return
+    suspend fun updateProgress(sessionId: Long, page: Int?, percent: Int?, today: LocalDate = LocalDate.now()) = db.withTransaction {
+        val session = dao.get(sessionId) ?: return@withTransaction
         dao.update(session.copy(progressPage = page, progressPercent = percent, updatedAt = Instant.now()))
+        // Voor de dagstreak: vandaag gelezen.
+        dao.logDay(ReadingDay(today, session.bookId))
     }
+
+    /** Dagen met bijgewerkte voortgang; samen met begin- en einddatums van sessies de leesdagen. */
+    fun observeLoggedDays(): Flow<List<LocalDate>> = dao.observeLoggedDays()
 
     /** Nieuwe sessie (bijv. een boek dat je vroeger las) of een bestaande bijwerken (id != 0). */
     suspend fun save(session: ReadingSession) = db.withTransaction {

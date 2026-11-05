@@ -45,6 +45,8 @@ interface SyncStore {
 
     suspend fun appendOutbox(entity: String, uuid: String, fields: String, hlc: String, deleted: Boolean): Long
     suspend fun outboxAfter(seq: Long): List<SyncChange>
+    suspend fun outboxCount(): Int
+    suspend fun deleteOutbox(seqs: List<Long>)
 
     /** Na het toepassen: afgeleide gegevens bijwerken (zoektekst, verweesde werken en auteurs). */
     suspend fun afterApply(touched: Set<Pair<String, String>>)
@@ -83,7 +85,22 @@ class SyncEngine(
     /** De klokstand bewaren, zodat die na een herstart niet terugloopt. */
     private val saveClock: suspend (String) -> Unit,
 ) {
-    suspend fun prepareOutgoing(): Int = store.transaction { prepareDirty() }
+    suspend fun prepareOutgoing(): Int = store.transaction {
+        prepareDirty().also { compactIfNeeded() }
+    }
+
+    /** Aantal outbox-regels na de vorige opruiming; -1 = nog niet opgeruimd sinds de start. */
+    private var compactedAt = -1
+
+    /** Opruimen als de outbox flink gegroeid is sinds de vorige keer (en dus niet bij elke sessie). */
+    private suspend fun compactIfNeeded() {
+        val count = store.outboxCount()
+        val threshold = if (compactedAt < 0) COMPACT_EVERY else compactedAt + COMPACT_EVERY
+        if (count <= threshold) return
+        val removable = removableOutbox(store.outboxAfter(0))
+        if (removable.isNotEmpty()) store.deleteOutbox(removable)
+        compactedAt = count - removable.size
+    }
 
     /** Lokale wijzigingen een tijdstempel geven en in de outbox zetten; binnen een transactie aanroepen. */
     private suspend fun prepareDirty(): Int {
@@ -180,6 +197,32 @@ class SyncEngine(
         const val DETACHED = "{\"_detached\":true}"
 
         private fun parse(json: String): JsonObject = Json.parseToJsonElement(json).jsonObject
+
+        /** Pas opruimen als er zoveel regels bij zijn gekomen. */
+        internal const val COMPACT_EVERY = 1000
+
+        /**
+         * Outbox-regels die niets meer toevoegen: alle velden zijn later voor hetzelfde record opnieuw
+         * verstuurd, of het record is later verwijderd. Een telefoon die nog achterloopt, krijgt dan alleen
+         * de nieuwere regel; die heeft per veld de nieuwste waarde en tijdstempel (in de outbox lopen de
+         * tijdstempels per veld op), dus het resultaat is hetzelfde. Zo groeit de outbox niet eindeloos.
+         */
+        internal fun removableOutbox(entries: List<SyncChange>): List<Long> {
+            val laterFields = mutableMapOf<Pair<String, String>, MutableSet<String>>()
+            val laterDeleted = mutableSetOf<Pair<String, String>>()
+            val removable = mutableListOf<Long>()
+            for (entry in entries.sortedByDescending { it.seq }) {
+                val key = entry.entity to entry.uuid
+                val seen = laterFields.getOrPut(key) { mutableSetOf() }
+                when {
+                    key in laterDeleted -> removable += entry.seq
+                    !entry.deleted && entry.fields.keys.isNotEmpty() && seen.containsAll(entry.fields.keys) -> removable += entry.seq
+                }
+                seen += entry.fields.keys
+                if (entry.deleted) laterDeleted += key
+            }
+            return removable
+        }
 
         /** Velden waarvan de waarde anders is dan in de schaduw; een ontbrekend veld telt als null. */
         internal fun changedFields(old: JsonObject, current: JsonObject): Map<String, JsonElement> =

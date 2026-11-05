@@ -21,7 +21,7 @@ import java.util.UUID
         ForeignKey(Location::class, ["id"], ["locationId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(Person::class, ["id"], ["borrowedFromPersonId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("isbn13"), Index("locationId"), Index("borrowedFromPersonId"), Index("hirtId"), Index("importRunId")],
+    indices = [Index("isbn13"), Index("locationId"), Index("borrowedFromPersonId"), Index("hirtId"), Index("importRunId"), Index("uuid")],
 )
 data class Book(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -77,7 +77,7 @@ data class Book(
 @Entity(
     tableName = "work",
     foreignKeys = [ForeignKey(Series::class, ["id"], ["seriesId"], onDelete = ForeignKey.SET_NULL)],
-    indices = [Index("seriesId")],
+    indices = [Index("seriesId"), Index("uuid")],
 )
 data class Work(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -139,7 +139,7 @@ data class BookWork(
     val position: Int,
 )
 
-@Entity(tableName = "series", indices = [Index("name")])
+@Entity(tableName = "series", indices = [Index("name"), Index("uuid")])
 data class Series(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val uuid: String = UUID.randomUUID().toString(),
@@ -176,7 +176,7 @@ data class SeriesPart(
 @Entity(
     tableName = "location",
     foreignKeys = [ForeignKey(Location::class, ["id"], ["parentId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("parentId")],
+    indices = [Index("parentId"), Index("uuid")],
 )
 data class Location(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -188,7 +188,7 @@ data class Location(
     val updatedAt: Instant = Instant.now(),
 )
 
-@Entity(tableName = "person", indices = [Index("name")])
+@Entity(tableName = "person", indices = [Index("name"), Index("uuid")])
 data class Person(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val uuid: String = UUID.randomUUID().toString(),
@@ -204,7 +204,7 @@ data class Person(
         ForeignKey(Book::class, ["id"], ["bookId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(Person::class, ["id"], ["personId"], onDelete = ForeignKey.SET_NULL),
     ],
-    indices = [Index("bookId"), Index("personId")],
+    indices = [Index("bookId"), Index("personId"), Index("uuid")],
 )
 data class Loan(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -240,6 +240,21 @@ data class ReadingSession(
     val rating: Double? = null,
     val review: String? = null,
     val updatedAt: Instant = Instant.now(),
+)
+
+/**
+ * Een dag waarop je in een boek las (voortgang bijgewerkt), voor de dagstreak. Begin- en einddatums
+ * van leessessies tellen ook mee, maar staan niet hier. Persoonlijk: niet gesynchroniseerd.
+ */
+@Entity(
+    tableName = "reading_log",
+    primaryKeys = ["date", "bookId"],
+    foreignKeys = [ForeignKey(Book::class, ["id"], ["bookId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("bookId")],
+)
+data class ReadingDay(
+    val date: LocalDate,
+    val bookId: Long,
 )
 
 @Entity(tableName = "reading_goal")

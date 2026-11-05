@@ -53,4 +53,52 @@ class ReadingStreaksTest {
         assertNull(Streaks.monthsReachedOn(sessions, 4))
         assertEquals(Streak(0, 0, false), Streaks.of(emptyList(), LocalDate.of(2026, 1, 1)).months)
     }
+
+    private fun days(vararg spec: String): Set<LocalDate> = spec.flatMap { range ->
+        val (from, to) = if (".." in range) range.split("..") else listOf(range, range)
+        generateSequence(LocalDate.parse(from)) { it.plusDays(1) }.takeWhile { !it.isAfter(LocalDate.parse(to)) }.toList()
+    }.toSet()
+
+    @Test
+    fun `day streak allows one free day per week`() {
+        // 2026-11-02 is een maandag. Week 1: woensdag vrij; week 2 (vanaf 9 nov): elke dag.
+        val read = days("2026-11-02..2026-11-03", "2026-11-05..2026-11-12")
+        assertEquals(11, Streaks.currentDays(read, LocalDate.of(2026, 11, 12)))
+        // Vandaag (13 nov) nog niet gelezen: de streak loopt nog.
+        assertEquals(11, Streaks.currentDays(read, LocalDate.of(2026, 11, 13)))
+        // 13 en 14 nov allebei niet: twee gemiste dagen in één week, weg.
+        assertEquals(0, Streaks.currentDays(read, LocalDate.of(2026, 11, 15)))
+    }
+
+    @Test
+    fun `two free days in one week break the streak`() {
+        // Ma 2 en wo 4 nov gelezen, di 3 en do 5 nov niet: alleen vanaf wo 4 telt.
+        val read = days("2026-11-01", "2026-11-02", "2026-11-04", "2026-11-06..2026-11-08")
+        assertEquals(5, Streaks.currentDays(read, LocalDate.of(2026, 11, 8)))
+        val sessions = listOf(read("2026-11-04"))
+        val streaks = Streaks.of(sessions, LocalDate.of(2026, 11, 8), read)
+        assertEquals(Streak(current = 5, longest = 5, thisPeriod = true), streaks.days)
+    }
+
+    @Test
+    fun `longest day streak and when it was reached`() {
+        val read = days("2025-03-03..2025-03-09", "2025-03-11..2025-03-20", "2025-06-01..2025-06-03")
+        // 3 t/m 20 maart, met maandag 10 maart als vrije dag: 18 dagen.
+        assertEquals(LocalDate.of(2025, 3, 9), Streaks.daysReachedOn(read, 7))
+        assertEquals(18, Streaks.of(emptyList(), LocalDate.of(2025, 6, 3), read).days.longest)
+        assertEquals(3, Streaks.of(emptyList(), LocalDate.of(2025, 6, 3), read).days.current)
+        assertEquals(null, Streaks.daysReachedOn(read, 30))
+    }
+
+    @Test
+    fun `reading days come from the log and from session dates`() {
+        val sessions = listOf(
+            ReadingSession(id = 1, bookId = 1, startedAt = LocalDate.of(2026, 1, 1), finishedAt = LocalDate.of(2026, 1, 9), status = ReadingStatus.FINISHED),
+            ReadingSession(id = 2, bookId = 2, startedAt = LocalDate.of(2026, 1, 1), finishedAt = LocalDate.of(2026, 1, 1), datePrecision = DatePrecision.YEAR, status = ReadingStatus.FINISHED),
+        )
+        assertEquals(
+            setOf(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 9)),
+            Streaks.readingDays(sessions, listOf(LocalDate.of(2026, 1, 5))),
+        )
+    }
 }

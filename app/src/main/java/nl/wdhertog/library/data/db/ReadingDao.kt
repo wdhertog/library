@@ -86,6 +86,13 @@ interface ReadingDao {
     @Query("UPDATE book SET wantToRead = :wantToRead, updatedAt = :now WHERE id = :bookId")
     suspend fun setWantToRead(bookId: Long, wantToRead: Boolean, now: java.time.Instant)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun logDay(day: ReadingDay)
+
+    /** Alle dagen met bijgewerkte voortgang, voor de dagstreak. */
+    @Query("SELECT DISTINCT date FROM reading_log")
+    fun observeLoggedDays(): Flow<List<java.time.LocalDate>>
+
     @Query("SELECT * FROM reading_goal")
     fun observeGoals(): Flow<List<ReadingGoal>>
 

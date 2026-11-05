@@ -218,6 +218,11 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
         SyncChange(it.seq, it.entity, it.uuid, Json.parseToJsonElement(it.fields).jsonObject, it.hlc, it.deleted)
     }
 
+    override suspend fun outboxCount() = dao.outboxCount()
+
+    // In stukken: SQLite heeft een grens aan het aantal parameters per query.
+    override suspend fun deleteOutbox(seqs: List<Long>) = seqs.chunked(500).forEach { dao.deleteOutbox(it) }
+
     override suspend fun afterApply(touched: Set<Pair<String, String>>) {
         books.deleteOrphans()
         val bookIds = touched.mapNotNull { (entity, uuid) ->
