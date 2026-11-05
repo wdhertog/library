@@ -23,11 +23,14 @@ object Isbn {
         return sum % 11 == 0
     }
 
-    /** Geeft een geldig ISBN-13 terug voor elke geldige ISBN-10/13-invoer, anders null. */
+    /**
+     * Geeft een geldig ISBN-13 terug voor elke geldige ISBN-10/13-invoer, anders null. Een 13-cijferige
+     * code moet met 978 of 979 beginnen: andere EAN-13's (een pak koffie) zijn geen boek.
+     */
     fun toIsbn13(raw: String): String? {
         val isbn = clean(raw)
         return when {
-            isValidIsbn13(isbn) -> isbn
+            isValidIsbn13(isbn) -> isbn.takeIf { it.startsWith("978") || it.startsWith("979") }
             isValidIsbn10(isbn) -> {
                 val body = "978" + isbn.take(9)
                 body + checkDigit13(body)

@@ -65,7 +65,9 @@ object CsvExport {
     }
 
     private fun field(value: String?): String {
-        val text = value.orEmpty()
+        // Begint een titel of notitie met = + - of @, dan voert Excel hem uit als formule: een ' ervoor
+        // maakt er gewone tekst van (Excel toont de ' niet).
+        val text = value.orEmpty().let { if (it.isNotEmpty() && it[0] in "=+-@\t\r") "'$it" else it }
         return if (text.any { it == ';' || it == '"' || it == '\n' || it == '\r' }) "\"" + text.replace("\"", "\"\"") + "\"" else text
     }
 }

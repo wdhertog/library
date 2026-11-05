@@ -14,6 +14,9 @@ import androidx.work.WorkerParameters
 import nl.wdhertog.library.LibraryApp
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
@@ -25,9 +28,18 @@ object AutoBackupNames {
 
     fun name(date: LocalDate) = "$PREFIX$date.zip"
 
-    /** Oudste automatische back-ups boven de [keep] nieuwste; andere bestanden blijven altijd staan. */
-    fun toDelete(names: List<String>, keep: Int = KEEP): List<String> =
-        names.filter { it.startsWith(PREFIX) && it.endsWith(".zip") }.sortedDescending().drop(keep)
+    /** Achtergebleven van een afgebroken back-up (zie AutoBackupWorker.publish). */
+    const val PART_SUFFIX = "-bezig.zip"
+
+    /**
+     * Oudste automatische back-ups boven de [keep] nieuwste, plus achtergebleven halve bestanden;
+     * andere bestanden blijven altijd staan.
+     */
+    fun toDelete(names: List<String>, keep: Int = KEEP): List<String> {
+        val auto = names.filter { it.startsWith(PREFIX) && it.endsWith(".zip") }
+        val (parts, complete) = auto.partition { it.endsWith(PART_SUFFIX) }
+        return complete.sortedDescending().drop(keep) + parts
+    }
 }
 
 /** Instellingen en status van de automatische back-up (gedeeld met het scherm). */
@@ -66,13 +78,15 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
         val resolver = applicationContext.contentResolver
         return try {
             val dir = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
-            val existing = children(tree)
             val name = AutoBackupNames.name(LocalDate.now())
-            // Vandaag al een automatische back-up: die vervangen.
-            existing[name]?.let { DocumentsContract.deleteDocument(resolver, it) }
-            val file = DocumentsContract.createDocument(resolver, dir, "application/zip", name) ?: error("Kan geen bestand maken in de map")
-            resolver.openOutputStream(file)?.use { (applicationContext as LibraryApp).container.backupService.createBackup(it) }
-                ?: error("Kan niet schrijven in de map")
+            // Eerst in de app maken; daarna pas in de map, zodat een mislukte kopie niets kapot maakt.
+            val temp = File(applicationContext.cacheDir, "auto-back-up.zip")
+            try {
+                temp.outputStream().use { (applicationContext as LibraryApp).container.backupService.createBackup(it) }
+                withContext(Dispatchers.IO) { publish(tree, dir, temp, name) }
+            } finally {
+                temp.delete()
+            }
             AutoBackupNames.toDelete(children(tree).keys.toList()).forEach { old ->
                 children(tree)[old]?.let { DocumentsContract.deleteDocument(resolver, it) }
             }
@@ -86,6 +100,37 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
             }
             Result.failure()
         }
+    }
+
+    /**
+     * Zet [temp] als [name] in de map. Eerst onder een tijdelijke naam: mislukt het kopiëren, dan blijft een
+     * eerdere back-up van vandaag staan en blijft er geen half bestand achter.
+     */
+    private fun publish(tree: Uri, dir: Uri, temp: File, name: String) {
+        val resolver = applicationContext.contentResolver
+        val partName = name.removeSuffix(".zip") + AutoBackupNames.PART_SUFFIX
+        children(tree)[partName]?.let { DocumentsContract.deleteDocument(resolver, it) }
+        val part = DocumentsContract.createDocument(resolver, dir, "application/zip", partName) ?: error("Kan geen bestand maken in de map")
+        try {
+            copy(temp, part)
+        } catch (e: Exception) {
+            runCatching { DocumentsContract.deleteDocument(resolver, part) }
+            throw e
+        }
+        // Gelukt: nu pas de vorige van vandaag weg, en de nieuwe zijn echte naam geven.
+        children(tree)[name]?.let { DocumentsContract.deleteDocument(resolver, it) }
+        val renamed = runCatching { DocumentsContract.renameDocument(resolver, part, name) }.getOrNull()
+        if (renamed == null) {
+            // Niet elke map kan hernoemen: dan nog een keer onder de echte naam schrijven.
+            val file = DocumentsContract.createDocument(resolver, dir, "application/zip", name) ?: error("Kan geen bestand maken in de map")
+            copy(temp, file)
+            DocumentsContract.deleteDocument(resolver, part)
+        }
+    }
+
+    private fun copy(from: File, to: Uri) {
+        applicationContext.contentResolver.openOutputStream(to)?.use { out -> from.inputStream().use { it.copyTo(out) } }
+            ?: error("Kan niet schrijven in de map")
     }
 
     /** Bestandsnaam → document-URI van alles in de map. */

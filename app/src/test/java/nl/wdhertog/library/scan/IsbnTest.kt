@@ -22,6 +22,13 @@ class IsbnTest {
     }
 
     @Test
+    fun `andere EAN-13 is geen ISBN`() {
+        assertTrue(Isbn.isValidIsbn13("8710398123459"))
+        assertEquals(null, Isbn.toIsbn13("8710398123459"))
+        assertEquals("9791032305690", Isbn.toIsbn13("979-10-323-0569-0"))
+    }
+
+    @Test
     fun `zet ISBN-10 om naar ISBN-13 en terug`() {
         assertEquals("9780804429573", Isbn.toIsbn13("0-8044-2957-X"))
         assertEquals("080442957X", Isbn.toIsbn10("9780804429573"))

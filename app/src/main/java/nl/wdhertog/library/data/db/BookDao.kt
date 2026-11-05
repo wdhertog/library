@@ -79,6 +79,10 @@ interface BookDao {
     @Query("UPDATE book SET enrichStatus = :status, updatedAt = :now WHERE id = :id")
     suspend fun setEnrichStatus(id: Long, status: EnrichStatus, now: java.time.Instant)
 
+    /** Alleen een boek dat nog in de wachtrij stond; een al verrijkt boek blijft verrijkt. */
+    @Query("UPDATE book SET enrichStatus = 'FAILED', updatedAt = :now WHERE id = :id AND enrichStatus IN ('NEW', 'QUICK')")
+    suspend fun markEnrichFailed(id: Long, now: java.time.Instant)
+
     @Query("SELECT COUNT(*) FROM book WHERE coverFile = :coverFile")
     suspend fun countCoverUses(coverFile: String): Int
 

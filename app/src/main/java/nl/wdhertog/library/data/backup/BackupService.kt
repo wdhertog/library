@@ -40,6 +40,18 @@ class BackupService(
 
 
     suspend fun createBackup(out: OutputStream): BackupManifest {
+        // Eerst in de app: de database staat dan maar kort op slot, ook als [out] naar een trage (cloud)map gaat.
+        val temp = File(context.cacheDir, "back-up-${System.nanoTime()}.zip")
+        try {
+            val manifest = temp.outputStream().use { writeBackup(it) }
+            withContext(Dispatchers.IO) { temp.inputStream().use { it.copyTo(out) } }
+            return manifest
+        } finally {
+            temp.delete()
+        }
+    }
+
+    private suspend fun writeBackup(out: OutputStream): BackupManifest {
         val db = database()
         val books = db.bookDao().countBooks()
         val schemaVersion = schemaVersion()

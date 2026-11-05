@@ -15,4 +15,10 @@ class AutoBackupNamesTest {
             AutoBackupNames.toDelete(names),
         )
     }
+
+    @Test
+    fun `a half written backup is cleaned up and does not count`() {
+        val names = (1..5).map { AutoBackupNames.name(LocalDate.of(2026, 10, it)) } + "bibliotheek-auto-2026-10-06-bezig.zip"
+        assertEquals(listOf("bibliotheek-auto-2026-10-06-bezig.zip"), AutoBackupNames.toDelete(names))
+    }
 }
