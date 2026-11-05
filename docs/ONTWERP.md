@@ -890,7 +890,7 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 
 ### 6. Leesstreaks
 
-**Gebouwd (v1, 5 november 2026):** `data/repository/ReadingStreaks.kt` (`Streaks.of`, `monthsReachedOn`), maanden en weken op rij; regel in de leesdoelkaart op Lezen (alleen bij het huidige jaar). De lopende reeks breekt pas als een hele maand voorbij is zonder uitgelezen boek. v2 (dagstreak) niet gebouwd.
+**Gebouwd (v1, 5 november 2026):** `data/repository/ReadingStreaks.kt` (`Streaks.of`, `monthsReachedOn`), maanden en weken op rij; regel in de leesdoelkaart op Lezen (alleen bij het huidige jaar). De lopende reeks breekt pas als een hele maand voorbij is zonder uitgelezen boek. v2 (dagstreak) gebouwd op 5 november 2026, zie hieronder.
 
 **Probleem:** de app weet per sessie wanneer je begon en klaar was, en de *laatste* voortgang, maar niet op welke dagen je las. Een dagstreak kan dus niet met de huidige gegevens.
 
@@ -908,7 +908,9 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 - optioneel: "Vandaag gelezen" als snelle knop in de widget;
 - streak = aaneengesloten dagen met een log; één dag "vrij" per week als instelling (anders demotiverend).
 
-**Open vraag:** is een dagstreak echt gewenst (dan moet je elke dag iets invullen), of is "maanden op rij" genoeg?
+**v2 gebouwd (5 november 2026, database versie 7):** tabel `reading_log (date, bookId)`, geschreven bij "Voortgang bijwerken"; begin- en einddatums van sessies tellen ook als leesdag (`Streaks.readingDays`). Eén vrije dag per week (ma–zo), vast, geen instelling. Vandaag nog niet gelezen breekt niets. Badges 7/30/100 dagen op rij. Geen widgetknop (besloten: eerst kijken of voortgang invullen genoeg is).
+
+**Open vraag (beantwoord):** is een dagstreak echt gewenst (dan moet je elke dag iets invullen), of is "maanden op rij" genoeg?
 
 ### 7. Badges
 

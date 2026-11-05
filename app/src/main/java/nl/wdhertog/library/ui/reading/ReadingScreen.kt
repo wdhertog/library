@@ -269,21 +269,32 @@ private fun YearOverviewLink(year: Int, onClick: () -> Unit) {
 }
 
 /**
- * Leesstreak in één regel, bijv. "🔥 7 maanden op rij · langste 11". Telt deze maand nog niet mee,
- * dan staat erbij dat je hem deze maand kunt voortzetten.
+ * Leesstreaks: dagen op rij (één vrije dag per week) en maanden op rij, bijv.
+ * "🔥 12 dagen op rij · langste 40" en "7 maanden op rij · langste 11". Telt vandaag of deze maand
+ * nog niet mee, dan staat erbij dat je hem nog kunt voortzetten.
  */
 internal fun streakLine(streaks: ReadingStreaks): String? {
-    val months = streaks.months
-    if (months.longest < 2) return null
-    val parts = mutableListOf<String>()
-    if (months.current >= 2) {
-        parts += "🔥 ${months.current} maanden op rij" + if (months.thisPeriod) "" else ", nog open deze maand"
-        if (months.longest > months.current) parts += "langste ${months.longest}"
-    } else {
-        parts += "Langste reeks: ${months.longest} maanden op rij"
+    val lines = mutableListOf<String>()
+    val days = streaks.days
+    if (days.current >= 2) {
+        var line = "🔥 ${days.current} dagen op rij" + if (days.thisPeriod) "" else ", vandaag nog niet"
+        if (days.longest > days.current) line += " · langste ${days.longest}"
+        lines += line
     }
-    if (streaks.weeks.current >= 2) parts += "${streaks.weeks.current} weken"
-    return parts.joinToString(" · ")
+    val months = streaks.months
+    if (months.longest >= 2) {
+        val flame = if (lines.isEmpty()) "🔥 " else ""
+        val parts = mutableListOf<String>()
+        if (months.current >= 2) {
+            parts += "$flame${months.current} maanden op rij" + if (months.thisPeriod) "" else ", nog open deze maand"
+            if (months.longest > months.current) parts += "langste ${months.longest}"
+        } else {
+            parts += "Langste reeks: ${months.longest} maanden op rij"
+        }
+        if (streaks.weeks.current >= 2) parts += "${streaks.weeks.current} weken"
+        lines += parts.joinToString(" · ")
+    }
+    return lines.takeIf { it.isNotEmpty() }?.joinToString("\n")
 }
 
 @Composable

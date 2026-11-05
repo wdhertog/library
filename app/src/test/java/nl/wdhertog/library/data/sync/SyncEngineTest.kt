@@ -197,4 +197,38 @@ class SyncEngineTest {
         assertEquals(setOf("owner"), SyncEngine.changedFields(old, new).keys)
         assertTrue(SyncEngine.changedFields(new, old).isEmpty().not())
     }
+
+    @Test
+    fun `outbox entries that add nothing are removable`() {
+        fun change(seq: Long, uuid: String, vararg fields: String, deleted: Boolean = false) = SyncChange(
+            seq, "book", uuid,
+            kotlinx.serialization.json.JsonObject(fields.associateWith { kotlinx.serialization.json.JsonPrimitive("x$seq") }),
+            "%015d-00000-a".format(seq), deleted,
+        )
+        val entries = listOf(
+            change(1, "b1", "title", "pages"),
+            change(2, "b1", "title"),
+            change(3, "b2", "title"),
+            change(4, "b1", "pages"), // nu is 1 helemaal overschreven
+            change(5, "b2", deleted = true), // 3 is overbodig
+            change(6, "b3", "title"),
+        )
+        assertEquals(listOf(3L, 1L), SyncEngine.removableOutbox(entries))
+    }
+
+    @Test
+    fun `a phone that missed compacted entries still ends up the same`() = runTest {
+        a.store.edit("book", "b1", "title" to "Een", "pages" to 100)
+        a.engine.prepareOutgoing()
+        repeat(SyncEngine.COMPACT_EVERY + 5) { i ->
+            wallA += 1
+            a.store.edit("book", "b1", "title" to "Titel $i")
+            a.engine.prepareOutgoing()
+        }
+        // Opgeruimd: van de ruim duizend regels blijven er maar een paar over.
+        assertTrue(a.engine.changesAfter(0).size < 20)
+        sync()
+        assertEquals("Titel ${SyncEngine.COMPACT_EVERY + 4}", b.store.field("book", "b1", "title"))
+        assertEquals(100, b.store.field("book", "b1", "pages")?.toString()?.toInt())
+    }
 }

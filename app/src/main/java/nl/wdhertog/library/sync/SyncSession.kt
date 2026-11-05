@@ -114,6 +114,12 @@ class SyncSession(
         val files: List<String>? = null,
         val file: String? = null,
         val data: String? = null,
+        /**
+         * Bij `changes`: tot welk volgnummer de verzender zijn outbox heeft bekeken. Ook als alles daarvan
+         * van de ontvanger zelf kwam (en dus niet meegestuurd is), hoeft die het niet opnieuw te vragen.
+         * Ontbreekt bij versies tot en met 1.6.
+         */
+        val upTo: Long? = null,
     )
 
     @Serializable
@@ -159,12 +165,13 @@ class SyncSession(
         if (known != null) peers.save(peer.copy(name = hello.name ?: peer.name))
 
         // Vóór het toepassen bepalen, anders gaat wat de ander net stuurde meteen terug.
-        val outgoing = changesFor(peerId, hello.since ?: 0)
-        val incoming = receive(reader).items.orEmpty().map { it.toChange() }
+        val (outgoing, upTo) = changesFor(peerId, hello.since ?: 0)
+        val changes = receive(reader)
+        val incoming = changes.items.orEmpty().map { it.toChange() }
         engine.applyIncoming(incoming)
-        peers.markReceived(peerId, incoming.maxOfOrNull { it.seq } ?: since, now())
+        peers.markReceived(peerId, receivedUpTo(changes, incoming, since), now())
 
-        send(writer, Message("changes", items = outgoing.map { it.toItem() }))
+        send(writer, Message("changes", items = outgoing.map { it.toItem() }, upTo = upTo))
         val done = receive(reader)
         if (done.type != "done") throw SyncRefused(done.message ?: "Onverwacht antwoord")
         val coversReceived = requestCovers(reader, writer)
@@ -227,21 +234,31 @@ class SyncSession(
 
         engine.prepareOutgoing()
         send(writer, Message("hello", deviceId, deviceName, since = peer.receivedUpTo))
-        val outgoing = changesFor(clientId, hello.since ?: 0)
-        send(writer, Message("changes", items = outgoing.map { it.toItem() }))
+        val (outgoing, upTo) = changesFor(clientId, hello.since ?: 0)
+        send(writer, Message("changes", items = outgoing.map { it.toItem() }, upTo = upTo))
 
-        val incoming = receive(reader).items.orEmpty().map { it.toChange() }
+        val changes = receive(reader)
+        val incoming = changes.items.orEmpty().map { it.toChange() }
         engine.applyIncoming(incoming)
-        peers.markReceived(clientId, incoming.maxOfOrNull { it.seq } ?: peer.receivedUpTo, now())
+        peers.markReceived(clientId, receivedUpTo(changes, incoming, peer.receivedUpTo), now())
         send(writer, Message("done"))
         serveCovers(reader, writer)
         val coversReceived = requestCovers(reader, writer)
         return SyncResult(hello.name ?: peer.name, received = incoming.size, sent = outgoing.size, paired = paired, coversReceived = coversReceived)
     }
 
-    /** Wat de ander nog niet heeft; wat van hemzelf komt (doorgegeven via een derde) hoeft niet terug. */
-    private suspend fun changesFor(peerId: String, since: Long) =
-        engine.changesAfter(since).filter { HybridClock.Timestamp.parse(it.hlc).deviceId != peerId }
+    /**
+     * Wat de ander nog niet heeft; wat van hemzelf komt (doorgegeven via een derde) hoeft niet terug.
+     * Met het hoogste bekeken volgnummer, ook als dat juist zo'n eigen wijziging was.
+     */
+    private suspend fun changesFor(peerId: String, since: Long): Pair<List<SyncChange>, Long> {
+        val all = engine.changesAfter(since)
+        return all.filter { HybridClock.Timestamp.parse(it.hlc).deviceId != peerId } to (all.maxOfOrNull { it.seq } ?: since)
+    }
+
+    /** Nieuwe stand van "tot hier ontvangen": [Message.upTo] als de ander die meestuurt, anders het hoogste ontvangen nummer. */
+    private fun receivedUpTo(changes: Message, incoming: List<SyncChange>, previous: Long): Long =
+        maxOf(previous, changes.upTo ?: 0, incoming.maxOfOrNull { it.seq } ?: 0)
 
     /** Vraagt de ontbrekende covers; geeft het aantal ontvangen bestanden. */
     private suspend fun requestCovers(reader: BufferedReader, writer: BufferedWriter): Int {

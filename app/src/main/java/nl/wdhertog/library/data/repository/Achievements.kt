@@ -45,6 +45,7 @@ object Achievements {
     private const val REREADS = 3
     private const val MIN_SERIES = 3
     private val streakMonths = listOf(6, 12)
+    private val streakDays = listOf(7, 30, 100)
 
     /** Een uitgelezen sessie met het moment waarop, gesorteerd: oudste eerst, zonder datum achteraan. */
     private data class Read(val session: ReadingSession, val item: BookListItem?) {
@@ -57,6 +58,8 @@ object Achievements {
         books: Map<Long, BookListItem>,
         goals: List<ReadingGoal>,
         series: List<SeriesSummary>,
+        /** Leesdagen voor de dagstreak (Streaks.readingDays). */
+        readingDays: Set<LocalDate> = Streaks.readingDays(sessions, emptyList()),
     ): List<Badge> {
         val reads = sessions.filter { it.status == ReadingStatus.FINISHED }
             .map { Read(it, books[it.bookId]) }
@@ -74,6 +77,8 @@ object Achievements {
             add(author(reads))
             add(reread(reads))
             streakMonths.forEach { n -> add(streak(sessions, n)) }
+            val longestDays = if (readingDays.isEmpty()) 0 else Streaks.of(emptyList(), days = readingDays).days.longest
+            streakDays.forEach { n -> add(dayStreak(readingDays, longestDays, n)) }
         }
     }
 
@@ -177,6 +182,15 @@ object Achievements {
         }
         val best = counts.values.maxOrNull() ?: 0
         return threshold("reread", BadgeKind.REREAD, "Herlezer", "Hetzelfde boek $REREADS keer uitgelezen", best, REREADS, at)
+    }
+
+    private fun dayStreak(days: Set<LocalDate>, longest: Int, length: Int): Badge {
+        val on = Streaks.daysReachedOn(days, length)
+        return Badge(
+            "streak-days-$length", BadgeKind.STREAK, "$length dagen op rij",
+            "$length dagen achter elkaar gelezen (één dag per week overslaan mag)",
+            progress = longest.coerceAtMost(length), target = length, achieved = on != null, achievedOn = on,
+        )
     }
 
     private fun streak(sessions: List<ReadingSession>, months: Int): Badge {

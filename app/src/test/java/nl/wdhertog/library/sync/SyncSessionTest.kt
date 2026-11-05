@@ -207,6 +207,18 @@ class SyncSessionTest {
     }
 
     @Test
+    fun `forwarded changes of my own still move my position forward`() {
+        pairAB()
+        a.store.edit("book", "b1", "title" to "Dictator")
+        exchange().first.getOrThrow()
+        // b heeft de wijziging van a in zijn outbox (om door te geven), maar stuurt die niet terug naar a.
+        val (client, _) = exchange()
+        assertEquals(0, client.getOrThrow().received)
+        val bOutboxEnd = runBlocking { b.store.outboxAfter(0).maxOf { it.seq } }
+        assertEquals(bOutboxEnd, a.peers.peers["b"]?.receivedUpTo)
+    }
+
+    @Test
     fun `cover names cannot be paths`() {
         assertEquals(true, CoverFiles.isValidName("80856c53-4d7f-42b4-aa20-e61c596da05d.jpg"))
         for (bad in listOf("../buiten.jpg", "a/b.jpg", "x.png", ".jpg", "x.jpg\n")) assertEquals(bad, false, CoverFiles.isValidName(bad))
