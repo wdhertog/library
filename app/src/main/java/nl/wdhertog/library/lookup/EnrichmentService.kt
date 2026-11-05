@@ -64,6 +64,7 @@ class EnrichmentService(
             repository.markEnrichFailed(bookId)
             return false
         }
+        var wikidataUnreachable = false
         val work = if (!wikidataEnabled()) null else try {
             wikidata.findWork(
                 titles = listOfNotNull(merged.title, merged.originalTitle),
@@ -73,8 +74,17 @@ class EnrichmentService(
             )
         } catch (e: CancellationException) {
             throw e
+        } catch (_: LookupException) {
+            wikidataUnreachable = true // geen verbinding of een foutcode: later opnieuw
+            null
         } catch (_: Exception) {
-            null // Wikidata is een aanvulling; zonder gaat het ook.
+            null // Onverwacht antwoord; Wikidata is een aanvulling, zonder gaat het ook.
+        }
+        if (wikidataUnreachable && !refresh) {
+            // Wat de bronnen gaven alvast tonen, maar het boek in de wachtrij laten: anders blijven serie en
+            // deelnummer voorgoed leeg omdat Wikidata toevallig even niet bereikbaar was.
+            repository.applyMetadata(bookId, merged, refresh = false, status = EnrichStatus.QUICK)
+            throw LookupException("Wikidata niet bereikbaar")
         }
         repository.applyMetadata(bookId, MetadataMerger.withWikidata(merged, work), refresh, EnrichStatus.ENRICHED)
         return true

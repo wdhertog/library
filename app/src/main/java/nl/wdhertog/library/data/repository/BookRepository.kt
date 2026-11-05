@@ -73,7 +73,8 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
 
     suspend fun requeueFailed(): Int = dao.requeueFailed()
 
-    suspend fun markEnrichFailed(bookId: Long) = dao.setEnrichStatus(bookId, EnrichStatus.FAILED, Instant.now())
+    /** Niet te vinden; een boek dat al verrijkt was (bijv. bij "Gegevens opnieuw ophalen") blijft dat. */
+    suspend fun markEnrichFailed(bookId: Long) = dao.markEnrichFailed(bookId, Instant.now())
 
     suspend fun loadDraft(bookId: Long): BookDraft? {
         val book = dao.getBook(bookId) ?: return null

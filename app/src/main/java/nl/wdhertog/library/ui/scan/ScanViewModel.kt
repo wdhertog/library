@@ -164,7 +164,7 @@ class ScanViewModel(
         // Dezelfde code blijft in beeld; alleen de eerste bevestigde waarneming telt.
         if (previous != null && now - previous < REPEAT_WINDOW_MS) return
 
-        val isbn13 = Isbn.toIsbn13(raw)?.takeIf { it.startsWith("978") || it.startsWith("979") }
+        val isbn13 = Isbn.toIsbn13(raw)
         if (isbn13 == null) {
             _signals.trySend(ScanSignal.NOT_AN_ISBN)
             return

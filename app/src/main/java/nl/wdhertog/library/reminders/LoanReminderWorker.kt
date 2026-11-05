@@ -57,13 +57,25 @@ class LoanReminderWorker(context: Context, params: WorkerParameters) : Coroutine
             )
         }
 
+        val manager = NotificationManagerCompat.from(applicationContext)
+        // Teruggebracht of andere datum: de melding intrekken en de sleutel vergeten (anders groeit dit eindeloos).
+        val current = reminders.map { it.key }.toSet()
+        val stale = prefs.all.keys.filter { (it.startsWith("loan-") || it.startsWith("borrowed-")) && it !in current }
+        if (stale.isNotEmpty()) {
+            stale.forEach { key ->
+                manager.cancel(key, NOTIFICATION_ID)
+                manager.cancel(key.hashCode()) // zoals versies tot 1.6 ze plaatsten
+            }
+            prefs.edit { stale.forEach { remove(it) } }
+        }
+
         if (reminders.isEmpty() || !canNotify()) return Result.success()
         ensureChannel()
-        val manager = NotificationManagerCompat.from(applicationContext)
         reminders.forEach { reminder ->
-            val last = prefs.getString(reminder.key, null)?.let(LocalDate::parse)
+            val last = prefs.getString(reminder.key, null)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
             if (!ReminderPolicy.shouldNotify(reminder.remindOn, today, last)) return@forEach
-            manager.notify(reminder.key.hashCode(), notification(reminder))
+            // De sleutel als tag: geen botsende ids, en later gericht in te trekken.
+            manager.notify(reminder.key, NOTIFICATION_ID, notification(reminder))
             prefs.edit { putString(reminder.key, today.toString()) }
         }
         return Result.success()
@@ -104,6 +116,7 @@ class LoanReminderWorker(context: Context, params: WorkerParameters) : Coroutine
     companion object {
         private const val CHANNEL = "loans"
         private const val PREFS = "loan-reminders"
+        private const val NOTIFICATION_ID = 1
         private const val WORK_NAME = "loan-reminders"
 
         /** Eenmalig, nu meteen (voor testen). */
