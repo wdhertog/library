@@ -171,6 +171,42 @@ class SyncSessionTest {
     }
 
     @Test
+    fun `huge hello without newline is refused before checking`() = runBlocking(Dispatchers.IO) {
+        val reader = java.io.BufferedReader(java.io.StringReader("x".repeat(SyncSession.HELLO_MAX_CHARS + 10)))
+        val writer = java.io.StringWriter().buffered()
+        var acquired = false
+        val result = runCatching { b.session.accept(reader, writer, a.fingerprint, null, acquire = { acquired = true; true }) }
+        assertThrows(SyncRefused::class.java) { result.getOrThrow() }
+        assertEquals(false, acquired)
+    }
+
+    @Test
+    fun `session is claimed only after the other phone is checked`() {
+        pairAB()
+        // Onbekende telefoon: geweigerd zonder de sessie te claimen.
+        var claims = 0
+        runBlocking(Dispatchers.IO) {
+            val hello = "{\"type\":\"hello\",\"deviceId\":\"vreemd\"}\n"
+            val result = runCatching {
+                b.session.accept(hello.reader().buffered(), java.io.StringWriter().buffered(), "fp-vreemd", null, acquire = { claims++; true })
+            }
+            assertThrows(SyncRefused::class.java) { result.getOrThrow() }
+        }
+        assertEquals(0, claims)
+        // Gekoppelde telefoon terwijl er al een sessie loopt: "bezig".
+        runBlocking(Dispatchers.IO) {
+            val hello = "{\"type\":\"hello\",\"deviceId\":\"a\"}\n"
+            val out = java.io.StringWriter()
+            val result = runCatching {
+                out.buffered().use { w -> b.session.accept(hello.reader().buffered(), w, a.fingerprint, null, acquire = { claims++; false }) }
+            }
+            assertThrows(SyncBusy::class.java) { result.getOrThrow() }
+            assertEquals(true, out.toString().contains("bezig"))
+        }
+        assertEquals(1, claims)
+    }
+
+    @Test
     fun `cover names cannot be paths`() {
         assertEquals(true, CoverFiles.isValidName("80856c53-4d7f-42b4-aa20-e61c596da05d.jpg"))
         for (bad in listOf("../buiten.jpg", "a/b.jpg", "x.png", ".jpg", "x.jpg\n")) assertEquals(bad, false, CoverFiles.isValidName(bad))
