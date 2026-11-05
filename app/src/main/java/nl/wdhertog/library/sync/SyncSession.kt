@@ -34,10 +34,8 @@ interface CoverFiles {
     suspend fun write(name: String, data: ByteArray)
 
     companion object {
-        private val validName = Regex("[A-Za-z0-9-]{1,64}\\.jpg")
-
         /** Alleen gewone namen: nooit een pad, zodat de ander niet buiten de covermap kan schrijven. */
-        fun isValidName(name: String) = validName.matches(name)
+        fun isValidName(name: String) = nl.wdhertog.library.covers.CoverStore.isValidName(name)
 
         const val MAX_BYTES = 8 shl 20
 
@@ -53,6 +51,9 @@ interface CoverFiles {
 data class PendingPairing(val secret: String, val expiresAt: Long)
 
 class SyncRefused(message: String) : Exception(message)
+
+/** De ander is gecontroleerd, maar deze telefoon is al met een andere bezig. */
+class SyncBusy : Exception("Al bezig met een andere telefoon")
 
 data class SyncResult(
     val peerName: String,
@@ -120,8 +121,15 @@ class SyncSession(
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
 
-    private companion object {
-        const val SNAPSHOT = "snapshot"
+    companion object {
+        private const val SNAPSHOT = "snapshot"
+
+        /** Een `hello` vóór de controle: klein en snel, anders kan iedereen op het netwerk de app ophouden of vullen. */
+        const val HELLO_MAX_CHARS = 16 * 1024
+        const val HELLO_MAX_MILLIS = 15_000L
+
+        /** Na de controle: een volledige eerste uitwisseling of een cover (8 MB, in Base64) moet passen. */
+        const val MESSAGE_MAX_CHARS = 64 * 1024 * 1024
     }
 
     /**
@@ -181,8 +189,15 @@ class SyncSession(
      * Kant van de telefoon die de verbinding aanneemt. [clientFingerprint] komt uit de TLS-verbinding;
      * [pending] is er alleen zolang deze telefoon een koppelcode laat zien.
      */
-    suspend fun accept(reader: BufferedReader, writer: BufferedWriter, clientFingerprint: String, pending: PendingPairing?): SyncResult {
-        val hello = receive(reader)
+    suspend fun accept(
+        reader: BufferedReader,
+        writer: BufferedWriter,
+        clientFingerprint: String,
+        pending: PendingPairing?,
+        /** Pas na de controle: claimt de sessie; false = al bezig met een andere telefoon. */
+        acquire: () -> Boolean = { true },
+    ): SyncResult {
+        val hello = receive(reader, HELLO_MAX_CHARS, System.nanoTime() + HELLO_MAX_MILLIS * 1_000_000)
         val clientId = hello.deviceId ?: return refuse(writer, "Onbekende telefoon")
         val existing = peers.find(clientId)
         var paired = false
@@ -191,11 +206,14 @@ class SyncSession(
             existing != null && existing.fingerprint == clientFingerprint -> existing
             hello.proof != null && pending != null && now() < pending.expiresAt &&
                 constantTimeEquals(hello.proof, PairingCode.proof(pending.secret, clientId, clientFingerprint)) ->
-                KnownPeer(clientId, hello.name ?: "Telefoon", clientFingerprint, 0).also {
-                    if (!snapshotOnly) { peers.save(it); paired = true }
-                }
+                KnownPeer(clientId, hello.name ?: "Telefoon", clientFingerprint, 0).also { paired = !snapshotOnly }
             else -> return refuse(writer, "Deze telefoon is niet gekoppeld")
         }
+        if (!acquire()) {
+            refuseBusy(writer)
+            throw SyncBusy()
+        }
+        if (paired) peers.save(peer)
 
         if (snapshotOnly) {
             // Eerst alles klaarzetten: wat de ander bij het samenvoegen laat winnen, krijgt dan een latere tijd.
@@ -267,8 +285,21 @@ class SyncSession(
         writer.flush()
     }
 
-    private fun receive(reader: BufferedReader): Message =
-        json.decodeFromString(Message.serializer(), reader.readLine() ?: throw SyncRefused("Verbinding verbroken"))
+    private fun receive(reader: BufferedReader, maxChars: Int = MESSAGE_MAX_CHARS, deadlineNanos: Long? = null): Message =
+        json.decodeFromString(Message.serializer(), readLine(reader, maxChars, deadlineNanos) ?: throw SyncRefused("Verbinding verbroken"))
+
+    /** Als [BufferedReader.readLine], maar met een maximale lengte en eventueel een uiterste tijd. */
+    private fun readLine(reader: BufferedReader, maxChars: Int, deadlineNanos: Long?): String? {
+        val line = StringBuilder()
+        while (true) {
+            val c = reader.read()
+            if (c == -1) return if (line.isEmpty()) null else line.toString()
+            if (c == '\n'.code) return line.removeSuffix("\r").toString()
+            if (line.length >= maxChars) throw SyncRefused("Bericht te groot")
+            if (deadlineNanos != null && System.nanoTime() > deadlineNanos) throw SyncRefused("Te traag")
+            line.append(c.toChar())
+        }
+    }
 
     private fun SyncChange.toItem() = Item(seq, entity, uuid, fields, hlc, deleted)
     private fun Item.toChange() = SyncChange(seq, entity, uuid, fields, hlc, deleted)

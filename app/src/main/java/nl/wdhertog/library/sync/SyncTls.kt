@@ -26,13 +26,18 @@ class SyncTls(private val identity: SyncIdentity) {
         (context(AcceptAnyClient).serverSocketFactory.createServerSocket(port) as SSLServerSocket).apply { needClientAuth = true }
 
     fun connect(host: String, port: Int, expectedFingerprint: String, timeoutMillis: Int = 10_000): SSLSocket {
-        val plain = Socket().apply {
-            connect(InetSocketAddress(host, port), timeoutMillis)
-            soTimeout = timeoutMillis * 3
+        val plain = Socket()
+        try {
+            plain.connect(InetSocketAddress(host, port), timeoutMillis)
+            plain.soTimeout = timeoutMillis * 3
+            // autoClose = true: het sluiten van de TLS-socket sluit ook de gewone.
+            val socket = context(PinnedServer(expectedFingerprint)).socketFactory.createSocket(plain, host, port, true) as SSLSocket
+            socket.startHandshake()
+            return socket
+        } catch (e: Exception) {
+            runCatching { plain.close() }
+            throw e
         }
-        val socket = context(PinnedServer(expectedFingerprint)).socketFactory.createSocket(plain, host, port, true) as SSLSocket
-        socket.startHandshake()
-        return socket
     }
 
     private fun context(trust: X509ExtendedTrustManager) = SSLContext.getInstance("TLS").apply {

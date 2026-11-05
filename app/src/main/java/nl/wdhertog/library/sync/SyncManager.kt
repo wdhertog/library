@@ -88,6 +88,7 @@ class SyncManager(
     private val tls by lazy { SyncTls(identity) }
     private val discovery by lazy { Discovery(context, scope) }
     private val sessionLock = Mutex()
+    private val connections = kotlinx.coroutines.sync.Semaphore(MAX_CONNECTIONS)
     private val stateLock = Mutex()
     private var session: SyncSession? = null
     private var server: SSLServerSocket? = null
@@ -398,7 +399,14 @@ class SyncManager(
         serverJob = scope.launch(Dispatchers.IO) {
             while (isActive) {
                 val client = runCatching { socket.accept() as SSLSocket }.getOrNull() ?: break
-                launch { serve(client) }
+                // Begrensd aantal gelijktijdige verbindingen: een vloed aan verbindingen houdt geen threads vast.
+                if (!connections.tryAcquire()) {
+                    runCatching { client.close() }
+                    continue
+                }
+                launch {
+                    try { serve(client) } finally { connections.release() }
+                }
             }
         }
         autoJob = scope.launch { discovery.found.collect { autoSync(it.keys) } }
@@ -478,19 +486,24 @@ class SyncManager(
     }
 
     private suspend fun serve(socket: SSLSocket) = runCatching {
+        var locked = false
         socket.use {
-            it.soTimeout = 30_000
+            it.soTimeout = 15_000
             it.startHandshake()
             val fingerprint = SyncTls.peerFingerprint(it)
             val reader = it.inputStream.bufferedReader()
             val writer = it.outputStream.bufferedWriter()
-            if (!sessionLock.tryLock()) {
-                session().refuseBusy(writer)
-                return@use
-            }
             try {
-                _status.value = SyncStatus.Busy("Synchroniseren…")
-                val result = session().accept(reader, writer, fingerprint, pending)
+                // De sessie pas claimen als de ander gecontroleerd is: anders kan elk apparaat op het
+                // netwerk de synchronisatie blokkeren door niets (of heel langzaam iets) te sturen.
+                val result = session().accept(reader, writer, fingerprint, pending, acquire = {
+                    locked = sessionLock.tryLock()
+                    if (locked) {
+                        it.soTimeout = 30_000
+                        _status.value = SyncStatus.Busy("Synchroniseren…")
+                    }
+                    locked
+                })
                 when {
                     result.snapshot -> {
                         // Het controlescherm op de andere telefoon kan even duren.
@@ -509,7 +522,7 @@ class SyncManager(
                     }
                 }
             } finally {
-                sessionLock.unlock()
+                if (locked) sessionLock.unlock()
             }
         }
     }.onFailure {
@@ -533,6 +546,7 @@ class SyncManager(
         const val TAG = "SyncManager"
         const val RELEASE_ID = "nl.wdhertog.library"
         const val PAIRING_VALID_MILLIS = 10 * 60_000L
+        const val MAX_CONNECTIONS = 4
         const val AUTO_INTERVAL_MILLIS = 2 * 60_000L
         const val EDIT_QUIET_MILLIS = 5_000L
         const val EDIT_MAX_WAIT_MILLIS = 60_000L

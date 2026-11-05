@@ -11,6 +11,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.longOrNull
+import nl.wdhertog.library.covers.CoverStore
 import nl.wdhertog.library.data.db.Book
 import nl.wdhertog.library.data.db.BookFormat
 import nl.wdhertog.library.data.db.BookWork
@@ -107,7 +108,7 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                     translators = f.str("translators", b.translators), publisher = f.str("publisher", b.publisher),
                     publishedYear = f.int("publishedYear", b.publishedYear), pages = f.int("pages", b.pages),
                     format = f.enum("format", b.format) { BookFormat.valueOf(it) }, description = f.str("description", b.description),
-                    coverUrl = f.str("coverUrl", b.coverUrl), coverFile = f.str("coverFile", b.coverFile), tags = f.str("tags", b.tags),
+                    coverUrl = f.str("coverUrl", b.coverUrl), coverFile = f.str("coverFile", b.coverFile).let { if (it == null || CoverStore.isValidName(it)) it else b.coverFile }, tags = f.str("tags", b.tags),
                     ownership = f.enum("ownership", b.ownership) { Ownership.valueOf(it) } ?: Ownership.OWNED,
                     borrowedFromPersonId = f.ref("borrowedFrom", b.borrowedFromPersonId) { dao.person(it)?.id },
                     borrowedDueDate = f.date("borrowedDueDate", b.borrowedDueDate),

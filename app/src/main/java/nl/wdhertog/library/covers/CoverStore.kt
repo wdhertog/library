@@ -28,11 +28,11 @@ class CoverStore(context: Context) {
 
     /** Zonder te wachten verwijderen (bijv. bij het sluiten van een scherm). */
     fun discard(name: String) {
-        File(dir, name).delete()
+        if (isValidName(name)) File(dir, name).delete()
     }
 
     suspend fun delete(name: String?) {
-        if (name == null) return
+        if (name == null || !isValidName(name)) return
         withContext(Dispatchers.IO) { File(dir, name).delete() }
     }
 
@@ -47,10 +47,18 @@ class CoverStore(context: Context) {
         private const val MAX_SIDE = 1200
         private const val JPEG_QUALITY = 85
 
+        private val validName = Regex("[A-Za-z0-9-]{1,64}\\.jpg")
+
+        /**
+         * Alleen gewone bestandsnamen zoals [save] ze maakt: nooit een pad. De naam kan van een andere
+         * telefoon komen (sync), en mag dan niet buiten de covermap wijzen.
+         */
+        fun isValidName(name: String) = validName.matches(name)
+
         fun coverDir(context: Context) = File(context.filesDir, "covers")
 
         /** Wat de beeldlader nodig heeft: een URL van een bron, of een eigen foto (bestandsnaam). */
         fun model(context: Context, cover: String): Any =
-            if (cover.contains("://")) cover else File(coverDir(context), cover)
+            if (cover.contains("://") || !isValidName(cover)) cover else File(coverDir(context), cover)
     }
 }
