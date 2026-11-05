@@ -125,6 +125,9 @@ data class SeriesDetailRoute(val seriesId: Long)
 @Serializable
 data class YearOverviewRoute(val year: Int)
 
+@Serializable
+object BadgesRoute
+
 private data class TopLevel(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector)
 
 private val topLevel = listOf(
@@ -268,7 +271,11 @@ fun AppNavHost(launch: Launch? = null, onLaunchHandled: () -> Unit = {}) {
                 ReadingScreen(
                     onOpenBook = { navController.navigate(BookDetailRoute(it)) },
                     onYearOverview = { navController.navigate(YearOverviewRoute(it)) },
+                    onBadges = { navController.navigate(BadgesRoute) },
                 )
+            }
+            composable<BadgesRoute> { entry ->
+                nl.wdhertog.library.ui.reading.BadgesScreen(onBack = { navController.popFrom(entry) })
             }
             composable<YearOverviewRoute> { entry ->
                 nl.wdhertog.library.ui.reading.YearOverviewScreen(

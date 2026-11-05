@@ -890,6 +890,8 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 
 ### 6. Leesstreaks
 
+**Gebouwd (v1, 5 november 2026):** `data/repository/ReadingStreaks.kt` (`Streaks.of`, `monthsReachedOn`), maanden en weken op rij; regel in de leesdoelkaart op Lezen (alleen bij het huidige jaar). De lopende reeks breekt pas als een hele maand voorbij is zonder uitgelezen boek. v2 (dagstreak) niet gebouwd.
+
 **Probleem:** de app weet per sessie wanneer je begon en klaar was, en de *laatste* voortgang, maar niet op welke dagen je las. Een dagstreak kan dus niet met de huidige gegevens.
 
 **v1 — zonder schemawijziging (voorstel om mee te beginnen):**
@@ -909,6 +911,8 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 **Open vraag:** is een dagstreak echt gewenst (dan moet je elke dag iets invullen), of is "maanden op rij" genoeg?
 
 ### 7. Badges
+
+**Gebouwd (5 november 2026):** `data/repository/Achievements.kt` met de hele eerste set hieronder (serie: minstens 3 delen); kaart "Badges" op Lezen (laatste drie) en scherm `BadgesScreen` (behaald met datum, nog te halen met voortgang). Material Icons in een gouden cirkel. Nog niet: melding bij "Uitgelezen" en badges in het jaaroverzicht.
 
 **Doel:** mijlpalen zichtbaar maken op Lezen, afgeleid uit bestaande gegevens — niets opslaan.
 
