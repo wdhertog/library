@@ -16,8 +16,12 @@ class HybridClock(private val deviceId: String, private val wallClock: () -> Lon
         override fun toString(): String = "%015d-%05d-%s".format(millis, counter, deviceId)
 
         companion object {
+            private val format = Regex("(\\d{15})-(\\d{5})-(.+)")
+
+            /** Alleen de vaste breedte: een afwijkende tijdstempel zou de tekstvolgorde verstoren. */
             fun parse(text: String): Timestamp {
-                val (millis, counter, device) = text.split('-', limit = 3)
+                val (millis, counter, device) = format.matchEntire(text)?.destructured
+                    ?: throw IllegalArgumentException("Ongeldige tijdstempel")
                 return Timestamp(millis.toLong(), counter.toInt(), device)
             }
         }
@@ -34,14 +38,20 @@ class HybridClock(private val deviceId: String, private val wallClock: () -> Lon
     @Synchronized
     fun now(): Timestamp {
         val wall = wallClock()
-        last = if (wall > last.millis) Timestamp(wall, 0, deviceId) else last.copy(counter = last.counter + 1)
+        last = if (wall > last.millis) Timestamp(wall, 0, deviceId) else next(last.millis, last.counter + 1)
         return last
     }
+
+    /** Past de teller niet meer in vijf cijfers, dan een milliseconde verder. */
+    private fun next(millis: Long, counter: Int) =
+        if (counter > MAX_COUNTER) Timestamp(millis + 1, 0, deviceId) else Timestamp(millis, counter, deviceId)
 
     /** Een tijdstempel van de andere telefoon gezien: de eigen klok loopt daarna nooit achter. */
     @Synchronized
     fun receive(remote: Timestamp): Timestamp {
         val wall = wallClock()
+        // Een telefoon met een klok ver in de toekomst mag de klok van alle andere niet vastzetten.
+        if (remote.millis > wall + MAX_DRIFT_MILLIS) return now()
         val millis = maxOf(wall, last.millis, remote.millis)
         val counter = when {
             millis == last.millis && millis == remote.millis -> maxOf(last.counter, remote.counter) + 1
@@ -49,8 +59,13 @@ class HybridClock(private val deviceId: String, private val wallClock: () -> Lon
             millis == remote.millis -> remote.counter + 1
             else -> 0
         }
-        last = Timestamp(millis, counter, deviceId)
+        last = next(millis, counter)
         return last
+    }
+
+    private companion object {
+        const val MAX_COUNTER = 99_999
+        const val MAX_DRIFT_MILLIS = 24 * 60 * 60_000L
     }
 
     val current: Timestamp get() = last

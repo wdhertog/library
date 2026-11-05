@@ -9,7 +9,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
-import nl.wdhertog.library.lookup.LookupException
 import nl.wdhertog.library.lookup.LookupHttp
 import nl.wdhertog.library.lookup.sources.arr
 import nl.wdhertog.library.lookup.sources.str
@@ -59,7 +58,9 @@ class BookSearch(
     private suspend fun safe(block: suspend () -> List<SearchCandidate>): List<SearchCandidate> =
         try {
             block()
-        } catch (_: LookupException) {
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
+        } catch (_: Exception) { // ook een onverwacht antwoord (parsefout)
             emptyList()
         }
 

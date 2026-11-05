@@ -21,6 +21,25 @@ class HybridClockTest {
     }
 
     @Test
+    fun `a clock far in the future is not taken over`() {
+        val clock = HybridClock("a", wallClock = { 1_000L })
+        val day = 24 * 60 * 60_000L
+        val after = clock.receive(HybridClock.Timestamp(1_000L + 2 * day, 0, "b"))
+        assertEquals(1_000L, after.millis)
+    }
+
+    @Test
+    fun `counter rolls over into the next millisecond`() {
+        val clock = HybridClock("a", wallClock = { 1_000L })
+        clock.restore(HybridClock.Timestamp(1_000L, 99_999, "a").toString())
+        val next = clock.now()
+        assertEquals(1_001L, next.millis)
+        assertEquals(0, next.counter)
+        assertEquals(next.toString().length, HybridClock.Timestamp(1_000L, 0, "a").toString().length)
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) { HybridClock.Timestamp.parse("12-1-x") }
+    }
+
+    @Test
     fun `a newer remote time is taken over`() {
         val clock = HybridClock("a", wallClock = { 1_000L })
         clock.now()

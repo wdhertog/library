@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.withContext
 import nl.wdhertog.library.covers.Box
 import nl.wdhertog.library.covers.CoverImages
@@ -270,8 +272,9 @@ class ScanViewModel(
     private var coverLines: List<CoverLine> = emptyList()
 
     fun onCoverCaptured(image: ImageProxy, frame: Box, viewWidth: Float, viewHeight: Float) {
-        viewModelScope.launch {
-            val photo = withContext(Dispatchers.Default) { CoverImages.cropToFrame(image, frame, viewWidth, viewHeight) }
+        // ATOMIC + NonCancellable: het camerabeeld wordt altijd verwerkt en gesloten (zie CoverViewModel).
+        viewModelScope.launch(start = CoroutineStart.ATOMIC) {
+            val photo = withContext(Dispatchers.Default + NonCancellable) { CoverImages.cropToFrame(image, frame, viewWidth, viewHeight) }
             coverSearch.value = CoverSearchState.Working(photo, "Tekst lezen…")
             coverLines = runCatching { CoverRecognizer.recognize(photo) }.getOrDefault(emptyList())
             val query = CoverText.searchText(coverLines)

@@ -1,6 +1,7 @@
 package nl.wdhertog.library.data.backup
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -85,30 +86,70 @@ class BackupService(
      * Daarna moet de app opnieuw starten (zie restartApp).
      */
     suspend fun restore(zipFile: File) {
+        // Eerst alles uitpakken naast de huidige bibliotheek en controleren. Gaat daarbij iets mis (kapotte
+        // ZIP, vol geheugen, geen geldige database), dan blijft de huidige bibliotheek onaangeroerd.
+        val staging = File(context.filesDir, STAGING_DIR)
+        val maxVersion = schemaVersion()
+        withContext(Dispatchers.IO) {
+            staging.deleteRecursively()
+            File(staging, COVERS).mkdirs()
+            ZipFile(zipFile).use { zip ->
+                zip.entries().asSequence().filter { BackupFormat.isKnownEntry(it.name) }.forEach { entry ->
+                    val target = when (entry.name) {
+                        BackupFormat.MANIFEST -> return@forEach
+                        BackupFormat.DATABASE -> File(staging, DB_NAME)
+                        BackupFormat.DATABASE_WAL -> File(staging, "$DB_NAME-wal")
+                        else -> File(staging, COVERS + "/" + BackupFormat.coverFileName(entry.name)!!)
+                    }
+                    zip.getInputStream(entry).use { source -> target.outputStream().use { source.copyTo(it) } }
+                }
+            }
+            try {
+                checkDatabase(File(staging, DB_NAME), maxVersion)
+            } catch (e: Exception) {
+                staging.deleteRecursively()
+                throw e
+            }
+        }
         safetyCopy.parentFile?.mkdirs()
         safetyCopy.outputStream().use { createBackup(it) }
         withContext(Dispatchers.IO) {
             closeDatabase()
             listOf(dbFile, walFile, shmFile).forEach { it.delete() }
-            coverDir.listFiles()?.forEach { it.delete() }
+            coverDir.deleteRecursively()
+            // Hernoemen binnen de app-opslag: snel, en geen half gekopieerde bestanden.
+            moveOrCopy(File(staging, DB_NAME), dbFile)
+            File(staging, "$DB_NAME-wal").takeIf(File::exists)?.let { moveOrCopy(it, walFile) }
+            moveOrCopy(File(staging, COVERS), coverDir)
             coverDir.mkdirs()
-            ZipFile(zipFile).use { zip ->
-                zip.entries().asSequence().filter { BackupFormat.isKnownEntry(it.name) }.forEach { entry ->
-                    val target = when (entry.name) {
-                        BackupFormat.MANIFEST -> return@forEach
-                        BackupFormat.DATABASE -> dbFile
-                        BackupFormat.DATABASE_WAL -> walFile
-                        else -> File(coverDir, BackupFormat.coverFileName(entry.name)!!)
-                    }
-                    zip.getInputStream(entry).use { source -> target.outputStream().use { source.copyTo(it) } }
-                }
-            }
+            staging.deleteRecursively()
             zipFile.delete()
             // De teruggezette bibliotheek kan van een andere telefoon komen: synchronisatie begint opnieuw.
             syncResetMarker(context).createNewFile()
             // En van een oudere versie: eenmalige onderhoudstaken (bijv. talen uit het ISBN) opnieuw doen.
             context.getSharedPreferences("onderhoud", Context.MODE_PRIVATE).edit().clear().commit()
         }
+    }
+
+    /** Een echte SQLite-database, heel, en niet van een nieuwere app-versie dan deze. */
+    private fun checkDatabase(file: File, maxVersion: Int) {
+        if (!file.isFile) throw IllegalStateException("Geen database in de back-up")
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.NO_LOCALIZED_COLLATORS).use { db ->
+            val version = db.version
+            if (version > maxVersion) throw IllegalStateException("Deze back-up komt van een nieuwere versie van de app")
+            db.rawQuery("PRAGMA quick_check", null).use { c ->
+                if (!c.moveToFirst() || c.getString(0) != "ok") throw IllegalStateException("De database in de back-up is beschadigd")
+            }
+        }
+        // Openen kan een -shm achterlaten; die hoort niet mee.
+        File(file.path + "-shm").delete()
+    }
+
+    private fun moveOrCopy(from: File, to: File) {
+        to.parentFile?.mkdirs()
+        if (from.renameTo(to)) return
+        from.copyRecursively(to, overwrite = true)
+        from.deleteRecursively()
     }
 
     private suspend fun schemaVersion(): Int = withContext(Dispatchers.IO) { database().openHelper.readableDatabase.version }
@@ -123,6 +164,8 @@ class BackupService(
         const val DB_NAME = "library.db"
         const val BEFORE_RESTORE = "backups/voor-terugzetten.zip"
         const val BEFORE_MERGE = "backups/voor-samenvoegen.zip"
+        private const val STAGING_DIR = "terugzetten"
+        private const val COVERS = "covers"
 
         /** Bestaat dit bestand, dan wordt bij het openen van de database de synchronisatiestatus gewist. */
         fun syncResetMarker(context: Context) = File(context.filesDir, "sync-opnieuw")

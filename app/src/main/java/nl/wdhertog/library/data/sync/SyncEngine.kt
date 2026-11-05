@@ -83,7 +83,10 @@ class SyncEngine(
     /** De klokstand bewaren, zodat die na een herstart niet terugloopt. */
     private val saveClock: suspend (String) -> Unit,
 ) {
-    suspend fun prepareOutgoing(): Int = store.transaction {
+    suspend fun prepareOutgoing(): Int = store.transaction { prepareDirty() }
+
+    /** Lokale wijzigingen een tijdstempel geven en in de outbox zetten; binnen een transactie aanroepen. */
+    private suspend fun prepareDirty(): Int {
         var added = 0
         for (dirty in store.dirty()) {
             val shadow = store.shadow(dirty.entity, dirty.uuid)
@@ -110,7 +113,7 @@ class SyncEngine(
             }
             store.clearDirty(dirty.entity, dirty.uuid)
         }
-        added
+        return added
     }
 
     suspend fun changesAfter(seq: Long): List<SyncChange> = store.outboxAfter(seq)
@@ -121,6 +124,9 @@ class SyncEngine(
     fun clockNow(): String = clock.current.toString()
 
     suspend fun applyIncoming(changes: List<SyncChange>): Int = store.transaction {
+        // Wat de gebruiker tijdens de uitwisseling wijzigde, eerst een tijdstempel geven: anders wint de
+        // binnenkomende waarde, wordt de schaduw gelijk aan de huidige waarde en verdwijnt de wijziging stil.
+        prepareDirty()
         val touched = mutableSetOf<Pair<String, String>>()
         val ordered = changes.sortedWith(compareBy({ SyncSchema.applyOrder.indexOf(it.entity) }, { it.seq }))
         for (change in ordered) {

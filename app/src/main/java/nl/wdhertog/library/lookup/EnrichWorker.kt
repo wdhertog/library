@@ -19,6 +19,7 @@ class EnrichWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val container = (applicationContext as LibraryApp).container
         val repository = container.bookRepository
         val enrichment = container.enrichmentService
+        var failedInARow = 0
         while (!isStopped) {
             val pending = repository.booksAwaitingEnrichment(limit = 20)
             if (pending.isEmpty()) return Result.success()
@@ -26,12 +27,22 @@ class EnrichWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                 if (isStopped) return Result.success()
                 try {
                     enrichment.enrich(bookId, refresh = false)
+                    failedInARow = 0
                 } catch (_: LookupException) {
-                    return Result.retry() // Geen netwerk of bronnen onbereikbaar: later verder.
+                    // Geen netwerk of bronnen onbereikbaar: later verder. Lukt het na een paar pogingen
+                    // nog steeds niet bij dit ene boek, dan ligt het aan het boek (bijv. een bron die er
+                    // steeds een foutcode op geeft): overslaan, anders blijft de hele wachtrij erachter
+                    // hangen. "Bibliotheek bijwerken" probeert het later opnieuw.
+                    if (runAttemptCount < SKIP_AFTER_ATTEMPTS || ++failedInARow > 1) return Result.retry()
+                    repository.markEnrichFailed(bookId)
                 }
             }
         }
         return Result.success()
+    }
+
+    private companion object {
+        const val SKIP_AFTER_ATTEMPTS = 3
     }
 }
 

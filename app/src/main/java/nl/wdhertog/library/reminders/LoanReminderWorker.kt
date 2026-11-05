@@ -81,6 +81,15 @@ class LoanReminderWorker(context: Context, params: WorkerParameters) : Coroutine
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(reminder.title)
             .setContentText(reminder.text)
+            // Op het vergrendelscherm geen titel of naam van wie het boek heeft.
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(
+                NotificationCompat.Builder(applicationContext, CHANNEL)
+                    .setSmallIcon(R.drawable.ic_notification)
+                    .setContentTitle("Uitleen-herinnering")
+                    .setContentText("Een boek moet terug")
+                    .build(),
+            )
             .setAutoCancel(true)
             .setContentIntent(
                 PendingIntent.getActivity(

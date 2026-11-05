@@ -12,6 +12,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,8 +49,10 @@ class CoverViewModel(
     /** Foto van de camera: rechtzetten en uitsnijden tot het kader dat op het scherm stond. */
     fun onCaptured(image: ImageProxy, frame: Box, viewWidth: Float, viewHeight: Float) {
         state.value = CoverUiState.Processing
-        viewModelScope.launch {
-            val cropped = withContext(Dispatchers.Default) { CoverImages.cropToFrame(image, frame, viewWidth, viewHeight) }
+        // ATOMIC + NonCancellable: ook als het scherm net sluit, wordt het camerabeeld verwerkt en gesloten
+        // (cropToFrame sluit het); anders blijft het open en houdt het de camera vast.
+        viewModelScope.launch(start = CoroutineStart.ATOMIC) {
+            val cropped = withContext(Dispatchers.Default + NonCancellable) { CoverImages.cropToFrame(image, frame, viewWidth, viewHeight) }
             state.value = CoverUiState.Review(cropped)
         }
     }
