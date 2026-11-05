@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nl.wdhertog.library.data.db.DatePrecision
 import nl.wdhertog.library.data.repository.ReadEntry
+import nl.wdhertog.library.data.repository.ReadingStreaks
 import nl.wdhertog.library.data.repository.YearStats
 import nl.wdhertog.library.data.repository.cover
 import nl.wdhertog.library.data.repository.displayTitle
@@ -77,7 +78,8 @@ private val monthLetters = listOf("j", "f", "m", "a", "m", "j", "j", "a", "s", "
 fun ReadingScreen(
     onOpenBook: (Long) -> Unit,
     onYearOverview: (Int) -> Unit,
-    viewModel: ReadingViewModel = appViewModel { container, _ -> ReadingViewModel(container.bookRepository, container.readingRepository) },
+    onBadges: () -> Unit,
+    viewModel: ReadingViewModel = appViewModel { container, _ -> readingViewModel(container) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val year by viewModel.year.collectAsStateWithLifecycle()
@@ -99,9 +101,12 @@ fun ReadingScreen(
         }
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
             // Schets 4: leesdoel als ring bovenaan, dan wat je leest, je leeslijst als covers, en de maanden.
-            item { GoalCard(s.stats, isCurrentYear = year == LocalDate.now().year, onEdit = { editingGoal = true }) }
+            item { GoalCard(s.stats, s.streaks.takeIf { year == LocalDate.now().year }, isCurrentYear = year == LocalDate.now().year, onEdit = { editingGoal = true }) }
             if (s.stats.finished.isNotEmpty()) {
                 item { YearOverviewLink(s.stats.year, onClick = { onYearOverview(s.stats.year) }) }
+            }
+            if (s.badges.any { it.achieved }) {
+                item { BadgesCard(s.badges, onClick = onBadges) }
             }
 
             if (s.current.isNotEmpty()) {
@@ -213,7 +218,7 @@ private fun CurrentBook(entry: ReadEntry, onClick: () -> Unit) {
 
 /** Leesdoel als ring, met hoe je ervoor staat, en de pagina's en je gemiddelde beoordeling. */
 @Composable
-private fun GoalCard(stats: YearStats, isCurrentYear: Boolean, onEdit: () -> Unit) {
+private fun GoalCard(stats: YearStats, streaks: ReadingStreaks?, isCurrentYear: Boolean, onEdit: () -> Unit) {
     val done = stats.finished.size
     val goal = stats.goal
     AppCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), onClick = onEdit) {
@@ -241,6 +246,9 @@ private fun GoalCard(stats: YearStats, isCurrentYear: Boolean, onEdit: () -> Uni
                 if (parts.isNotEmpty()) {
                     Text(parts.joinToString(" · "), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                streaks?.let { streakLine(it) }?.let {
+                    Text(it, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }
@@ -258,6 +266,24 @@ private fun YearOverviewLink(year: Int, onClick: () -> Unit) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+/**
+ * Leesstreak in één regel, bijv. "🔥 7 maanden op rij · langste 11". Telt deze maand nog niet mee,
+ * dan staat erbij dat je hem deze maand kunt voortzetten.
+ */
+internal fun streakLine(streaks: ReadingStreaks): String? {
+    val months = streaks.months
+    if (months.longest < 2) return null
+    val parts = mutableListOf<String>()
+    if (months.current >= 2) {
+        parts += "🔥 ${months.current} maanden op rij" + if (months.thisPeriod) "" else ", nog open deze maand"
+        if (months.longest > months.current) parts += "langste ${months.longest}"
+    } else {
+        parts += "Langste reeks: ${months.longest} maanden op rij"
+    }
+    if (streaks.weeks.current >= 2) parts += "${streaks.weeks.current} weken"
+    return parts.joinToString(" · ")
 }
 
 @Composable
