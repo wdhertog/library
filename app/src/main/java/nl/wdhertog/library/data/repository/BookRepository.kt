@@ -509,6 +509,15 @@ class BookRepository(
         )
     }
 
+    /** Zelf aangepast: verrijking mag [field] bij deze boeken niet meer overschrijven. */
+    internal suspend fun lockField(bookIds: List<Long>, field: String) {
+        bookIds.forEach { id ->
+            val book = dao.getBook(id) ?: return@forEach
+            val locked = book.lockedFields.toFieldSet()
+            if (field !in locked) dao.updateBook(book.copy(lockedFields = (locked + field).sorted().joinToString(","), updatedAt = Instant.now()))
+        }
+    }
+
     /** Zoektekst opnieuw opbouwen uit boek, werk, auteurs en serie. */
     internal suspend fun refreshSearchText(bookId: Long) {
         val book = dao.getBook(bookId) ?: return
