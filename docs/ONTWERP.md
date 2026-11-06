@@ -480,6 +480,12 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.9 (6 november 2026)
+- **JSON-export** (§12.1): knop op het Back-up-scherm, om je gegevens ergens anders te gebruiken.
+- **Have I Read That-import weg** (§12.5); Goodreads neemt de plaats in.
+- **Hoofdeditie** bovenaan bij het filter "Meerdere edities"; **badges** op de deel-afbeelding van het jaaroverzicht.
+- **Review**: synchroniseren en koppelen lopen door als je het scherm draait (was een echte fout), sync-dienst veilig bij snel aan/uit, cloudbestanden niet meer op de main thread, camera-analyse op een eigen thread.
+
 ### Gebouwd in 1.8 (6 november 2026)
 - **Auteurs samenvoegen** (§12.2): hernoemen en samenvoegen op de auteurspagina, suggesties "Mogelijk dezelfde auteur".
 - **Hoofdeditie** (§12.3): zelf een editie als hoofdeditie aanwijzen; cover en titel in series en op de auteurspagina. Database versie 8.

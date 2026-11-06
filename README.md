@@ -87,7 +87,7 @@ Het ontwerp staat in [`docs/ONTWERP.md`](docs/ONTWERP.md), met de keuzes, het da
 
 ## Status
 
-**Versie 1.8** is uitgebracht, met auteurs samenvoegen, een hoofdeditie per werk, import uit Goodreads en meer badges. In 1.7 kwamen leesstreaks en badges, en veel reparaties uit een review op bugs, beveiliging en snelheid. In 1.6 kwam een jaaroverzicht ("je jaar in boeken", te delen als afbeelding of tekst), een widget "Nu aan het lezen" op het beginscherm, boeken delen en uitgeleende boeken navragen, en ontbrekende delen van een serie op je leeslijst. In 1.5 kwam de nieuwe vormgeving, de auteurspagina, ontbrekende delen van series, de taal uit het ISBN en instellingen. Synchroniseren tussen telefoons zit er sinds 1.4 in. Wat nog op de lijst staat: zie [§10 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10).
+**Versie 1.9** is uitgebracht, met een JSON-export van al je gegevens en reparaties aan synchroniseren en scannen. In 1.8 kwamen auteurs samenvoegen, een hoofdeditie per werk, import uit Goodreads en meer badges. In 1.7 kwamen leesstreaks en badges, en veel reparaties uit een review op bugs, beveiliging en snelheid. In 1.6 kwam een jaaroverzicht ("je jaar in boeken", te delen als afbeelding of tekst), een widget "Nu aan het lezen" op het beginscherm, boeken delen en uitgeleende boeken navragen, en ontbrekende delen van een serie op je leeslijst. In 1.5 kwam de nieuwe vormgeving, de auteurspagina, ontbrekende delen van series, de taal uit het ISBN en instellingen. Synchroniseren tussen telefoons zit er sinds 1.4 in. Wat nog op de lijst staat: zie [§10 van het ontwerp](docs/ONTWERP.md#10-nog-te-doen-na-v10).
 
 Fouten of ideeën zijn welkom als [issue](https://github.com/wdhertog/library/issues).
 
