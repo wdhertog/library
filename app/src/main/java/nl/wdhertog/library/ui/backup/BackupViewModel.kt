@@ -112,7 +112,9 @@ class BackupViewModel(
     val messages = _messages.receiveAsFlow()
 
     fun createBackup(resolver: ContentResolver, uri: Uri) = work("Back-up maken…") {
-        val manifest = resolver.openOutputStream(uri)?.use { backup.createBackup(it) } ?: error("Kan niet schrijven")
+        // Openen kan bij een cloudmap (Nextcloud) even duren: niet op de main thread.
+        val out = withContext(Dispatchers.IO) { resolver.openOutputStream(uri) } ?: error("Kan niet schrijven")
+        val manifest = out.use { backup.createBackup(it) }
         val now = Instant.now()
         prefs.edit().putLong(KEY_LAST, now.toEpochMilli()).apply()
         lastBackup.value = now
@@ -132,7 +134,8 @@ class BackupViewModel(
     fun inspect(resolver: ContentResolver, uri: Uri) {
         state.value = BackupUiState.Busy("Back-up controleren…")
         viewModelScope.launch {
-            val input = resolver.openInputStream(uri)
+            // Openen kan bij een cloudmap eerst downloaden: niet op de main thread.
+            val input = runCatching { withContext(Dispatchers.IO) { resolver.openInputStream(uri) } }.getOrNull()
             if (input == null) {
                 state.value = BackupUiState.Idle
                 _messages.send("Bestand niet te openen")
