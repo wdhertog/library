@@ -58,7 +58,7 @@ fun MoreScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Item(Icons.Default.Person, "Auteurs", "Per auteur je boeken, series en gegevens", onAuthors)
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Item(Icons.Default.FileOpen, "Importeren", "Goodreads, Have I Read That, Excel of CSV", onImport)
+                Item(Icons.Default.FileOpen, "Importeren", "Goodreads, Excel of CSV", onImport)
             }
             GroupTitle("App")
             AppCard(Modifier.fillMaxWidth()) {

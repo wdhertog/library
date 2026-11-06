@@ -370,6 +370,8 @@ Zoals gebouwd (fase 4):
 
 ### 6.11 Importeren uit Have I Read That (JSON)
 
+**Historisch:** deze import is in 1.9 uit de app gehaald (§12.5); Goodreads nam de plaats in. De kolom `book.hirtId` en het sync-veld `hirtId` blijven, zodat eerder geïmporteerde boeken en telefoons met een oudere versie blijven werken.
+
 Vaste importeur (geen kolomtoewijzing nodig), want het formaat is bekend. Analyse van de export van 01-11-2026: 700 boeken. Geïmporteerd wordt elk boek met `owned: true` **of** de tag `eigen-boeken`, behalve ebooks en luisterboeken → **336 boeken**.
 
 | JSON-veld | Wordt | Opmerking |
@@ -775,6 +777,8 @@ Vanavond haalbaar: 1 en 2, eventueel 3 beginnen.
 
 ### 1. JSON-export bij de back-up
 
+**Gebouwd (6 november 2026, voor 1.9):** `JsonExport` + knop "Exporteren als JSON" op het Back-up-scherm. Besloten: alleen als losse knop, niet in de ZIP.
+
 **Doel:** een open, leesbare export van alles, naast de ZIP (die alleen de SQLite-database bevat) en de CSV (die alleen boeken plat slaat).
 
 **Wat erin:**
@@ -892,6 +896,8 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 **Open vraag:** wil je Goodreads-leesdoelen? Die staan niet in de export, dus nee — tenzij handmatig.
 
 ### 5. HIRT-import verwijderen
+
+**Gedaan (6 november 2026, voor 1.9):** `HirtParser` en de kaart op het importscherm zijn weg; `ImportText` heeft de gedeelde stukken. `hirtId` en `MatchReason.HIRT_ID` blijven.
 
 **Aanname:** de Have I Read That-import heeft zijn werk gedaan (eenmalige overstap) en mag uit de app. (Bedoel je juist "een gedane HIRT-import terugdraaien": dat kan al, elke import is ongedaan te maken.)
 
