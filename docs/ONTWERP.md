@@ -478,6 +478,13 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.8 (6 november 2026)
+- **Auteurs samenvoegen** (§12.2): hernoemen en samenvoegen op de auteurspagina, suggesties "Mogelijk dezelfde auteur".
+- **Hoofdeditie** (§12.3): zelf een editie als hoofdeditie aanwijzen; cover en titel in series en op de auteurspagina. Database versie 8.
+- **Goodreads-import** (§12.4): de CSV-export van Goodreads, met leesgeschiedenis; opnieuw importeren zonder dubbelen (`book.externalIds`).
+- **Badges, tweede versie** (§12.7): melding bij uitlezen, badges in het jaaroverzicht, details per badge, voortgang leesdoel, vier nieuwe badges.
+- **Review, tweede deel**: één gedeelde bibliotheeklijst, minder werk op de main thread, robuustere import, en kleine UI-reparaties (scrollpositie, opslaan, draaien van het scherm).
+
 ### Gebouwd in 1.7 (5 november 2026)
 - **Leesstreaks** (§12.6): maanden en weken op rij met een uitgelezen boek, en dagen op rij (één vrije dag per week) uit "Voortgang bijwerken" en de begin- en einddatums van sessies; tabel `reading_log`, database versie 7.
 - **Badges** (§12.7): mijlpalen uit je eigen leesgeschiedenis, met datum, ook met terugwerkende kracht; kaart op Lezen en een eigen scherm.
