@@ -25,8 +25,12 @@ interface BookDao {
 
     // --- Boeken ---
 
-    @Query("SELECT * FROM book")
-    fun observeBooks(): Flow<List<Book>>
+    /**
+     * Alle boeken voor lijsten, zonder beschrijving en notities (die zijn groot en staan alleen op de
+     * boekpagina). Niet gebruiken om te bewaren of te exporteren: die velden zijn hier leeg.
+     */
+    @Query("SELECT id, uuid, isbn13, isbn10, title, subtitle, language, translators, publisher, publishedYear, pages, format, NULL AS description, coverUrl, coverFile, tags, ownership, disposalReason, disposedTo, disposedAt, favorite, owner, borrowedFromPersonId, borrowedDueDate, locationId, shelfPosition, NULL AS notes, wantToRead, enrichStatus, enrichedSources, lockedFields, openLibraryEditionId, storygraphId, hirtId, importRunId, searchText, addedAt, updatedAt FROM book")
+    fun observeBookList(): Flow<List<Book>>
 
     @Query("SELECT * FROM book WHERE id = :id")
     fun observeBook(id: Long): Flow<Book?>
@@ -271,8 +275,14 @@ interface BookDao {
 
     // --- Auteurs ---
 
+    /** Eerst exact (via de index), dan pas zonder op hoofdletters te letten (doorzoekt de hele tabel). */
+    suspend fun findAuthor(name: String): Author? = findAuthorExact(name) ?: findAuthorIgnoringCase(name)
+
+    @Query("SELECT * FROM author WHERE name = :name LIMIT 1")
+    suspend fun findAuthorExact(name: String): Author?
+
     @Query("SELECT * FROM author WHERE name = :name COLLATE NOCASE LIMIT 1")
-    suspend fun findAuthor(name: String): Author?
+    suspend fun findAuthorIgnoringCase(name: String): Author?
 
     @Insert
     suspend fun insertAuthor(author: Author): Long
@@ -294,8 +304,14 @@ interface BookDao {
     @Query("SELECT * FROM series WHERE id = :id")
     suspend fun getSeries(id: Long): Series?
 
+    /** Eerst exact (via de index), dan pas zonder op hoofdletters te letten. */
+    suspend fun findSeries(name: String): Series? = findSeriesExact(name) ?: findSeriesIgnoringCase(name)
+
+    @Query("SELECT * FROM series WHERE name = :name LIMIT 1")
+    suspend fun findSeriesExact(name: String): Series?
+
     @Query("SELECT * FROM series WHERE name = :name COLLATE NOCASE LIMIT 1")
-    suspend fun findSeries(name: String): Series?
+    suspend fun findSeriesIgnoringCase(name: String): Series?
 
     @Insert
     suspend fun insertSeries(series: Series): Long

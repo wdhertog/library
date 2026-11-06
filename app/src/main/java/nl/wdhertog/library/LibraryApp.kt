@@ -44,7 +44,7 @@ class AppContainer(val app: Application) {
     val backupService by lazy {
         BackupService(app, { database }, closeDatabase = { if (databaseHolder.isInitialized()) database.close() })
     }
-    val bookRepository by lazy { BookRepository(database, coverStore) }
+    val bookRepository by lazy { BookRepository(database, coverStore, appScope) }
     val coverStore by lazy { CoverStore(app) }
     val locationRepository by lazy { LocationRepository(database) }
     val loanRepository by lazy { LoanRepository(database, bookRepository) }

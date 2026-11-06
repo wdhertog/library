@@ -1,5 +1,7 @@
 package nl.wdhertog.library.ui.authors
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,7 +34,7 @@ class AuthorListViewModel(authors: AuthorRepository) : ViewModel() {
     val authors: StateFlow<List<AuthorSummary>?> = combine(authors.observeSummaries(), query) { list, q ->
         val needle = TextNormalizer.normalize(q)
         if (needle.isBlank()) list else list.filter { TextNormalizer.normalize(it.name).contains(needle) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 /** Eén werk van de auteur, met jouw edities en vertalingen. */
@@ -117,7 +119,7 @@ class AuthorViewModel(
                 averageRating = rating,
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Opnieuw bij Wikidata kijken. */
     fun lookUp(done: (String) -> Unit) {

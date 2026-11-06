@@ -1,5 +1,7 @@
 package nl.wdhertog.library.ui.locations
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -50,7 +52,7 @@ class LocationDetailViewModel(
                 .filter { it.book.locationId == locationId }
                 .sortedWith(compareBy<BookListItem, Int?>(nullsLast()) { it.book.shelfPosition }.thenBy { it.book.title })
             LocationDetailState(node, books, loaded = true)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocationDetailState(null, emptyList(), loaded = false))
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocationDetailState(null, emptyList(), loaded = false))
 
     fun addChild(name: String, type: LocationType) {
         viewModelScope.launch { repository.add(name, type, locationId) }

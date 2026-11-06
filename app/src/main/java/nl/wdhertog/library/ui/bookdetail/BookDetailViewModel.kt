@@ -1,5 +1,7 @@
 package nl.wdhertog.library.ui.bookdetail
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -110,7 +112,7 @@ class BookDetailViewModel(
     /** Voor "koppelen aan andere editie": alle andere boeken. */
     val otherBooks: StateFlow<List<BookListItem>> = repository.observeLibrary()
         .map { items -> items.filter { it.book.id != bookId } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun linkAsSameWork(otherBookId: Long) {
         viewModelScope.launch {
