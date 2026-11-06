@@ -34,7 +34,7 @@ class SeriesOrderTest {
         )
         assertEquals(listOf("0.5", "1", "2", "3", "4", null), volumes.map { it.index })
         val first = volumes[1] as SeriesVolume.Present
-        assertEquals(listOf(10L, 11L), first.books.map { it.bookId })
+        assertEquals(listOf(11L, 10L), first.books.map { it.bookId }) // hoofdeditie (Nederlands) eerst
         assertEquals(true, first.read)
         assertEquals(listOf("2", "4"), volumes.filterIsInstance<SeriesVolume.Missing>().map { it.index })
     }

@@ -9,7 +9,7 @@ import java.time.Instant
 data class AuthorSummary(val id: Long, val name: String, val books: Int, val works: Int)
 
 /** Welk boek bij welk werk hoort, voor de boeken van een auteur. */
-data class BookWorkLink(val bookId: Long, val workId: Long)
+data class BookWorkLink(val bookId: Long, val workId: Long, val primaryBookUuid: String? = null)
 
 @Dao
 interface AuthorDao {
@@ -35,10 +35,37 @@ interface AuthorDao {
     @Query("SELECT id FROM author WHERE name = :name COLLATE NOCASE LIMIT 1")
     suspend fun findId(name: String): Long?
 
+    /** Een andere auteur met deze naam (hoofdletters tellen niet). */
+    @Query("SELECT * FROM author WHERE name = :name COLLATE NOCASE AND id != :excludeId LIMIT 1")
+    suspend fun findOther(name: String, excludeId: Long): Author?
+
+    @Query("SELECT DISTINCT bw.bookId FROM book_work bw JOIN work_author wa ON wa.workId = bw.workId WHERE wa.authorId = :authorId")
+    suspend fun bookIds(authorId: Long): List<Long>
+
+    /** Alle auteurs van de werken van deze auteur (ook co-auteurs). */
+    @Query("SELECT * FROM work_author WHERE workId IN (SELECT workId FROM work_author WHERE authorId = :authorId)")
+    suspend fun linksOfWorksBy(authorId: Long): List<WorkAuthor>
+
+    @Query("DELETE FROM work_author WHERE workId IN (:workIds)")
+    suspend fun deleteLinksOfWorks(workIds: List<Long>)
+
+    @androidx.room.Insert
+    suspend fun insertLinks(links: List<WorkAuthor>)
+
+    @Query("DELETE FROM author WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("UPDATE author SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
+
+    @androidx.room.Update
+    suspend fun update(author: Author)
+
     @Query(
         """
-        SELECT DISTINCT bw.bookId, bw.workId FROM book_work bw
+        SELECT DISTINCT bw.bookId, bw.workId, w.primaryBookUuid FROM book_work bw
         JOIN work_author wa ON wa.workId = bw.workId
+        JOIN work w ON w.id = bw.workId
         WHERE wa.authorId = :authorId
         """
     )

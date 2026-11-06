@@ -141,7 +141,12 @@ fun CoverScreen(
                         }
                     }
                 CoverUiState.Processing -> CircularProgressIndicator()
-                is CoverUiState.Review -> Review(s, onRetake = viewModel::retake, onSave = { viewModel.save(onSaved = onClose) })
+                // Sluiten zodra het scherm (weer) actief is, dus ook na terugkomen uit de achtergrond.
+                CoverUiState.Saved -> androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+                    onClose()
+                    onPauseOrDispose { }
+                }
+                is CoverUiState.Review -> Review(s, onRetake = viewModel::retake, onSave = viewModel::save)
             }
         }
     }

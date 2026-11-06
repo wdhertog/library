@@ -44,6 +44,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import nl.wdhertog.library.data.repository.editionFacts
+import nl.wdhertog.library.data.repository.Editions
 import nl.wdhertog.library.util.Share
 import androidx.compose.material.icons.filled.Share
 import nl.wdhertog.library.ui.theme.Literata
@@ -63,6 +65,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -119,28 +122,29 @@ fun BookDetailScreen(
             container.locationRepository,
             container.loanRepository,
             container.readingRepository,
+            container.badgeService,
         )
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val tree by viewModel.locationTree.collectAsStateWithLifecycle()
     val locationIndex = remember(tree) { LocationTree.index(tree) }
-    var pickingLocation by remember { mutableStateOf(false) }
+    var pickingLocation by rememberSaveable { mutableStateOf(false) }
     val bookLoans by viewModel.bookLoans.collectAsStateWithLifecycle()
     val borrowed by viewModel.borrowed.collectAsStateWithLifecycle()
     val personNames by viewModel.personNames.collectAsStateWithLifecycle()
     val ownerNames by viewModel.ownerNames.collectAsStateWithLifecycle()
-    var editingOwner by remember { mutableStateOf(false) }
-    var editionDialog by remember { mutableStateOf<String?>(null) }
+    var editingOwner by rememberSaveable { mutableStateOf(false) }
+    var editionDialog by rememberSaveable { mutableStateOf<String?>(null) }
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     var sessionDialog by remember { mutableStateOf<Pair<String, ReadingSession>?>(null) }
     var progressFor by remember { mutableStateOf<ReadingSession?>(null) }
-    var loanDialog by remember { mutableStateOf<String?>(null) }
+    var loanDialog by rememberSaveable { mutableStateOf<String?>(null) }
     var loanToDelete by remember { mutableStateOf<nl.wdhertog.library.data.db.LoanRow?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
@@ -264,6 +268,7 @@ fun BookDetailScreen(
                     },
                     locationLabel = { id -> id?.let { locationIndex[it]?.pathLabel } },
                     onOpenBook = onOpenBook,
+                    onSetPrimary = viewModel::setPrimaryEdition,
                     onOpenLocation = onOpenLocation,
                     onPickLocation = { pickingLocation = true },
                     onEditOwner = { editingOwner = true },
@@ -459,6 +464,7 @@ private fun DetailContent(
     secondaryAction: Pair<String, () -> Unit>?,
     locationLabel: (Long?) -> String?,
     onOpenBook: (Long) -> Unit,
+    onSetPrimary: () -> Unit,
     onOpenLocation: (Long) -> Unit,
     onPickLocation: () -> Unit,
     onEditOwner: () -> Unit,
@@ -591,8 +597,25 @@ private fun DetailContent(
             }
 
             if (detail.otherEditions.isNotEmpty()) {
+                val primaryUuid = detail.works.firstOrNull()?.primaryBookUuid
+                val all = listOf(detail.book) + detail.otherEditions
+                val primary = Editions.primaryOf(all, primaryUuid) { it.editionFacts }
+                val chosen = Editions.isChosen(all, primaryUuid) { it.editionFacts }
                 DetailCard("Andere edities in je collectie") {
-                    detail.otherEditions.forEach { EditionRow(it, locationLabel(it.locationId), onClick = { onOpenBook(it.id) }) }
+                    detail.otherEditions.forEach {
+                        EditionRow(it, locationLabel(it.locationId), isPrimary = it.id == primary?.id, onClick = { onOpenBook(it.id) })
+                    }
+                    if (primary?.id == detail.book.id) {
+                        Text(
+                            if (chosen) "★ Dit is de hoofdeditie (zelf gekozen)" else "★ Dit is nu de hoofdeditie",
+                            Modifier.padding(top = 8.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (!(chosen && primary?.id == detail.book.id)) {
+                        TextButton(onClick = onSetPrimary) { Text("Als hoofdeditie instellen") }
+                    }
                 }
             }
 
@@ -678,7 +701,7 @@ private fun DetailRow(label: String, value: String?) {
 }
 
 @Composable
-private fun EditionRow(book: Book, location: String?, onClick: () -> Unit) {
+private fun EditionRow(book: Book, location: String?, isPrimary: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -687,7 +710,7 @@ private fun EditionRow(book: Book, location: String?, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column {
             Text(book.title, style = MaterialTheme.typography.bodyLarge)
-            MetaLine(listOfNotNull(book.language?.let(Languages::displayName), book.publishedYear?.toString(), location?.let { "📍 $it" }))
+            MetaLine(listOfNotNull("★ hoofdeditie".takeIf { isPrimary }, book.language?.let(Languages::displayName), book.publishedYear?.toString(), location?.let { "📍 $it" }))
         }
     }
 }

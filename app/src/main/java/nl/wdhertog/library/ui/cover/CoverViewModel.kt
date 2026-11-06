@@ -28,6 +28,9 @@ sealed interface CoverUiState {
     data object Camera : CoverUiState
     data object Processing : CoverUiState
     data class Review(val bitmap: Bitmap) : CoverUiState
+
+    /** Opgeslagen; het scherm sluit zodra het weer zichtbaar is (ook als de app intussen in de achtergrond stond). */
+    data object Saved : CoverUiState
 }
 
 class CoverViewModel(
@@ -74,12 +77,12 @@ class CoverViewModel(
         state.value = CoverUiState.Camera
     }
 
-    fun save(onSaved: () -> Unit) {
+    fun save() {
         val review = state.value as? CoverUiState.Review ?: return
         state.value = CoverUiState.Processing
         viewModelScope.launch {
             repository.setCoverFile(bookId, store.save(review.bitmap))
-            onSaved()
+            state.value = CoverUiState.Saved
         }
     }
 

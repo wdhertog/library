@@ -44,4 +44,16 @@ class BookListTest {
         books.save(0, BookDraft(title = "Imperium", authors = listOf("robert harris")))
         assertEquals(1, db.query("SELECT COUNT(*) FROM author", null).use { it.moveToFirst(); it.getInt(0) })
     }
+
+    @Test
+    fun `primary edition is set, kept when linking and cleared when split off`() = runBlocking {
+        val en = books.save(0, BookDraft(title = "The Lord of the Rings", authors = listOf("J.R.R. Tolkien")))
+        val nl = books.save(0, BookDraft(title = "In de ban van de ring", authors = listOf("J.R.R. Tolkien")))
+        books.linkAsSameWork(nl, en)
+        books.setPrimaryEdition(nl)
+        val work = db.bookDao().getPrimaryWork(en)!!
+        assertEquals(db.bookDao().getBook(nl)!!.uuid, work.primaryBookUuid)
+        books.splitFromWork(nl)
+        assertNull(db.bookDao().getPrimaryWork(en)!!.primaryBookUuid)
+    }
 }

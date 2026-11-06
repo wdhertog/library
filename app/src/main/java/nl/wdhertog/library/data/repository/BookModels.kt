@@ -24,6 +24,10 @@ val EnrichStatus.label: String
         EnrichStatus.MANUAL -> "Handmatig ingevoerd"
     }
 
+/** Feiten voor het kiezen van de hoofdeditie (zie Editions). */
+val Book.editionFacts: EditionFacts
+    get() = EditionFacts(uuid, ownership == nl.wdhertog.library.data.db.Ownership.OWNED, cover != null, language, addedAt.toEpochMilli())
+
 data class BookListItem(
     val book: Book,
     val authors: List<String>,

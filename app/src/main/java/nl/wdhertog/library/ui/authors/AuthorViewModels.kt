@@ -18,9 +18,13 @@ import kotlinx.coroutines.launch
 import nl.wdhertog.library.data.db.Author
 import nl.wdhertog.library.data.db.AuthorSummary
 import nl.wdhertog.library.data.db.SeriesSummary
+import nl.wdhertog.library.data.repository.AuthorDuplicate
+import nl.wdhertog.library.data.repository.AuthorDuplicates
 import nl.wdhertog.library.data.repository.AuthorRepository
 import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.BookRepository
+import nl.wdhertog.library.data.repository.Editions
+import nl.wdhertog.library.data.repository.editionFacts
 import nl.wdhertog.library.data.repository.ReadingRepository
 import nl.wdhertog.library.data.repository.SeriesOrder
 import nl.wdhertog.library.data.repository.SeriesRepository
@@ -28,13 +32,36 @@ import nl.wdhertog.library.data.repository.displayTitle
 import nl.wdhertog.library.ui.navigation.AuthorRoute
 import nl.wdhertog.library.util.TextNormalizer
 
-class AuthorListViewModel(authors: AuthorRepository) : ViewModel() {
+class AuthorListViewModel(
+    private val repository: AuthorRepository,
+    private val prefs: android.content.SharedPreferences,
+) : ViewModel() {
     val query = MutableStateFlow("")
 
-    val authors: StateFlow<List<AuthorSummary>?> = combine(authors.observeSummaries(), query) { list, q ->
+    val authors: StateFlow<List<AuthorSummary>?> = combine(repository.observeSummaries(), query) { list, q ->
         val needle = TextNormalizer.normalize(q)
         if (needle.isBlank()) list else list.filter { TextNormalizer.normalize(it.name).contains(needle) }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val ignored = MutableStateFlow(prefs.getStringSet(KEY_IGNORED, emptySet()).orEmpty())
+
+    /** Auteurs die waarschijnlijk dezelfde zijn in een andere schrijfwijze ("J.R.R. Tolkien", "Tolkien, J.R.R."). */
+    val duplicates: StateFlow<List<AuthorDuplicate>> = combine(repository.observeSummaries(), ignored) { list, skip ->
+        AuthorDuplicates.find(list, skip)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun merge(duplicate: AuthorDuplicate) {
+        viewModelScope.launch { repository.merge(duplicate.other.id, duplicate.keep.id) }
+    }
+
+    fun ignore(duplicate: AuthorDuplicate) {
+        ignored.value = ignored.value + duplicate.key
+        prefs.edit().putStringSet(KEY_IGNORED, ignored.value).apply()
+    }
+
+    private companion object {
+        const val KEY_IGNORED = "ignored-duplicate-authors"
+    }
 }
 
 /** Eén werk van de auteur, met jouw edities en vertalingen. */
@@ -73,9 +100,13 @@ class AuthorViewModel(
 
     val lookingUp = MutableStateFlow(false)
 
+    /** Geen auteur met dit id of deze naam (meer), bijv. na samenvoegen of verwijderen: niet eindeloos laden. */
+    val notFound = MutableStateFlow(false)
+
     init {
         viewModelScope.launch {
-            val id = authorId.value ?: authors.findId(route.name)?.also { authorId.value = it } ?: return@launch
+            val id = authorId.value ?: authors.findId(route.name)?.also { authorId.value = it }
+                ?: run { notFound.value = true; return@launch }
             if (mayLookUp()) authors.refreshInfo(id)
         }
     }
@@ -88,11 +119,16 @@ class AuthorViewModel(
             combine(reading.observeReadBookIds(), authors.observeAverageRating(id), ::Pair),
             series.observeSummaries(),
         ) { author, links, library, (readIds, rating), allSeries ->
-            author ?: return@combine null
+            if (author == null) {
+                notFound.value = true
+                return@combine null
+            }
+            notFound.value = false
             val byId = library.associateBy { it.book.id }
             val read = readIds.toSet()
             val works = links.groupBy { it.workId }.mapNotNull { (workId, workLinks) ->
-                val items = workLinks.mapNotNull { byId[it.bookId] }.sortedBy { it.book.language }
+                // De hoofdeditie eerst: die titel en cover.
+                val items = Editions.ordered(workLinks.mapNotNull { byId[it.bookId] }, workLinks.first().primaryBookUuid) { it.book.editionFacts }
                 val first = items.firstOrNull() ?: return@mapNotNull null
                 AuthorWork(
                     workId = workId,
@@ -120,6 +156,25 @@ class AuthorViewModel(
             )
         }
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Alle auteurs, voor "Samenvoegen met…". */
+    val allAuthors: StateFlow<List<AuthorSummary>> = authors.observeSummaries()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Naam wijzigen; bestaat de naam al, dan samenvoegen en verder met die auteur. */
+    fun rename(name: String) {
+        val id = authorId.value ?: return
+        viewModelScope.launch { authorId.value = authors.rename(id, name) }
+    }
+
+    /** Deze auteur opgaan in [intoId]; de pagina toont daarna die auteur. */
+    fun mergeInto(intoId: Long) {
+        val id = authorId.value ?: return
+        viewModelScope.launch {
+            authors.merge(id, intoId)
+            authorId.value = intoId
+        }
+    }
 
     /** Opnieuw bij Wikidata kijken. */
     fun lookUp(done: (String) -> Unit) {

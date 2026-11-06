@@ -62,7 +62,7 @@ fun BookEditScreen(
     onClose: () -> Unit,
     onSaved: (bookId: Long, isNew: Boolean) -> Unit,
     viewModel: BookEditViewModel = appViewModel { container, handle ->
-        BookEditViewModel(handle, container.bookRepository, container.enrichScheduler)
+        BookEditViewModel(handle, container.bookRepository, container.enrichScheduler, container.appScope)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.wdhertog.library.data.db.ImportRun
+import nl.wdhertog.library.importer.GoodreadsParser
 import nl.wdhertog.library.importer.HirtParser
 import nl.wdhertog.library.importer.XlsxReader
 import nl.wdhertog.library.importer.TableImporter
@@ -144,8 +145,24 @@ class ImportViewModel(
                         listOf(Sheet(name.orEmpty(), CsvReader.read(bytes)))
                     }
                 }.filter { it.table.header.isNotEmpty() }
+                val goodreads = sheets.singleOrNull()?.table?.takeIf { GoodreadsParser.matches(it.header) }
                 if (sheets.isEmpty()) {
                     ImportUiState.Error("Geen gegevens gevonden in dit bestand")
+                } else if (goodreads != null) {
+                    // Een export van Goodreads: kolommen zijn bekend, meteen naar de controle.
+                    val export = withContext(Dispatchers.Default) { GoodreadsParser.parse(goodreads) }
+                    val matches = ImportMatcher.match(export.books, service.existingBooks())
+                    val notOwned = export.books.count { !it.owned }
+                    ImportUiState.Review(
+                        source = GoodreadsParser.SOURCE,
+                        fileName = name,
+                        items = export.books.zip(matches, ::ReviewItem),
+                        goals = emptyMap(),
+                        summary = "Goodreads: ${export.books.size} boeken" + when {
+                            export.ownedMarked == 0 -> " (geen als „in bezit” gemarkeerd: allemaal als eigen boek)"
+                            else -> ", ${export.books.size - notOwned} in bezit, $notOwned niet (meer) in bezit"
+                        },
+                    )
                 } else {
                     ImportUiState.Mapping(name, sheets, 0, targetsFor(sheets.first().table))
                 }
@@ -214,17 +231,33 @@ class ImportViewModel(
         }
         state.value = ImportUiState.Running(0, items.size)
         appScope.launch {
-            val result = service.run(review.source, review.fileName, items, review.goals) { done ->
-                state.value = ImportUiState.Running(done, items.size)
+            try {
+                val result = service.run(review.source, review.fileName, items, review.goals) { done ->
+                    state.value = ImportUiState.Running(done, items.size)
+                }
+                state.value = ImportUiState.Done(result)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Niet de app laten crashen en niet op "bezig" blijven staan. Wat al was ingelezen, staat
+                // bij de eerdere imports en is daar ongedaan te maken.
+                android.util.Log.w("ImportViewModel", "Importeren mislukt", e)
+                state.value = ImportUiState.Error(
+                    "Importeren mislukt: ${e.message ?: e.javaClass.simpleName}. Wat al was ingelezen, kun je hieronder bij de eerdere imports ongedaan maken.",
+                )
+            } finally {
+                scheduler.schedule()
             }
-            scheduler.schedule()
-            state.value = ImportUiState.Done(result)
         }
     }
 
     fun undo(runId: Long) {
         appScope.launch {
-            service.undo(runId)
+            runCatching { service.undo(runId) }.onFailure {
+                android.util.Log.w("ImportViewModel", "Ongedaan maken mislukt", it)
+                state.value = ImportUiState.Error("Ongedaan maken mislukt: ${it.message}")
+                return@launch
+            }
             if ((state.value as? ImportUiState.Done)?.result?.runId == runId) state.value = ImportUiState.Start
         }
     }

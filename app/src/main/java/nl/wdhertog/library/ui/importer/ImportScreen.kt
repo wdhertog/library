@@ -75,7 +75,7 @@ private val tableTypes = arrayOf(
 /** Keuzes voor boeken die zeker al in je bibliotheek staan. */
 private val mergeChoices = listOf(MergeChoice.FILL, MergeChoice.OVERWRITE, MergeChoice.SKIP)
 
-/** Importeren uit Have I Read That (later ook CSV/Excel), met controle vooraf en ongedaan maken. */
+/** Importeren uit Goodreads, Have I Read That of CSV/Excel, met controle vooraf en ongedaan maken. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportScreen(
@@ -214,6 +214,15 @@ private fun Start(
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = onPickHirt) { Text("Bestand kiezen…") }
                 },
+            )
+        }
+        item {
+            SourceCard(
+                title = "Goodreads",
+                text = "Op goodreads.com: My Books → Import and export → Export Library. Kies hier het CSV-bestand: " +
+                    "leesgeschiedenis, beoordelingen, recensies, planken (als tags) en je leeslijst komen mee. " +
+                    "Opnieuw importeren werkt bij zonder dubbelen.",
+                action = { Button(onClick = onPickTable) { Text("Bestand kiezen…") } },
             )
         }
         item {

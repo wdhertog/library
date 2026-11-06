@@ -136,6 +136,19 @@ class LibraryViewModel(
 
     private val filters = MutableStateFlow(Filters())
 
+    /**
+     * Een andere filter of sortering gekozen: de lijst begint dan weer bovenaan. Alleen bij een echte
+     * wijziging door de gebruiker, niet bij terugkeren naar het scherm (dan blijft de scrollpositie staan).
+     */
+    private val _scrollToTop = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    val scrollToTop: kotlinx.coroutines.flow.Flow<Unit> = _scrollToTop.receiveAsFlow()
+
+    private fun changeFilters(change: (Filters) -> Filters) {
+        val before = filters.value
+        filters.update(change)
+        if (filters.value != before) _scrollToTop.trySend(Unit)
+    }
+
     /** Los van [state], zodat het zoekveld direct reageert terwijl er gefilterd wordt. */
     val queryText: StateFlow<String> = filters.map { it.query }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
@@ -224,26 +237,26 @@ class LibraryViewModel(
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
-    fun setQuery(value: String) = filters.update { it.copy(query = value) }
+    fun setQuery(value: String) = changeFilters { it.copy(query = value) }
 
-    fun setSort(value: SortOrder) = filters.update { it.copy(sort = value) }
+    fun setSort(value: SortOrder) = changeFilters { it.copy(sort = value) }
 
-    fun setLanguage(value: String?) = filters.update { it.copy(language = value) }
+    fun setLanguage(value: String?) = changeFilters { it.copy(language = value) }
 
-    fun setLocation(value: Long?) = filters.update { it.copy(locationId = value) }
+    fun setLocation(value: Long?) = changeFilters { it.copy(locationId = value) }
 
-    fun setOwner(value: String?) = filters.update { it.copy(owner = value) }
+    fun setOwner(value: String?) = changeFilters { it.copy(owner = value) }
 
-    fun setFavoritesOnly(value: Boolean) = filters.update { it.copy(favoritesOnly = value) }
+    fun setFavoritesOnly(value: Boolean) = changeFilters { it.copy(favoritesOnly = value) }
 
-    fun setRead(value: ReadFilter) = filters.update { it.copy(read = value) }
+    fun setRead(value: ReadFilter) = changeFilters { it.copy(read = value) }
 
-    fun setOwnership(value: OwnershipFilter) = filters.update { it.copy(ownership = value) }
+    fun setOwnership(value: OwnershipFilter) = changeFilters { it.copy(ownership = value) }
 
-    fun setMultipleEditions(value: Boolean) = filters.update { it.copy(multipleEditions = value) }
+    fun setMultipleEditions(value: Boolean) = changeFilters { it.copy(multipleEditions = value) }
 
     /** Alle filters uit (zoektekst en sortering blijven). */
-    fun clearFilters() = filters.update { Filters(query = it.query, sort = it.sort) }
+    fun clearFilters() = changeFilters { Filters(query = it.query, sort = it.sort) }
 
     suspend fun createLocation(name: String, type: LocationType, parentId: Long?): Long = locations.add(name, type, parentId)
 

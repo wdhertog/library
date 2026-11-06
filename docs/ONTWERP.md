@@ -799,6 +799,8 @@ Vanavond haalbaar: 1 en 2, eventueel 3 beginnen.
 
 ### 2. Auteurs samenvoegen
 
+**Gebouwd (6 november 2026):** hernoemen en samenvoegen op de auteurspagina, suggesties "Mogelijk dezelfde auteur" in de lijst (`AuthorDuplicates`). Koppelingen worden opnieuw neergezet (verwijderen + invoegen) zodat de synctriggers het werk meesturen; er is geen trigger op UPDATE van `work_author`.
+
 **Doel:** "J.R.R. Tolkien", "J. R. R. Tolkien" en "Tolkien, J.R.R." worden één auteur.
 
 **Hoe (naar het voorbeeld van `SeriesRepository.mergeInto`):**
@@ -818,6 +820,8 @@ Vanavond haalbaar: 1 en 2, eventueel 3 beginnen.
 **Tests:** `AuthorRepositoryTest` uitbreiden: samenvoegen met gedeeld werk, hernoemen naar bestaande naam, slot gezet.
 
 ### 3. Een editie aanwijzen als hoofdeditie
+
+**Gebouwd (6 november 2026, database versie 8):** `work.primaryBookUuid`, sync-veld `primaryBook`; `Editions.ordered/primaryOf`. Besloten: een zelf gekozen hoofdeditie bepaalt ook de titel in series en op de auteurspagina (alleen weergave). Nog niet: hoofdeditie bovenaan bij de filter "Meerdere edities".
 
 **Doel:** van een werk met meerdere edities bepalen welke "de" editie is: die cover en titel tonen in series, op de auteurspagina en in de lijst bij "Meerdere edities".
 
@@ -845,6 +849,8 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 **Open vraag:** moet de hoofdeditie ook de **werktitel** bepalen (bijv. "In de ban van de ring" in plaats van "The Lord of the Rings")? Voorstel: ja als optie, maar `Work.title` niet overschrijven — alleen weergave.
 
 ### 4. Goodreads-import
+
+**Gebouwd (6 november 2026):** `GoodreadsParser`, automatisch herkend in de CSV-route, eigen kaart op het importscherm. Besloten: `book.externalIds` (gesynchroniseerd). In bezit: heeft niemand iets als in bezit gemarkeerd, dan alles; anders alleen de gemarkeerde, de rest als "niet (meer) in bezit" (leesgeschiedenis blijft). Gebouwd op de bekende kolommen, nog niet met een echte export getest.
 
 **Doel:** de CSV-export van Goodreads ("Export Library") rechtstreeks inlezen, met leesgeschiedenis, net zo vast als nu Have I Read That.
 
@@ -919,7 +925,7 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 
 ### 7. Badges
 
-**Gebouwd (5 november 2026):** `data/repository/Achievements.kt` met de hele eerste set hieronder (serie: minstens 3 delen); kaart "Badges" op Lezen (laatste drie) en scherm `BadgesScreen` (behaald met datum, nog te halen met voortgang). Material Icons in een gouden cirkel. Nog niet: melding bij "Uitgelezen" en badges in het jaaroverzicht.
+**Gebouwd (5 november 2026):** `data/repository/Achievements.kt` met de hele eerste set hieronder (serie: minstens 3 delen); kaart "Badges" op Lezen (laatste drie) en scherm `BadgesScreen` (behaald met datum, nog te halen met voortgang). Material Icons in een gouden cirkel. Versie 2 (6 november 2026): melding bij "Uitgelezen" als je een badge haalt, badges in het jaaroverzicht, tikken op een badge toont wanneer en waarmee, voortgang bij "Doel gehaald" (dit jaar), en Vlotte lezer, Trouwe lezer, Uitlener en Verzamelaar (`BadgeService`).
 
 **Doel:** mijlpalen zichtbaar maken op Lezen, afgeleid uit bestaande gegevens — niets opslaan.
 

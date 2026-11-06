@@ -65,6 +65,7 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                 "notes" to b.notes, "enrichStatus" to b.enrichStatus.name, "enrichedSources" to b.enrichedSources,
                 "lockedFields" to b.lockedFields, "openLibraryEditionId" to b.openLibraryEditionId,
                 "storygraphId" to b.storygraphId, "hirtId" to b.hirtId, "addedAt" to b.addedAt.toEpochMilli(),
+                "externalIds" to b.externalIds,
                 "works" to dao.workUuidsOfBook(b.id),
             )
         }
@@ -73,7 +74,7 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                 "title" to w.title, "originalTitle" to w.originalTitle, "originalLanguage" to w.originalLanguage,
                 "firstPublishedYear" to w.firstPublishedYear, "series" to w.seriesId?.let { dao.seriesUuid(it) },
                 "seriesIndex" to w.seriesIndex, "awards" to w.awards, "openLibraryWorkId" to w.openLibraryWorkId,
-                "wikidataId" to w.wikidataId, "authors" to bookDao.getAuthorNames(w.id),
+                "wikidataId" to w.wikidataId, "authors" to bookDao.getAuthorNames(w.id), "primaryBook" to w.primaryBookUuid,
             )
         }
         SERIES -> dao.series(uuid)?.let {
@@ -120,6 +121,7 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                     enrichedSources = f.str("enrichedSources", b.enrichedSources), lockedFields = f.str("lockedFields", b.lockedFields),
                     openLibraryEditionId = f.str("openLibraryEditionId", b.openLibraryEditionId),
                     storygraphId = f.str("storygraphId", b.storygraphId), hirtId = f.long("hirtId", b.hirtId),
+                    externalIds = f.str("externalIds", b.externalIds),
                     addedAt = f.long("addedAt", b.addedAt.toEpochMilli())?.let(Instant::ofEpochMilli) ?: b.addedAt,
                     updatedAt = now,
                 )
@@ -141,7 +143,8 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                     firstPublishedYear = f.int("firstPublishedYear", w.firstPublishedYear),
                     seriesId = f.ref("series", w.seriesId) { dao.series(it)?.id }, seriesIndex = f.str("seriesIndex", w.seriesIndex),
                     awards = f.str("awards", w.awards), openLibraryWorkId = f.str("openLibraryWorkId", w.openLibraryWorkId),
-                    wikidataId = f.str("wikidataId", w.wikidataId), updatedAt = now,
+                    wikidataId = f.str("wikidataId", w.wikidataId), primaryBookUuid = f.str("primaryBook", w.primaryBookUuid),
+                    updatedAt = now,
                 )
                 val id = if (existing == null) bookDao.insertWork(w) else w.id.also { bookDao.updateWork(w) }
                 f.list("authors")?.let { books.setWorkAuthors(id, it) }

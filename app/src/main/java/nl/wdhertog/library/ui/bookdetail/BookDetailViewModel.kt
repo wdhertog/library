@@ -10,6 +10,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.receiveAsFlow
+import nl.wdhertog.library.data.db.ReadingStatus
+import nl.wdhertog.library.data.repository.BadgeService
 import nl.wdhertog.library.data.db.BorrowedRow
 import nl.wdhertog.library.data.db.DisposalReason
 import nl.wdhertog.library.data.db.ReadingSession
@@ -45,6 +47,7 @@ class BookDetailViewModel(
     private val locations: LocationRepository,
     private val loans: LoanRepository,
     private val reading: ReadingRepository,
+    private val badges: BadgeService? = null,
 ) : ViewModel() {
 
     val bookId = savedStateHandle.toRoute<BookDetailRoute>().bookId
@@ -93,7 +96,17 @@ class BookDetailViewModel(
     }
 
     fun saveSession(session: ReadingSession) {
-        viewModelScope.launch { reading.save(session) }
+        viewModelScope.launch {
+            // Uitgelezen: kijken of dat een nieuwe badge oplevert, en dat even melden.
+            val before = if (session.status == ReadingStatus.FINISHED) badges?.current() else null
+            reading.save(session)
+            if (before != null) {
+                val earned = BadgeService.newlyEarned(before, badges?.current().orEmpty())
+                if (earned.isNotEmpty()) {
+                    _messages.send("Nieuwe badge: " + earned.joinToString(", ") { it.title } + " 🎉")
+                }
+            }
+        }
     }
 
     fun deleteSession(sessionId: Long) {
@@ -113,6 +126,13 @@ class BookDetailViewModel(
     val otherBooks: StateFlow<List<BookListItem>> = repository.observeLibrary()
         .map { items -> items.filter { it.book.id != bookId } }
         .flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun setPrimaryEdition() {
+        viewModelScope.launch {
+            repository.setPrimaryEdition(bookId)
+            _messages.send("Hoofdeditie: deze cover en titel in series en op de auteurspagina")
+        }
+    }
 
     fun linkAsSameWork(otherBookId: Long) {
         viewModelScope.launch {

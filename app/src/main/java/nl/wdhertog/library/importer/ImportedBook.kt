@@ -34,6 +34,8 @@ data class ImportedBook(
     val readings: List<ImportedReading> = emptyList(),
     val hirtId: Long? = null,
     val storygraphId: String? = null,
+    /** Id's bij andere diensten, bijv. "goodreads:12345" (zie Book.externalIds). */
+    val externalIds: List<String> = emptyList(),
     /** false = staat in het bestand, maar is niet (meer) in bezit. */
     val owned: Boolean = true,
     /** Pad in de locatieboom, bijv. "Woonkamer/Kast 2/Plank 3". */

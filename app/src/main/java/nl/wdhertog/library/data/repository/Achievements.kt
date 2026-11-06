@@ -8,7 +8,7 @@ import nl.wdhertog.library.data.db.SeriesSummary
 import java.time.LocalDate
 
 /** Soort badge; bepaalt het pictogram. */
-enum class BadgeKind { BOOKS, PAGES, THICK_BOOK, GOAL, LANGUAGES, SERIES, AUTHOR, REREAD, STREAK }
+enum class BadgeKind { BOOKS, PAGES, THICK_BOOK, GOAL, LANGUAGES, SERIES, AUTHOR, REREAD, STREAK, FAST, YEARS, LENDER, COLLECTOR }
 
 /**
  * Een badge met hoe ver je bent.
@@ -17,6 +17,8 @@ enum class BadgeKind { BOOKS, PAGES, THICK_BOOK, GOAL, LANGUAGES, SERIES, AUTHOR
  *   leesdatum) of als je hem nog niet hebt.
  * @property yearOnly van [achievedOn] is alleen het jaar bekend.
  * @property times hoe vaak gehaald, voor badges die vaker kunnen (leesdoel).
+ * @property achievedWith waarmee je hem haalde: een boektitel, serie, auteur of jaar.
+ * @property progressNote bij de voortgang, bijv. "dit jaar".
  */
 data class Badge(
     val id: String,
@@ -29,6 +31,8 @@ data class Badge(
     val achievedOn: LocalDate? = null,
     val yearOnly: Boolean = false,
     val times: Int = if (achieved) 1 else 0,
+    val achievedWith: String? = null,
+    val progressNote: String? = null,
 )
 
 /**
@@ -46,11 +50,16 @@ object Achievements {
     private const val MIN_SERIES = 3
     private val streakMonths = listOf(6, 12)
     private val streakDays = listOf(7, 30, 100)
+    private const val FAST_DAYS = 7
+    private const val YEARS = 10
+    private const val LOANS = 10
+    private const val COLLECTION = 500
 
     /** Een uitgelezen sessie met het moment waarop, gesorteerd: oudste eerst, zonder datum achteraan. */
     private data class Read(val session: ReadingSession, val item: BookListItem?) {
         val date: LocalDate? get() = session.finishedAt
         val yearOnly: Boolean get() = session.datePrecision == DatePrecision.YEAR
+        val title: String? get() = item?.book?.displayTitle
     }
 
     fun evaluate(
@@ -60,6 +69,9 @@ object Achievements {
         series: List<SeriesSummary>,
         /** Leesdagen voor de dagstreak (Streaks.readingDays). */
         readingDays: Set<LocalDate> = Streaks.readingDays(sessions, emptyList()),
+        /** Wanneer je een boek uitleende (leeg = onbekend), één per uitlening. */
+        lentDates: List<LocalDate?> = emptyList(),
+        today: LocalDate = LocalDate.now(),
     ): List<Badge> {
         val reads = sessions.filter { it.status == ReadingStatus.FINISHED }
             .map { Read(it, books[it.bookId]) }
@@ -71,7 +83,7 @@ object Achievements {
             }
             pageCounts.forEach { n -> add(pages(reads, n)) }
             add(thickBook(reads))
-            add(goals(reads, goals))
+            add(goals(reads, goals, today))
             languageCounts.forEach { n -> add(languages(reads, n)) }
             add(series(reads, series))
             add(author(reads))
@@ -79,6 +91,10 @@ object Achievements {
             streakMonths.forEach { n -> add(streak(sessions, n)) }
             val longestDays = if (readingDays.isEmpty()) 0 else Streaks.of(emptyList(), days = readingDays).days.longest
             streakDays.forEach { n -> add(dayStreak(readingDays, longestDays, n)) }
+            add(fast(reads))
+            add(years(reads))
+            add(lender(lentDates))
+            add(collector(books.values))
         }
     }
 
@@ -86,12 +102,16 @@ object Achievements {
     fun recent(badges: List<Badge>, count: Int = 3): List<Badge> =
         badges.filter { it.achieved }.sortedWith(compareByDescending<Badge, LocalDate?>(nullsFirst()) { it.achievedOn }).take(count)
 
-    private fun threshold(id: String, kind: BadgeKind, title: String, description: String, progress: Int, target: Int, at: Read?): Badge {
+    private fun threshold(
+        id: String, kind: BadgeKind, title: String, description: String, progress: Int, target: Int, at: Read?,
+        with: String? = at?.title,
+    ): Badge {
         val achieved = progress >= target
         return Badge(
             id, kind, title, description,
             progress = progress.coerceAtMost(target), target = target, achieved = achieved,
             achievedOn = at?.date.takeIf { achieved }, yearOnly = achieved && at?.yearOnly == true,
+            achievedWith = with.takeIf { achieved },
         )
     }
 
@@ -112,18 +132,27 @@ object Achievements {
         return threshold("thick", BadgeKind.THICK_BOOK, "Dikke pil", "Een boek van $THICK pagina's of meer uitgelezen", thickest, THICK, at)
     }
 
-    /** Leesdoel gehaald; telt per jaar. Behaald op: het boek waarmee je het doel haalde. */
-    private fun goals(reads: List<Read>, goals: List<ReadingGoal>): Badge {
+    /**
+     * Leesdoel gehaald; telt per jaar. Behaald op: het boek waarmee je het doel haalde.
+     * Nog niet gehaald: de voortgang van dit jaar ("14 van 16 dit jaar"), als je een doel hebt.
+     */
+    private fun goals(reads: List<Read>, goals: List<ReadingGoal>, today: LocalDate): Badge {
         val reached = goals.filter { it.target > 0 }.mapNotNull { goal ->
             val inYear = reads.filter { it.date?.year == goal.year }
-            inYear.getOrNull(goal.target - 1)
-        }.sortedWith(compareBy<Read, LocalDate?>(nullsLast()) { it.date })
-        val first = reached.firstOrNull()
+            inYear.getOrNull(goal.target - 1)?.let { goal.year to it }
+        }.sortedWith(compareBy<Pair<Int, Read>, LocalDate?>(nullsLast()) { it.second.date })
+        val last = reached.lastOrNull()
+        val thisYear = goals.firstOrNull { it.year == today.year && it.target > 0 }
+        val doneThisYear = reads.count { it.date?.year == today.year }
         return Badge(
             "goal", BadgeKind.GOAL, "Doel gehaald", "Je leesdoel voor een jaar gehaald",
-            progress = reached.size.coerceAtMost(1), target = 1, achieved = first != null,
-            achievedOn = reached.lastOrNull()?.date, yearOnly = reached.lastOrNull()?.yearOnly == true,
+            progress = if (last != null || thisYear == null) reached.size.coerceAtMost(1) else doneThisYear.coerceAtMost(thisYear.target),
+            target = if (last != null || thisYear == null) 1 else thisYear.target,
+            achieved = last != null,
+            achievedOn = last?.second?.date, yearOnly = last?.second?.yearOnly == true,
             times = reached.size,
+            achievedWith = last?.let { (year, read) -> "leesdoel $year" + (read.title?.let { " (met $it)" } ?: "") },
+            progressNote = "dit jaar".takeIf { last == null && thisYear != null },
         )
     }
 
@@ -134,20 +163,23 @@ object Achievements {
             val language = read.item?.book?.language?.lowercase() ?: continue
             if (seen.add(language) && seen.size == target) at = read
         }
-        return threshold("languages-$target", BadgeKind.LANGUAGES, "$target talen", "Boeken in $target verschillende talen uitgelezen", seen.size, target, at)
+        val with = at?.let { read -> listOfNotNull(read.title, read.item?.book?.language?.uppercase()).joinToString(" · ") }
+        return threshold("languages-$target", BadgeKind.LANGUAGES, "$target talen", "Boeken in $target verschillende talen uitgelezen", seen.size, target, at, with)
     }
 
     /** Een serie van minstens [MIN_SERIES] delen helemaal uitgelezen. */
     private fun series(reads: List<Read>, series: List<SeriesSummary>): Badge {
         fun total(s: SeriesSummary) = maxOf(s.totalVolumes ?: 0, s.maxIndex ?: 0, s.works, ManualParts.highest(s.manualParts) ?: 0)
-        val complete = series.filter { total(it) >= MIN_SERIES && it.read >= total(it) }.map { it.id }.toSet()
+        val complete = series.filter { total(it) >= MIN_SERIES && it.read >= total(it) }.associate { it.id to it.name }
         // Wanneer: het deel dat als laatste voor het eerst werd uitgelezen.
-        val finishedOn = complete.mapNotNull { id ->
+        val finished = complete.mapNotNull { (id, name) ->
             reads.filter { it.item?.series?.seriesId == id }
                 .groupBy { it.item!!.series!!.seriesIndex ?: "boek-${it.session.bookId}" }
                 .values.map { it.first() }
                 .maxWithOrNull(compareBy<Read, LocalDate?>(nullsFirst()) { it.date })
-        }.sortedWith(compareBy<Read, LocalDate?>(nullsLast()) { it.date })
+                ?.let { name to it }
+        }.sortedWith(compareBy<Pair<String, Read>, LocalDate?>(nullsLast()) { it.second.date })
+        val finishedOn = finished.map { it.second }
         val bestProgress = series.filter { total(it) >= MIN_SERIES }.maxOfOrNull { it.read * 100 / total(it) } ?: 0
         return Badge(
             "series", BadgeKind.SERIES, "Serie uit", "Alle delen van een serie (minstens $MIN_SERIES) uitgelezen",
@@ -155,6 +187,7 @@ object Achievements {
             achieved = complete.isNotEmpty(),
             achievedOn = finishedOn.firstOrNull()?.date, yearOnly = finishedOn.firstOrNull()?.yearOnly == true,
             times = complete.size,
+            achievedWith = finished.firstOrNull()?.first,
         )
     }
 
@@ -162,15 +195,19 @@ object Achievements {
     private fun author(reads: List<Read>): Badge {
         val perAuthor = mutableMapOf<String, MutableSet<Long>>()
         var at: Read? = null
+        var atAuthor: String? = null
         var best = 0
         for (read in reads) {
             for (author in read.item?.authors.orEmpty()) {
                 val set = perAuthor.getOrPut(author) { mutableSetOf() }
-                if (set.add(read.session.bookId) && set.size == AUTHOR_BOOKS && at == null) at = read
+                if (set.add(read.session.bookId) && set.size == AUTHOR_BOOKS && at == null) {
+                    at = read
+                    atAuthor = author
+                }
                 best = maxOf(best, set.size)
             }
         }
-        return threshold("author", BadgeKind.AUTHOR, "Fan", "$AUTHOR_BOOKS boeken van dezelfde auteur uitgelezen", best, AUTHOR_BOOKS, at)
+        return threshold("author", BadgeKind.AUTHOR, "Fan", "$AUTHOR_BOOKS boeken van dezelfde auteur uitgelezen", best, AUTHOR_BOOKS, at, atAuthor)
     }
 
     private fun reread(reads: List<Read>): Badge {
@@ -182,6 +219,50 @@ object Achievements {
         }
         val best = counts.values.maxOrNull() ?: 0
         return threshold("reread", BadgeKind.REREAD, "Herlezer", "Hetzelfde boek $REREADS keer uitgelezen", best, REREADS, at)
+    }
+
+    /** Vlotte lezer: een boek binnen een week van begin tot eind (beide datums bekend). */
+    private fun fast(reads: List<Read>): Badge {
+        val at = reads.firstOrNull { read ->
+            val s = read.session
+            s.datePrecision == DatePrecision.DAY && s.startedAt != null && s.finishedAt != null &&
+                !s.finishedAt.isBefore(s.startedAt) && java.time.temporal.ChronoUnit.DAYS.between(s.startedAt, s.finishedAt) < FAST_DAYS
+        }
+        return threshold("fast", BadgeKind.FAST, "Vlotte lezer", "Een boek binnen een week uitgelezen", if (at != null) 1 else 0, 1, at)
+    }
+
+    /** Trouwe lezer: in [YEARS] verschillende jaren een boek uitgelezen. */
+    private fun years(reads: List<Read>): Badge {
+        val seen = mutableSetOf<Int>()
+        var at: Read? = null
+        for (read in reads) {
+            val year = read.date?.year ?: continue
+            if (seen.add(year) && seen.size == YEARS) at = read
+        }
+        return threshold("years", BadgeKind.YEARS, "Trouwe lezer", "In $YEARS verschillende jaren boeken uitgelezen", seen.size, YEARS, at, at?.date?.year?.toString())
+    }
+
+    /** Uitlener: [LOANS] keer een boek uitgeleend. */
+    private fun lender(lentDates: List<LocalDate?>): Badge {
+        val sorted = lentDates.sortedWith(nullsLast())
+        val achieved = sorted.size >= LOANS
+        return Badge(
+            "lender", BadgeKind.LENDER, "Uitlener", "$LOANS keer een boek uitgeleend",
+            progress = sorted.size.coerceAtMost(LOANS), target = LOANS, achieved = achieved,
+            achievedOn = sorted.getOrNull(LOANS - 1).takeIf { achieved },
+        )
+    }
+
+    /** Verzamelaar: [COLLECTION] boeken in bezit; behaald op de dag dat het [COLLECTION]e erbij kwam. */
+    private fun collector(books: Collection<BookListItem>): Badge {
+        val owned = books.filter { it.book.ownership == nl.wdhertog.library.data.db.Ownership.OWNED }.sortedBy { it.book.addedAt }
+        val at = owned.getOrNull(COLLECTION - 1)
+        return Badge(
+            "collector", BadgeKind.COLLECTOR, "Verzamelaar", "$COLLECTION boeken in bezit",
+            progress = owned.size.coerceAtMost(COLLECTION), target = COLLECTION, achieved = at != null,
+            achievedOn = at?.book?.addedAt?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate(),
+            achievedWith = at?.book?.displayTitle,
+        )
     }
 
     private fun dayStreak(days: Set<LocalDate>, longest: Int, length: Int): Badge {

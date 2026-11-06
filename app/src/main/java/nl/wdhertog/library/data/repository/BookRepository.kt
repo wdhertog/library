@@ -366,6 +366,8 @@ class BookRepository(
                 awards = into.awards ?: from.awards,
                 openLibraryWorkId = into.openLibraryWorkId ?: from.openLibraryWorkId,
                 wikidataId = into.wikidataId ?: from.wikidataId,
+                // De keuze van het werk dat overblijft geldt; had dat er geen, dan die van het andere.
+                primaryBookUuid = into.primaryBookUuid ?: from.primaryBookUuid,
                 updatedAt = Instant.now(),
             ),
         )
@@ -384,6 +386,13 @@ class BookRepository(
      * Dit boek hoort niet bij de andere edities (een verkeerde koppeling): het krijgt weer een eigen werk,
      * met dezelfde auteurs en serie, en wordt niet meer automatisch gekoppeld.
      */
+    /** Dit exemplaar als hoofdeditie van zijn werk: die cover en titel in series en op de auteurspagina. */
+    suspend fun setPrimaryEdition(bookId: Long) = db.withTransaction {
+        val book = dao.getBook(bookId) ?: return@withTransaction
+        val work = dao.getPrimaryWork(bookId) ?: return@withTransaction
+        if (work.primaryBookUuid != book.uuid) dao.updateWork(work.copy(primaryBookUuid = book.uuid, updatedAt = Instant.now()))
+    }
+
     suspend fun splitFromWork(bookId: Long) = db.withTransaction {
         val book = dao.getBook(bookId) ?: return@withTransaction
         val work = dao.getPrimaryWork(bookId) ?: return@withTransaction
@@ -400,6 +409,8 @@ class BookRepository(
         )
         setWorkAuthors(newWorkId, dao.getAuthorNames(work.id))
         dao.replaceBookWork(bookId, work.id, newWorkId)
+        // Was dit de hoofdeditie van het oude werk, dan heeft dat werk nu geen keuze meer.
+        if (work.primaryBookUuid == book.uuid) dao.updateWork(work.copy(primaryBookUuid = null, updatedAt = Instant.now()))
         setLock(book, WORK_LOCK, true)
         refreshSearchText(bookId)
     }
@@ -507,6 +518,15 @@ class BookRepository(
                 WorkAuthor(workId, authorId, index)
             },
         )
+    }
+
+    /** Zelf aangepast: verrijking mag [field] bij deze boeken niet meer overschrijven. */
+    internal suspend fun lockField(bookIds: List<Long>, field: String) {
+        bookIds.forEach { id ->
+            val book = dao.getBook(id) ?: return@forEach
+            val locked = book.lockedFields.toFieldSet()
+            if (field !in locked) dao.updateBook(book.copy(lockedFields = (locked + field).sorted().joinToString(","), updatedAt = Instant.now()))
+        }
     }
 
     /** Zoektekst opnieuw opbouwen uit boek, werk, auteurs en serie. */

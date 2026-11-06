@@ -13,7 +13,12 @@ internal data class MarcField(val tag: String, val subfields: List<Pair<Char, St
 
 /** Leest de eerste MARC21- of UNIMARC-record uit een SRU-antwoord (namespaces worden genegeerd). */
 internal fun parseFirstMarcRecord(xml: String): List<MarcField>? {
-    val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+    val factory = DocumentBuilderFactory.newInstance().apply {
+        isNamespaceAware = true
+        // Geen DOCTYPE of (externe) entiteiten: een gewijzigd antwoord mag niet het geheugen vullen of bestanden lezen.
+        runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
+        isExpandEntityReferences = false
+    }
     val document = factory.newDocumentBuilder().parse(InputSource(StringReader(xml)))
     val record = document.getElementsByTagNameNS("*", "record")
         .let { list -> (0 until list.length).map { list.item(it) as Element } }

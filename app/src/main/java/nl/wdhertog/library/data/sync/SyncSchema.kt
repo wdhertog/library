@@ -21,11 +21,11 @@ object SyncSchema {
             "isbn13", "isbn10", "title", "subtitle", "language", "translators", "publisher", "publishedYear", "pages",
             "format", "description", "coverUrl", "coverFile", "tags", "ownership", "borrowedFrom", "borrowedDueDate",
             "disposalReason", "disposedTo", "disposedAt", "owner", "location", "shelfPosition", "notes", "enrichStatus",
-            "enrichedSources", "lockedFields", "openLibraryEditionId", "storygraphId", "hirtId", "addedAt", "works",
+            "enrichedSources", "lockedFields", "openLibraryEditionId", "storygraphId", "hirtId", "addedAt", "works", "externalIds",
         ),
         WORK to listOf(
             "title", "originalTitle", "originalLanguage", "firstPublishedYear", "series", "seriesIndex", "awards",
-            "openLibraryWorkId", "wikidataId", "authors",
+            "openLibraryWorkId", "wikidataId", "authors", "primaryBook",
         ),
         SERIES to listOf("name", "totalVolumes", "wikidataId", "manualParts"),
         LOCATION to listOf("parent", "name", "type", "sortOrder"),

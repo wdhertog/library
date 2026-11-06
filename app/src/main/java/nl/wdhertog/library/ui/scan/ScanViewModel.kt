@@ -176,8 +176,12 @@ class ScanViewModel(
         if (entries.value.any { it.isbn13 == isbn13 } || !inFlight.add(isbn13)) return
 
         viewModelScope.launch {
-            addIsbn(isbn13)
-            inFlight.remove(isbn13)
+            // finally: ook bij een fout mag hetzelfde ISBN later opnieuw gescand worden.
+            try {
+                addIsbn(isbn13)
+            } finally {
+                inFlight.remove(isbn13)
+            }
         }
     }
 

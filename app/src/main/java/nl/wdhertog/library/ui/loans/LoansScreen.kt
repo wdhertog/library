@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -73,7 +74,17 @@ fun LoansScreen(
     var chosen by remember { mutableStateOf<BookListItem?>(null) }
     var returning by remember { mutableStateOf<BorrowedRow?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
-    val today = remember { LocalDate.now() }
+    // Bijwerken bij terugkomen en om middernacht, anders klopt "te laat" niet als het scherm openblijft.
+    var today by remember { mutableStateOf(LocalDate.now()) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        today = LocalDate.now()
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(today) {
+        val untilMidnight = java.time.Duration.between(java.time.LocalDateTime.now(), today.plusDays(1).atStartOfDay())
+        kotlinx.coroutines.delay(untilMidnight.toMillis().coerceAtLeast(1_000))
+        today = LocalDate.now()
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Uitleen") }) },
