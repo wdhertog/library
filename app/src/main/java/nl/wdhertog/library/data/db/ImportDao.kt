@@ -13,6 +13,7 @@ data class BookIdentityRow(
     val title: String,
     val isbn13: String?,
     val hirtId: Long?,
+    val externalIds: String? = null,
     /** Auteurs van het eerste werk, gescheiden door een tab. */
     val authors: String?,
 )
@@ -22,7 +23,7 @@ interface ImportDao {
 
     @Query(
         """
-        SELECT b.id, b.title, b.isbn13, b.hirtId,
+        SELECT b.id, b.title, b.isbn13, b.hirtId, b.externalIds,
                (SELECT GROUP_CONCAT(a.name, char(9)) FROM book_work bw
                   JOIN work_author wa ON wa.workId = bw.workId JOIN author a ON a.id = wa.authorId
                  WHERE bw.bookId = b.id AND bw.position = 0) AS authors

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nl.wdhertog.library.data.db.ImportRun
+import nl.wdhertog.library.importer.GoodreadsParser
 import nl.wdhertog.library.importer.HirtParser
 import nl.wdhertog.library.importer.XlsxReader
 import nl.wdhertog.library.importer.TableImporter
@@ -144,8 +145,24 @@ class ImportViewModel(
                         listOf(Sheet(name.orEmpty(), CsvReader.read(bytes)))
                     }
                 }.filter { it.table.header.isNotEmpty() }
+                val goodreads = sheets.singleOrNull()?.table?.takeIf { GoodreadsParser.matches(it.header) }
                 if (sheets.isEmpty()) {
                     ImportUiState.Error("Geen gegevens gevonden in dit bestand")
+                } else if (goodreads != null) {
+                    // Een export van Goodreads: kolommen zijn bekend, meteen naar de controle.
+                    val export = withContext(Dispatchers.Default) { GoodreadsParser.parse(goodreads) }
+                    val matches = ImportMatcher.match(export.books, service.existingBooks())
+                    val notOwned = export.books.count { !it.owned }
+                    ImportUiState.Review(
+                        source = GoodreadsParser.SOURCE,
+                        fileName = name,
+                        items = export.books.zip(matches, ::ReviewItem),
+                        goals = emptyMap(),
+                        summary = "Goodreads: ${export.books.size} boeken" + when {
+                            export.ownedMarked == 0 -> " (geen als „in bezit” gemarkeerd: allemaal als eigen boek)"
+                            else -> ", ${export.books.size - notOwned} in bezit, $notOwned niet (meer) in bezit"
+                        },
+                    )
                 } else {
                     ImportUiState.Mapping(name, sheets, 0, targetsFor(sheets.first().table))
                 }

@@ -36,7 +36,6 @@ object HirtParser {
     private const val FAVORITE_TAG = "favorieten"
 
     /** "Duin (Duin, #1)" → titel "Duin", serie "Duin", deel "1". */
-    private val seriesInTitle = Regex("""^(.*?)\s*\(([^()]*?),?\s*#\s*([\w.]+)\)\s*$""")
     private val contributor = Regex("""^(.*?)\s*\(([^()]*)\)$""")
 
     class FormatException(message: String) : Exception(message)
@@ -67,12 +66,11 @@ object HirtParser {
         var title = json.str("title") ?: return null
         var seriesName = json.str("series")
         var seriesIndex = json.str("series_number")
-        seriesInTitle.matchEntire(title)?.let { m ->
-            title = m.groupValues[1]
-            if (seriesName == null) seriesName = m.groupValues[2].trim()
-            if (seriesIndex == null) seriesIndex = m.groupValues[3]
+        ImportText.splitSeries(title).let { parts ->
+            title = parts.title
+            if (seriesName == null) seriesName = parts.seriesName
+            if (seriesIndex == null) seriesIndex = parts.seriesIndex
         }
-        title = title.trim().removeSuffix(":").trim()
 
         val authors = splitNames(json.str("author")).distinctBy(String::lowercase)
         // Rollen kloppen niet altijd; een auteur blijft auteur.

@@ -55,7 +55,7 @@ class ImportService(
     fun observeRuns(): Flow<List<ImportRun>> = dao.observeRuns()
 
     suspend fun existingBooks(): List<ExistingBook> = dao.bookIdentities().map {
-        ExistingBook(it.id, it.title, it.authors?.split('\t').orEmpty(), it.isbn13, it.hirtId)
+        ExistingBook(it.id, it.title, it.authors?.split('\t').orEmpty(), it.isbn13, it.hirtId, ExternalIds.parse(it.externalIds))
     }
 
     suspend fun run(
@@ -124,6 +124,7 @@ class ImportService(
                 // Met ISBN gaat het boek in de verrijkingswachtrij; die vult alleen lege velden aan.
                 enrichStatus = if (imported.isbn13 != null) EnrichStatus.NEW else EnrichStatus.MANUAL,
                 hirtId = imported.hirtId,
+                externalIds = ExternalIds.join(imported.externalIds),
                 storygraphId = imported.storygraphId,
                 importRunId = runId,
                 addedAt = imported.addedAt?.atStartOfDay(ZoneId.systemDefault())?.toInstant() ?: Instant.now(),
@@ -154,6 +155,7 @@ class ImportService(
                     else -> "${book.notes}\n${imported.notes}"
                 },
                 hirtId = imported.hirtId ?: book.hirtId,
+                externalIds = ExternalIds.join(ExternalIds.parse(book.externalIds) + imported.externalIds),
                 storygraphId = book.storygraphId ?: imported.storygraphId,
                 // Have I Read That weet vaak al jaren eerder dat je het boek hebt.
                 addedAt = if (importedAdded != null && importedAdded < book.addedAt) importedAdded else book.addedAt,
