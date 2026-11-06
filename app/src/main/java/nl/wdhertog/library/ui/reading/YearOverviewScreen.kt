@@ -1,5 +1,6 @@
 package nl.wdhertog.library.ui.reading
 
+import kotlinx.coroutines.flow.flowOn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -73,7 +74,7 @@ class YearOverviewViewModel(handle: SavedStateHandle, books: BookRepository, rea
     val stats: StateFlow<YearStats?> =
         combine(books.observeLibrary(), reading.observeSessions(), reading.observeGoals()) { library, sessions, goals ->
             ReadingStats.forYear(year, sessions, library.associateBy { it.book.id }, goals.firstOrNull { it.year == year }?.target)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
 /** "Je jaar in boeken": de hoogtepunten van een leesjaar, om terug te kijken of te delen. */
@@ -113,7 +114,7 @@ fun YearOverviewScreen(
                                         rendering = true
                                         scope.launch {
                                             try {
-                                                val image = YearImage.render(context, o, stats?.finished.orEmpty())
+                                                val image = withContext(Dispatchers.Default) { YearImage.render(context, o, stats?.finished.orEmpty()) } // 1080×1350 tekenen: niet op de main thread
                                                 withContext(Dispatchers.IO) { Share.image(context, image, "jaar-in-boeken-${o.year}") }
                                             } finally {
                                                 rendering = false

@@ -1,8 +1,17 @@
 package nl.wdhertog.library.data.repository
 
 import androidx.room.withTransaction
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.shareIn
+import nl.wdhertog.library.data.db.BookAuthorRow
+import nl.wdhertog.library.data.db.BookSeriesRow
 import nl.wdhertog.library.data.db.Author
 import nl.wdhertog.library.data.db.Book
 import nl.wdhertog.library.data.db.Ownership
@@ -28,7 +37,12 @@ sealed interface ScanAddResult {
     data class AlreadyPresent(override val bookId: Long, val notOwned: Boolean = false) : ScanAddResult
 }
 
-class BookRepository(private val db: LibraryDatabase, private val covers: CoverStore) {
+class BookRepository(
+    private val db: LibraryDatabase,
+    private val covers: CoverStore,
+    /** Voor de gedeelde bibliotheekstroom; zonder (tests) krijgt elke verzamelaar een eigen stroom. */
+    private val scope: CoroutineScope? = null,
+) {
 
     private companion object {
         /** In lockedFields: zelf van andere edities losgekoppeld. */
@@ -37,18 +51,34 @@ class BookRepository(private val db: LibraryDatabase, private val covers: CoverS
 
     private val dao = db.bookDao()
 
-    fun observeLibrary(): Flow<List<BookListItem>> =
-        combine(dao.observeBooks(), dao.observeBookAuthors(), dao.observeBookSeries()) { books, authorRows, seriesRows ->
-            val authorsByBook = authorRows.groupBy({ it.bookId }, { it.name })
-            val seriesByBook = seriesRows.associateBy { it.bookId }
-            books.map { book ->
-                BookListItem(
-                    book = book,
-                    authors = authorsByBook[book.id].orEmpty().distinct(),
-                    series = seriesByBook[book.id],
-                )
-            }
+    /**
+     * Alle boeken met auteurs en serie, voor lijsten. Eén gedeelde stroom voor alle schermen (anders laadt
+     * elk scherm dat nog in de navigatie staat de hele bibliotheek opnieuw bij elke wijziging), zonder
+     * beschrijving en notities; voor exporteren is er [fullLibrary].
+     */
+    fun observeLibrary(): Flow<List<BookListItem>> = library
+
+    private val library: Flow<List<BookListItem>> =
+        combine(dao.observeBookList(), dao.observeBookAuthors(), dao.observeBookSeries(), ::toListItems)
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+            .let { flow -> scope?.let { flow.shareIn(it, SharingStarted.WhileSubscribed(5_000), replay = 1) } ?: flow }
+
+    /** Alle boeken met alle velden (ook beschrijving en notities), bijv. voor de CSV-export. */
+    suspend fun fullLibrary(): List<BookListItem> =
+        toListItems(dao.getBooks(), dao.observeBookAuthors().first(), dao.observeBookSeries().first())
+
+    private fun toListItems(books: List<Book>, authorRows: List<BookAuthorRow>, seriesRows: List<BookSeriesRow>): List<BookListItem> {
+        val authorsByBook = authorRows.groupBy({ it.bookId }, { it.name })
+        val seriesByBook = seriesRows.associateBy { it.bookId }
+        return books.map { book ->
+            BookListItem(
+                book = book,
+                authors = authorsByBook[book.id].orEmpty().distinct(),
+                series = seriesByBook[book.id],
+            )
         }
+    }
 
     fun observeDetail(bookId: Long): Flow<BookDetail?> =
         combine(

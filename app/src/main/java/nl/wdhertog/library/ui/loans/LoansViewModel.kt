@@ -1,5 +1,7 @@
 package nl.wdhertog.library.ui.loans
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,7 +45,7 @@ class LoansViewModel(
             borrowed = borrowed,
             available = library.filter { it.book.ownership == Ownership.OWNED && it.book.id !in lentOut },
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LoansUiState())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LoansUiState())
 
     val personNames: StateFlow<List<String>> = loans.observePersonNames()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

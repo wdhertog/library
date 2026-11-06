@@ -1,5 +1,6 @@
 package nl.wdhertog.library.ui.scan
 
+import kotlinx.coroutines.flow.flowOn
 import android.graphics.Bitmap
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.SavedStateHandle
@@ -142,7 +143,7 @@ class ScanViewModel(
                 val previous = entry.previous?.locationId?.let { index[it]?.pathLabel }
                 SessionRow(entry, byId[entry.bookId], previous)
             }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun setShelf(locationId: Long?) {
         shelfId.value = locationId

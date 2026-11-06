@@ -120,7 +120,7 @@ class BackupViewModel(
     }
 
     fun exportCsv(resolver: ContentResolver, uri: Uri) = work("Exporteren…") {
-        val library = books.observeLibrary().first()
+        val library = books.fullLibrary() // met notities
         val index = LocationTree.index(locations.observeTree().first())
         val sessions = reading.observeSessions().first().groupBy { it.bookId }
         val lent = loans.observeActiveLoans().first().associate { it.bookId to it.personName }

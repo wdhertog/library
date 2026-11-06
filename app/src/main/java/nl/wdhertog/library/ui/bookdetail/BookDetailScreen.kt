@@ -132,7 +132,6 @@ fun BookDetailScreen(
     val ownerNames by viewModel.ownerNames.collectAsStateWithLifecycle()
     var editingOwner by remember { mutableStateOf(false) }
     var editionDialog by remember { mutableStateOf<String?>(null) }
-    val otherBooks by viewModel.otherBooks.collectAsStateWithLifecycle()
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     var sessionDialog by remember { mutableStateOf<Pair<String, ReadingSession>?>(null) }
     var progressFor by remember { mutableStateOf<ReadingSession?>(null) }
@@ -386,6 +385,8 @@ fun BookDetailScreen(
     val loadedDetail = (state as? BookDetailUiState.Loaded)?.detail
     when (editionDialog) {
         "link" -> {
+            // Alleen zolang de dialoog open is: de hele bibliotheek is hier anders voor niets actief.
+            val otherBooks by viewModel.otherBooks.collectAsStateWithLifecycle()
             val sameWork = loadedDetail?.otherEditions?.map { it.id }.orEmpty().toSet()
             BookPickerDialog(
                 title = "Editie of vertaling van welk boek?",
