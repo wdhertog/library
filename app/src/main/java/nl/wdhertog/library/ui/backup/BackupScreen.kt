@@ -94,6 +94,9 @@ fun BackupScreen(
     val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.inspect(context.contentResolver, it) }
     }
+    val exportJson = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let { viewModel.exportJson(context.contentResolver, it) }
+    }
     val exportCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         uri?.let { viewModel.exportCsv(context.contentResolver, it) }
     }
@@ -205,6 +208,20 @@ fun BackupScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(onClick = { exportCsv.launch("bibliotheek-$today.csv") }) { Text("Exporteren…") }
+                }
+            }
+
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Exporteren als JSON", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Al je gegevens in een open formaat, om ze ergens anders te gebruiken: boeken, werken, auteurs, " +
+                            "series, locaties, uitleningen, leesgeschiedenis en leesdoelen. Geen back-up: terugzetten gaat " +
+                            "met de ZIP hierboven. Covers zitten er niet in.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(onClick = { exportJson.launch("bibliotheek-$today.json") }) { Text("Exporteren…") }
                 }
             }
         }

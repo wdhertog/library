@@ -39,6 +39,25 @@ class BackupService(
         .filter(File::exists).sortedByDescending(File::lastModified)
 
 
+    /** Alles als JSON (zie JsonExport): de gedeelde records zoals de sync ze kent, plus wat persoonlijk is. */
+    suspend fun exportJson(out: OutputStream, books: nl.wdhertog.library.data.repository.BookRepository): Int {
+        val db = database()
+        val records = nl.wdhertog.library.data.sync.RoomSyncStore(db, books).snapshot()
+        val allBooks = db.bookDao().getBooks()
+        val text = JsonExport.write(
+            records = records,
+            books = allBooks,
+            authors = db.authorDao().all(),
+            sessions = db.readingDao().allSessions(),
+            goals = db.readingDao().allGoals(),
+            readingDays = db.readingDao().allDays(),
+            schemaVersion = schemaVersion(),
+            appVersion = BuildConfig.VERSION_NAME,
+        )
+        withContext(Dispatchers.IO) { out.write(text.toByteArray()) }
+        return allBooks.size
+    }
+
     suspend fun createBackup(out: OutputStream): BackupManifest {
         // Eerst in de app: de database staat dan maar kort op slot, ook als [out] naar een trage (cloud)map gaat.
         val temp = File(context.cacheDir, "back-up-${System.nanoTime()}.zip")
@@ -164,7 +183,7 @@ class BackupService(
         from.deleteRecursively()
     }
 
-    private suspend fun schemaVersion(): Int = withContext(Dispatchers.IO) { database().openHelper.readableDatabase.version }
+    internal suspend fun schemaVersion(): Int = withContext(Dispatchers.IO) { database().openHelper.readableDatabase.version }
 
     private fun addFile(zip: ZipOutputStream, name: String, file: File) {
         zip.putNextEntry(ZipEntry(name))

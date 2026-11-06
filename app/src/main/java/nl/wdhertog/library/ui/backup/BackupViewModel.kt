@@ -121,6 +121,12 @@ class BackupViewModel(
         "Back-up gemaakt: ${manifest.books} boeken, ${manifest.covers} eigen covers"
     }
 
+    fun exportJson(resolver: ContentResolver, uri: Uri) = work("Exporteren…") {
+        val out = withContext(Dispatchers.IO) { resolver.openOutputStream(uri) } ?: error("Kan niet schrijven")
+        val count = out.use { backup.exportJson(it, books) }
+        "$count boeken geëxporteerd als JSON"
+    }
+
     fun exportCsv(resolver: ContentResolver, uri: Uri) = work("Exporteren…") {
         val library = books.fullLibrary() // met notities
         val index = LocationTree.index(locations.observeTree().first())
