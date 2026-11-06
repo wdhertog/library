@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 data class BookAuthorRow(val bookId: Long, val name: String)
 
 /** Het (eerste) werk van een boek; edities van hetzelfde werk delen dit id. */
-data class BookWorkRow(val bookId: Long, val workId: Long)
+data class BookWorkRow(val bookId: Long, val workId: Long, val primaryBookUuid: String? = null)
 
 data class BookSeriesRow(
     val bookId: Long,
@@ -242,7 +242,7 @@ interface BookDao {
     @Query("DELETE FROM book_work WHERE bookId = :bookId AND workId = :workId")
     suspend fun deleteBookWork(bookId: Long, workId: Long)
 
-    @Query("SELECT bookId, workId FROM book_work WHERE position = 0")
+    @Query("SELECT bw.bookId, bw.workId, w.primaryBookUuid FROM book_work bw JOIN work w ON w.id = bw.workId WHERE bw.position = 0")
     fun observePrimaryWorks(): Flow<List<BookWorkRow>>
 
     @Query("SELECT * FROM work WHERE id = :id")
