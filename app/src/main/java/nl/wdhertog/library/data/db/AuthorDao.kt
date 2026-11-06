@@ -32,6 +32,9 @@ interface AuthorDao {
     @Query("SELECT * FROM author WHERE id = :id")
     suspend fun get(id: Long): Author?
 
+    @Query("SELECT * FROM author")
+    suspend fun all(): List<Author>
+
     @Query("SELECT id FROM author WHERE name = :name COLLATE NOCASE LIMIT 1")
     suspend fun findId(name: String): Long?
 

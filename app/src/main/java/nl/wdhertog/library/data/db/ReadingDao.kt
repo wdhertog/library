@@ -89,6 +89,15 @@ interface ReadingDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun logDay(day: ReadingDay)
 
+    @Query("SELECT * FROM reading_session")
+    suspend fun allSessions(): List<ReadingSession>
+
+    @Query("SELECT * FROM reading_goal")
+    suspend fun allGoals(): List<ReadingGoal>
+
+    @Query("SELECT * FROM reading_log")
+    suspend fun allDays(): List<ReadingDay>
+
     /** Alle dagen met bijgewerkte voortgang, voor de dagstreak. */
     @Query("SELECT DISTINCT date FROM reading_log")
     fun observeLoggedDays(): Flow<List<java.time.LocalDate>>

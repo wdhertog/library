@@ -127,7 +127,7 @@ fun YearOverviewScreen(
                                         rendering = true
                                         scope.launch {
                                             try {
-                                                val image = withContext(Dispatchers.Default) { YearImage.render(context, o, stats?.finished.orEmpty()) } // 1080×1350 tekenen: niet op de main thread
+                                                val image = withContext(Dispatchers.Default) { YearImage.render(context, o, stats?.finished.orEmpty(), badges.map { it.title }) } // 1080×1350 tekenen: niet op de main thread
                                                 withContext(Dispatchers.IO) { Share.image(context, image, "jaar-in-boeken-${o.year}") }
                                             } finally {
                                                 rendering = false

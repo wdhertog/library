@@ -139,6 +139,42 @@ class SyncManager(
         scope.launch { evaluate() }
     }
 
+    /**
+     * Uitkomst van koppelen of samenvoegen voor het scherm. Hier en niet in het scherm, en de acties lopen in
+     * [scope]: draai je het scherm tijdens het uitwisselen, dan loopt het gewoon door en blijft de melding staan.
+     */
+    private val _pairMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val pairMessage: kotlinx.coroutines.flow.StateFlow<String?> = _pairMessage
+
+    fun clearPairMessage() {
+        _pairMessage.value = null
+    }
+
+    /** Koppelen vanuit het scherm; null-uitkomst = het controlescherm voor samenvoegen staat open. */
+    fun requestPairing(code: PairingCode) {
+        scope.launch {
+            _pairMessage.value = pairWith(code).fold(
+                onSuccess = { it?.let { r -> "Gekoppeld met ${r.peerName}: ${r.received} ontvangen, ${r.sent} verstuurd" + coversText(r) + "." } },
+                onFailure = { "Koppelen mislukt: ${it.message ?: "onbekende fout"}" },
+            )
+        }
+    }
+
+    fun requestMerge(accepted: Set<String>) {
+        scope.launch {
+            _pairMessage.value = confirmMerge(accepted).fold(
+                onSuccess = { "Samengevoegd met ${it.peerName}: ${it.received} ontvangen, ${it.sent} verstuurd" + coversText(it) + "." },
+                onFailure = { "Samenvoegen mislukt: ${it.message ?: "onbekende fout"}" },
+            )
+        }
+    }
+
+    fun requestSyncNow() {
+        scope.launch { syncNow() }
+    }
+
+    private fun coversText(r: SyncResult) = if (r.coversReceived > 0) ", ${r.coversReceived} covers" else ""
+
     /** De instelling voor de achtergrond is veranderd (vanuit het scherm, dus in beeld). */
     fun backgroundSettingChanged() {
         scope.launch {

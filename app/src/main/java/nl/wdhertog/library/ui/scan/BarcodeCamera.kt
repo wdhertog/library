@@ -40,11 +40,13 @@ fun BarcodeCamera(
         val scanner = BarcodeScanning.getClient(
             BarcodeScannerOptions.Builder().setBarcodeFormats(format).build(),
         )
-        val executor = ContextCompat.getMainExecutor(context)
+        // Beelden omzetten op een eigen thread (anders hapert de lijst ernaast); de uitkomst op de main thread.
+        val analysis = java.util.concurrent.Executors.newSingleThreadExecutor()
+        val main = ContextCompat.getMainExecutor(context)
         controller.imageAnalysisBackpressureStrategy = ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST
         controller.setImageAnalysisAnalyzer(
-            executor,
-            MlKitAnalyzer(listOf(scanner), ImageAnalysis.COORDINATE_SYSTEM_ORIGINAL, executor) { result ->
+            analysis,
+            MlKitAnalyzer(listOf(scanner), ImageAnalysis.COORDINATE_SYSTEM_ORIGINAL, main) { result ->
                 result.getValue(scanner)?.forEach { barcode -> barcode.rawValue?.let(currentOnBarcode) }
             },
         )
@@ -53,6 +55,7 @@ fun BarcodeCamera(
             controller.clearImageAnalysisAnalyzer()
             controller.unbind()
             scanner.close()
+            analysis.shutdown()
         }
     }
 

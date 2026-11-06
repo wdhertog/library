@@ -1,5 +1,6 @@
 package nl.wdhertog.library.ui.sync
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -107,24 +108,18 @@ fun SyncScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val container = (context.applicationContext as LibraryApp).container
     val manager = container.syncManager
-    val peers by container.syncRepository.observePeers().collectAsState(initial = emptyList())
-    val status by manager.status.collectAsState()
-    val pairing by manager.pairing.collectAsState()
-    val inBackground by container.settings.syncInBackground.collectAsState()
+    val peers by container.syncRepository.observePeers().collectAsStateWithLifecycle(initialValue = emptyList())
+    val status by manager.status.collectAsStateWithLifecycle()
+    val pairing by manager.pairing.collectAsStateWithLifecycle()
+    val inBackground by container.settings.syncInBackground.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SyncDialog?>(null) }
     var unpair by remember { mutableStateOf<SyncPeer?>(null) }
-    var pairMessage by remember { mutableStateOf<String?>(null) }
+    val pairMessage by manager.pairMessage.collectAsStateWithLifecycle()
 
     val pairWith: (PairingCode) -> Unit = { code ->
         dialog = null
-        scope.launch {
-            pairMessage = manager.pairWith(code).fold(
-                // null: het controlescherm staat open.
-                onSuccess = { it?.let { r -> "Gekoppeld met ${r.peerName}: ${r.received} ontvangen, ${r.sent} verstuurd" + covers(r) + "." } },
-                onFailure = { "Koppelen mislukt: ${it.message ?: "onbekende fout"}" },
-            )
-        }
+        manager.requestPairing(code)
     }
 
     Scaffold(
@@ -154,7 +149,7 @@ fun SyncScreen(onBack: () -> Unit) {
 
             StatusLine(status)
             Button(
-                onClick = { scope.launch { manager.syncNow() } },
+                onClick = { manager.requestSyncNow() },
                 enabled = peers.isNotEmpty() && status !is SyncStatus.Busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -222,24 +217,17 @@ fun SyncScreen(onBack: () -> Unit) {
     (pairing as? PairingState.Review)?.let { review ->
         MergeReviewDialog(
             review = review,
-            onConfirm = { accepted ->
-                scope.launch {
-                    pairMessage = manager.confirmMerge(accepted).fold(
-                        onSuccess = { "Samengevoegd met ${it.peerName}: ${it.received} ontvangen, ${it.sent} verstuurd" + covers(it) + "." },
-                        onFailure = { "Samenvoegen mislukt: ${it.message ?: "onbekende fout"}" },
-                    )
-                }
-            },
+            onConfirm = { accepted -> manager.requestMerge(accepted) },
             onCancel = manager::cancelMerge,
         )
     }
 
     pairMessage?.let { message ->
         AlertDialog(
-            onDismissRequest = { pairMessage = null },
+            onDismissRequest = manager::clearPairMessage,
             title = { Text("Koppelen") },
             text = { Text(message) },
-            confirmButton = { TextButton(onClick = { pairMessage = null }) { Text("OK") } },
+            confirmButton = { TextButton(onClick = manager::clearPairMessage) { Text("OK") } },
         )
     }
 
@@ -519,9 +507,6 @@ private fun PairRow(pair: MergePair, peerName: String, checked: Boolean, onChang
         }
     }
 }
-
-private fun covers(result: nl.wdhertog.library.sync.SyncResult) =
-    if (result.coversReceived > 0) ", ${result.coversReceived} covers" else ""
 
 private val timeFormat = DateTimeFormatter.ofPattern("d MMM HH:mm", Locale.forLanguageTag("nl"))
 

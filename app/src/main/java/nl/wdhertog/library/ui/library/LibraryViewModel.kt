@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import nl.wdhertog.library.data.repository.editionFacts
+import nl.wdhertog.library.data.repository.Editions
 import nl.wdhertog.library.data.repository.ReadingRepository
 import kotlinx.coroutines.launch
 import nl.wdhertog.library.data.db.LocationType
@@ -171,6 +173,7 @@ class LibraryViewModel(
     val state: StateFlow<LibraryUiState> =
         combine(indexed, locations.observeTree(), filters, readState, repository.observePrimaryWorks()) { all, tree, filters, readState, works ->
             val workOf = works.associate { it.bookId to it.workId }
+            val chosenPrimary = works.associate { it.workId to it.primaryBookUuid }
             val flat = LocationTree.flatten(tree)
             val byId = flat.associateBy { it.id }
             val selected = filters.locationId?.let(byId::get)
@@ -194,6 +197,10 @@ class LibraryViewModel(
             }
             // Edities van één werk naast elkaar: op de (eerste) titel van het werk, daarbinnen op titel.
             val groupKey = editionGroups.mapValues { (_, books) -> books.minOf { it.titleKey } }
+            // Binnen een groep de hoofdeditie bovenaan (zelf gekozen, of volgens Editions).
+            val primaryOfGroup = editionGroups.mapValues { (workId, books) ->
+                Editions.primaryOf(books, chosenPrimary[workId]) { it.item.book.editionFacts }?.item?.book?.id
+            }
             val visible = (if (filters.multipleEditions) editionGroups.values.flatten() else inScope)
                 .filter { filters.language == null || it.item.book.language == filters.language }
                 .filter { inSelected == null || it.item.book.locationId in inSelected }
@@ -209,7 +216,8 @@ class LibraryViewModel(
                 }
                 .filter { entry -> words.all { entry.item.book.searchText.contains(it) } }
                 .sortedWith(
-                    if (filters.multipleEditions) compareBy<Indexed> { groupKey[workOf[it.item.book.id]] }.thenBy { workOf[it.item.book.id] }.thenBy { it.titleKey }
+                    if (filters.multipleEditions) compareBy<Indexed> { groupKey[workOf[it.item.book.id]] }.thenBy { workOf[it.item.book.id] }
+                        .thenByDescending { primaryOfGroup[workOf[it.item.book.id]] == it.item.book.id }.thenBy { it.titleKey }
                     else comparatorFor(filters.sort, treeOrder),
                 )
                 .map { it.item }

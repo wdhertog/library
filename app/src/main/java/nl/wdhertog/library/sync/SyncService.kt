@@ -28,7 +28,14 @@ class SyncService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         createChannel(this)
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
+        // Altijd eerst startForeground: Android eist dat na startForegroundService, ook als we meteen weer stoppen.
         ServiceCompat.startForeground(this, NOTIFICATION_ID, notification(this, home), type)
+        starting = false
+        if (stopRequested) {
+            stopRequested = false
+            stopSelf()
+            return START_NOT_STICKY
+        }
         running = true
         (application as LibraryApp).container.syncManager.onServiceStarted()
         return START_NOT_STICKY
@@ -43,6 +50,12 @@ class SyncService : Service() {
         private const val CHANNEL = "sync"
         private const val NOTIFICATION_ID = 7
         @Volatile private var running = false
+
+        /** startForegroundService gevraagd, maar onStartCommand nog niet geweest. */
+        @Volatile private var starting = false
+
+        /** Stoppen gevraagd terwijl de dienst nog startte: hij stopt zichzelf na startForeground. */
+        @Volatile private var stopRequested = false
         @Volatile private var home = true
 
         private fun createChannel(context: Context) {
@@ -78,10 +91,21 @@ class SyncService : Service() {
 
         /** Alleen aanroepen terwijl de app in beeld is; vanaf de achtergrond staat Android dit niet toe. */
         fun start(context: Context) = runCatching {
+            stopRequested = false
+            if (running || starting) return@runCatching
+            starting = true
             ContextCompat.startForegroundService(context, Intent(context, SyncService::class.java))
-        }
+        }.onFailure { starting = false }
 
+        /**
+         * Stoppen. Nog bezig met starten (bijv. de schakelaar snel aan en uit)? Dan niet stopService: dan crasht
+         * de app, omdat startForeground nooit kwam. De dienst stopt zichzelf dan zodra hij gestart is.
+         */
         fun stop(context: Context) {
+            if (starting) {
+                stopRequested = true
+                return
+            }
             context.stopService(Intent(context, SyncService::class.java))
         }
     }

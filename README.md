@@ -18,10 +18,10 @@ De app is in het Nederlands en gemaakt voor eigen gebruik, maar iedereen mag hem
 - **Edities en vertalingen** van hetzelfde werk horen bij elkaar. Lees je de Engelse editie, dan telt de Nederlandse ook als gelezen.
 - **Covers:** fotografeer zelf de cover als er geen in de open bronnen staat; dat geldt voor de meeste Nederlandse boeken.
 - **Importeren:**
-  - uit Have I Read That (JSON-export);
+  - uit Goodreads (CSV-export);
   - uit Excel of CSV, waarbij je per kolom kiest waar die terechtkomt.
   - Vooraf zie je welke boeken er al staan, en elke import is ongedaan te maken.
-- **Back-up:** automatisch elke week naar een map die je kiest (bijvoorbeeld in Nextcloud), handmatig als ZIP, terugzetten op een nieuwe telefoon, en exporteren naar CSV voor Excel.
+- **Back-up:** automatisch elke week naar een map die je kiest (bijvoorbeeld in Nextcloud), handmatig als ZIP, terugzetten op een nieuwe telefoon, en exporteren naar CSV voor Excel of naar JSON om je gegevens ergens anders te gebruiken.
 - **Delen met huisgenoten:** geef per boek de eigenaar aan en filter daarop.
 - **Synchroniseren tussen telefoons:** via de wifi thuis, rechtstreeks en versleuteld van telefoon naar telefoon, zonder server of account. Koppelen gaat met een QR-code. De eerste keer voeg je twee bestaande bibliotheken samen met een controlescherm. De collectie is gedeeld; wat je gelezen hebt, beoordelingen, favorieten en je leeslijst blijven per telefoon.
 

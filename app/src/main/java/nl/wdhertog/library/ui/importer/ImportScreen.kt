@@ -37,8 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.Switch
-import androidx.compose.foundation.clickable
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
@@ -75,7 +73,7 @@ private val tableTypes = arrayOf(
 /** Keuzes voor boeken die zeker al in je bibliotheek staan. */
 private val mergeChoices = listOf(MergeChoice.FILL, MergeChoice.OVERWRITE, MergeChoice.SKIP)
 
-/** Importeren uit Goodreads, Have I Read That of CSV/Excel, met controle vooraf en ongedaan maken. */
+/** Importeren uit Goodreads of CSV/Excel, met controle vooraf en ongedaan maken. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImportScreen(
@@ -87,11 +85,7 @@ fun ImportScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val runs by viewModel.runs.collectAsStateWithLifecycle()
-    val hirtIncludeAll by viewModel.hirtIncludeAll.collectAsStateWithLifecycle()
     var runToUndo by remember { mutableStateOf<ImportRun?>(null) }
-    val pickHirt = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { viewModel.openHirt(context.contentResolver, it) }
-    }
     val pickTable = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.openTable(context.contentResolver, it) }
     }
@@ -111,9 +105,6 @@ fun ImportScreen(
                 ImportUiState.Start, is ImportUiState.Error -> Start(
                     error = (s as? ImportUiState.Error)?.message,
                     runs = runs,
-                    onPickHirt = { pickHirt.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
-                    hirtIncludeAll = hirtIncludeAll,
-                    onHirtIncludeAll = { viewModel.hirtIncludeAll.value = it },
                     onPickTable = { pickTable.launch(tableTypes) },
                     onUndo = { runToUndo = it },
                 )
@@ -185,37 +176,11 @@ fun ImportScreen(
 private fun Start(
     error: String?,
     runs: List<ImportRun>,
-    onPickHirt: () -> Unit,
-    hirtIncludeAll: Boolean,
-    onHirtIncludeAll: (Boolean) -> Unit,
     onPickTable: () -> Unit,
     onUndo: (ImportRun) -> Unit,
 ) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
-        item {
-            SourceCard(
-                title = "Have I Read That",
-                text = "JSON-export met leesgeschiedenis, beoordelingen en leesdoel. Opnieuw importeren werkt bij " +
-                    "zonder dubbelen.",
-                action = {
-                    Row(Modifier.fillMaxWidth().clickable { onHirtIncludeAll(!hirtIncludeAll) }, verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Ook boeken die je niet (meer) hebt", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                "Gelezen, geleend of weggedaan, en e-books en luisterboeken. Ze komen in je leesgeschiedenis, " +
-                                    "niet in je boekenkast.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(checked = hirtIncludeAll, onCheckedChange = onHirtIncludeAll)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = onPickHirt) { Text("Bestand kiezen…") }
-                },
-            )
-        }
         item {
             SourceCard(
                 title = "Goodreads",
