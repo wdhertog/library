@@ -19,7 +19,7 @@ import nl.wdhertog.library.util.Languages
 
 /**
  * Het jaaroverzicht als afbeelding om te delen (1080 × 1350, staand 4:5): jaartal, aantal,
- * de covers van wat je las en de hoogtepunten. Altijd in de lichte kleuren van de app.
+ * de covers van wat je las, de hoogtepunten en de badges van dat jaar. Altijd in de lichte kleuren van de app.
  */
 object YearImage {
     private const val WIDTH = 1080
@@ -32,7 +32,7 @@ object YearImage {
     private const val GREEN = 0xFF2E4A3F.toInt()
     private const val LINE = 0xFFE7E1D6.toInt()
 
-    suspend fun render(context: Context, overview: YearOverview, books: List<ReadEntry>): Bitmap {
+    suspend fun render(context: Context, overview: YearOverview, books: List<ReadEntry>, badges: List<String> = emptyList()): Bitmap {
         val serif = ResourcesCompat.getFont(context, R.font.literata) ?: Typeface.SERIF
         val sans = Typeface.create("sans-serif", Typeface.NORMAL)
         val sansBold = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -96,6 +96,7 @@ object YearImage {
         fun short(entry: ReadEntry) = entry.item.book.displayTitle.substringBefore(": ")
         val highlights = buildList {
             overview.thickest?.let { add("DIKSTE BOEK" to "${short(it)} · ${it.item.book.pages} p.") }
+            if (badges.isNotEmpty()) add((if (badges.size == 1) "BADGE" else "BADGES") to badges.joinToString(" · "))
             overview.bestRated.firstOrNull()?.let { add((if (overview.bestRated.size > 1) "FAVORIETEN" else "FAVORIET") to overview.bestRated.joinToString(", ") { e -> short(e) }) }
             overview.topAuthor?.let { (name, n) -> add("MEEST GELEZEN AUTEUR" to "$name · $n boeken") }
             overview.busiestMonth?.let { (m, n) -> add("DRUKSTE MAAND" to "${YearOverview.monthName(m).replaceFirstChar { it.uppercase() }} · $n ${if (n == 1) "boek" else "boeken"}") }
