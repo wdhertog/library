@@ -214,17 +214,33 @@ class ImportViewModel(
         }
         state.value = ImportUiState.Running(0, items.size)
         appScope.launch {
-            val result = service.run(review.source, review.fileName, items, review.goals) { done ->
-                state.value = ImportUiState.Running(done, items.size)
+            try {
+                val result = service.run(review.source, review.fileName, items, review.goals) { done ->
+                    state.value = ImportUiState.Running(done, items.size)
+                }
+                state.value = ImportUiState.Done(result)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Niet de app laten crashen en niet op "bezig" blijven staan. Wat al was ingelezen, staat
+                // bij de eerdere imports en is daar ongedaan te maken.
+                android.util.Log.w("ImportViewModel", "Importeren mislukt", e)
+                state.value = ImportUiState.Error(
+                    "Importeren mislukt: ${e.message ?: e.javaClass.simpleName}. Wat al was ingelezen, kun je hieronder bij de eerdere imports ongedaan maken.",
+                )
+            } finally {
+                scheduler.schedule()
             }
-            scheduler.schedule()
-            state.value = ImportUiState.Done(result)
         }
     }
 
     fun undo(runId: Long) {
         appScope.launch {
-            service.undo(runId)
+            runCatching { service.undo(runId) }.onFailure {
+                android.util.Log.w("ImportViewModel", "Ongedaan maken mislukt", it)
+                state.value = ImportUiState.Error("Ongedaan maken mislukt: ${it.message}")
+                return@launch
+            }
             if ((state.value as? ImportUiState.Done)?.result?.runId == runId) state.value = ImportUiState.Start
         }
     }

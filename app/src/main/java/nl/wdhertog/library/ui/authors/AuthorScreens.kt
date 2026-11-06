@@ -130,6 +130,7 @@ fun AuthorScreen(
     },
 ) {
     val page by viewModel.page.collectAsStateWithLifecycle()
+    val notFound by viewModel.notFound.collectAsStateWithLifecycle()
     val lookingUp by viewModel.lookingUp.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var menuOpen by remember { mutableStateOf(false) }
@@ -159,7 +160,9 @@ fun AuthorScreen(
     ) { padding ->
         val p = page
         if (p == null) {
-            Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (notFound) Text("Deze auteur staat niet (meer) in je bibliotheek.", Modifier.padding(32.dp)) else CircularProgressIndicator()
+            }
             return@Scaffold
         }
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {

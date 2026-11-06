@@ -86,6 +86,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import nl.wdhertog.library.ui.components.LongSetSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -116,7 +118,7 @@ fun LibraryScreen(
     var pickingLocation by remember { mutableStateOf(false) }
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }
     // Meervoudige selectie: ids in lijstvolgorde worden bij een actie afgeleid uit de zichtbare lijst.
-    var selection by remember { mutableStateOf(emptySet<Long>()) }
+    var selection by rememberSaveable(stateSaver = LongSetSaver) { mutableStateOf(emptySet<Long>()) }
     val scope = rememberCoroutineScope()
     BackHandler(enabled = selection.isNotEmpty()) { selection = emptySet() }
 
@@ -190,9 +192,11 @@ fun LibraryScreen(
             // Andere filters of sortering: begin weer bovenaan de lijst.
             val listState = rememberLazyListState()
             val gridState = rememberLazyGridState()
-            LaunchedEffect(state.language, state.location, state.owner, state.favoritesOnly, state.read, state.ownership, state.multipleEditions, state.sort, state.query) {
-                listState.scrollToItem(0)
-                gridState.scrollToItem(0)
+            LaunchedEffect(Unit) {
+                viewModel.scrollToTop.collect {
+                    listState.scrollToItem(0)
+                    gridState.scrollToItem(0)
+                }
             }
             // Aantal, en wat er nog wordt opgezocht (schetsen: "312 van 1.284 boeken · 37 worden aangevuld").
             Row(Modifier.padding(start = 16.dp, end = 4.dp).heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {

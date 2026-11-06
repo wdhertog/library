@@ -331,8 +331,13 @@ private fun ShowCodeDialog(pairing: PairingState?, onDismiss: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                     )
                     TextButton(onClick = {
-                        context.getSystemService(ClipboardManager::class.java)
-                            .setPrimaryClip(ClipData.newPlainText("Koppelcode", pairing.code.encode()))
+                        // Gevoelig: het toetsenbord en de klembordgeschiedenis tonen of bewaren de code dan niet.
+                        val clip = ClipData.newPlainText("Koppelcode", pairing.code.encode()).apply {
+                            description.extras = android.os.PersistableBundle().apply {
+                                putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+                            }
+                        }
+                        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
                     }) { Text("Code kopiëren") }
                 }
                 is PairingState.Paired -> Text("Gekoppeld met ${pairing.name}. De collecties worden nu uitgewisseld.")

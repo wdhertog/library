@@ -63,6 +63,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -125,22 +126,22 @@ fun BookDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val tree by viewModel.locationTree.collectAsStateWithLifecycle()
     val locationIndex = remember(tree) { LocationTree.index(tree) }
-    var pickingLocation by remember { mutableStateOf(false) }
+    var pickingLocation by rememberSaveable { mutableStateOf(false) }
     val bookLoans by viewModel.bookLoans.collectAsStateWithLifecycle()
     val borrowed by viewModel.borrowed.collectAsStateWithLifecycle()
     val personNames by viewModel.personNames.collectAsStateWithLifecycle()
     val ownerNames by viewModel.ownerNames.collectAsStateWithLifecycle()
-    var editingOwner by remember { mutableStateOf(false) }
-    var editionDialog by remember { mutableStateOf<String?>(null) }
+    var editingOwner by rememberSaveable { mutableStateOf(false) }
+    var editionDialog by rememberSaveable { mutableStateOf<String?>(null) }
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     var sessionDialog by remember { mutableStateOf<Pair<String, ReadingSession>?>(null) }
     var progressFor by remember { mutableStateOf<ReadingSession?>(null) }
-    var loanDialog by remember { mutableStateOf<String?>(null) }
+    var loanDialog by rememberSaveable { mutableStateOf<String?>(null) }
     var loanToDelete by remember { mutableStateOf<nl.wdhertog.library.data.db.LoanRow?>(null) }
     val requestNotifications = rememberNotificationPermissionRequest()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     LaunchedEffect(viewModel) { viewModel.messages.collect { snackbar.showSnackbar(it) } }

@@ -253,16 +253,25 @@ fun ScanScreen(
         }
     }
 
+    var openingManual by remember { mutableStateOf(false) }
     coverSearch?.let { search ->
         CoverSearchDialog(
             state = search,
             onSearch = viewModel::searchAgain,
             onPick = viewModel::pick,
             onManual = {
-                scope.launch {
-                    val (title, author, coverFile) = viewModel.manualGuess()
-                    viewModel.closeCoverSearch()
-                    onManualFromCover(title, author, coverFile)
+                // Eén keer: dubbel tikken gaf twee keer het invoerscherm (en een losse cover-foto).
+                if (!openingManual) {
+                    openingManual = true
+                    scope.launch {
+                        try {
+                            val (title, author, coverFile) = viewModel.manualGuess()
+                            viewModel.closeCoverSearch()
+                            onManualFromCover(title, author, coverFile)
+                        } finally {
+                            openingManual = false
+                        }
+                    }
                 }
             },
             onDismiss = viewModel::closeCoverSearch,

@@ -41,6 +41,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import nl.wdhertog.library.ui.components.LongSetSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,8 +75,8 @@ fun LocationDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val node = state.node
     var menuOpen by remember { mutableStateOf(false) }
-    var dialog by remember { mutableStateOf<String?>(null) }
-    var selection by remember { mutableStateOf(emptySet<Long>()) }
+    var dialog by rememberSaveable { mutableStateOf<String?>(null) }
+    var selection by rememberSaveable(stateSaver = LongSetSaver) { mutableStateOf(emptySet<Long>()) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     BackHandler(enabled = selection.isNotEmpty()) { selection = emptySet() }

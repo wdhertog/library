@@ -55,6 +55,8 @@ class BookEditViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: BookRepository,
     private val scheduler: EnrichScheduler,
+    /** Opslaan loopt hierin door, ook als het scherm meteen sluit. */
+    private val appScope: kotlinx.coroutines.CoroutineScope,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<BookEditRoute>()
@@ -104,7 +106,9 @@ class BookEditViewModel(
             return
         }
         _state.update { it.copy(saving = true) }
-        viewModelScope.launch {
+        // Niet in viewModelScope: sluit je het scherm direct na Opslaan, dan wordt het opslaan anders
+        // halverwege afgebroken (en ruimt onCleared de nieuwe cover-foto op).
+        appScope.launch {
             val id = repository.save(bookId, current.draft)
             if (isNew && route.coverFile.isNotBlank()) repository.setCoverFile(id, route.coverFile)
             // Een nieuw boek met ISBN kan op de achtergrond worden aangevuld (cover, serie, …).
@@ -115,7 +119,7 @@ class BookEditViewModel(
 
     /** Niet opgeslagen: de alvast bewaarde cover-foto opruimen. */
     override fun onCleared() {
-        if (isNew && route.coverFile.isNotBlank() && _state.value.savedBookId == null) {
+        if (isNew && route.coverFile.isNotBlank() && _state.value.savedBookId == null && !_state.value.saving) {
             repository.discardCoverFile(route.coverFile)
         }
     }

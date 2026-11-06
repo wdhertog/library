@@ -70,14 +70,24 @@ class ImportService(
         var added = 0
         var updated = 0
         var languageChecks = 0
-        items.forEachIndexed { index, (imported, decision) ->
+        // Twee regels met hetzelfde ISBN in één bestand (bijv. twee keer gelezen): één boek, aangevuld.
+        val addedByIsbn = mutableMapOf<String, Long>()
+        items.forEachIndexed { index, (imported, original) ->
+            val decision = if (original == ImportDecision.Add) {
+                imported.isbn13?.let(addedByIsbn::get)?.let { ImportDecision.Merge(it, overwrite = false) } ?: original
+            } else {
+                original
+            }
             // Taal uit het bestand die het ISBN tegenspreekt (bijv. Engels ISBN met "nl"): markeren voor controle.
             val flag = decision != ImportDecision.Skip && IsbnLanguage.conflicts(imported.isbn13, imported.language)
             val book = if (flag) imported.copy(tags = imported.tags + IsbnLanguage.CHECK_TAG) else imported
             if (flag) languageChecks++
             db.withTransaction {
                 when (decision) {
-                    ImportDecision.Add -> add(runId, source, book).also { added++ }
+                    ImportDecision.Add -> add(runId, source, book).also { id ->
+                        added++
+                        book.isbn13?.let { addedByIsbn[it] = id }
+                    }
                     is ImportDecision.Merge -> merge(decision, source, book).also { updated++ }
                     ImportDecision.Skip -> Unit
                 }
@@ -96,7 +106,7 @@ class ImportService(
         dao.deleteRun(runId)
     }
 
-    private suspend fun add(runId: Long, source: String, imported: ImportedBook) {
+    private suspend fun add(runId: Long, source: String, imported: ImportedBook): Long {
         val bookId = bookDao.insertBook(
             Book(
                 isbn13 = imported.isbn13,
@@ -125,6 +135,7 @@ class ImportService(
         addReadings(bookId, imported, overwrite = false)
         addLoan(bookId, imported)
         imported.locationPath?.let { locations.findOrCreatePath(it) }?.let { locations.moveBook(bookId, it) }
+        return bookId
     }
 
     private suspend fun merge(decision: ImportDecision.Merge, source: String, imported: ImportedBook) {

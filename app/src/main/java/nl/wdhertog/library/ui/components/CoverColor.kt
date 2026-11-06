@@ -30,7 +30,7 @@ fun rememberCoverTint(title: String, cover: String?): Color {
     val context = LocalContext.current
     val surface = MaterialTheme.colorScheme.surface
     var base by remember(cover, title) { mutableStateOf(placeholderColor(title)) }
-    LaunchedEffect(cover) {
+    LaunchedEffect(cover, title) { // dezelfde sleutels als base, anders valt de kleur terug op de placeholder
         if (cover == null) return@LaunchedEffect
         val request = ImageRequest.Builder(context)
             .data(CoverStore.model(context, cover))

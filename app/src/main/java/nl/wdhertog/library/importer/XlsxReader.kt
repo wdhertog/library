@@ -16,6 +16,12 @@ object XlsxReader {
 
     class FormatException(message: String) : Exception(message)
 
+    /** Samen uitgepakte XML; een gewone bibliotheek van duizenden boeken is maar een paar MB. */
+    private const val MAX_UNZIPPED = 100L * 1024 * 1024
+
+    /** Zoveel kolommen kent Excel (A t/m XFD). */
+    private const val MAX_COLUMNS = 16_384
+
     fun read(bytes: ByteArray): List<Sheet> {
         val files = unzip(bytes)
         val workbook = files["xl/workbook.xml"] ?: throw FormatException("Geen Excel-bestand (.xlsx)")
@@ -34,12 +40,27 @@ object XlsxReader {
             generateSequence { zip.nextEntry }.forEach { entry ->
                 // Alleen de XML-delen die nodig zijn; afbeeldingen en printerinstellingen niet.
                 if (!entry.isDirectory && (entry.name.endsWith(".xml") || entry.name.endsWith(".rels"))) {
-                    files[entry.name] = zip.readBytes()
+                    files[entry.name] = readLimited(zip, MAX_UNZIPPED - files.values.sumOf { it.size })
                 }
             }
         }
         if (files.isEmpty()) throw FormatException("Geen Excel-bestand (.xlsx)")
         return files
+    }
+
+    /** Uitpakken met een grens: een "zip-bom" (klein bestand, enorm uitgepakt) mag het geheugen niet vullen. */
+    private fun readLimited(zip: ZipInputStream, budget: Long): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(64 * 1024)
+        var total = 0L
+        while (true) {
+            val n = zip.read(buffer)
+            if (n < 0) break
+            total += n
+            if (total > budget) throw FormatException("Dit Excel-bestand is te groot om te importeren")
+            out.write(buffer, 0, n)
+        }
+        return out.toByteArray()
     }
 
     private fun parse(xml: ByteArray, handler: DefaultHandler) {
@@ -119,6 +140,8 @@ object XlsxReader {
                     "row" -> row = mutableMapOf()
                     "c" -> {
                         column = attributes.getValue("r")?.let(::columnIndex) ?: (row.keys.maxOrNull()?.plus(1) ?: 0)
+                        // Verder dan Excel zelf kan (kolom XFD): negeren, anders een enorme lege rij.
+                        if (column !in 0 until MAX_COLUMNS) column = -1
                         type = attributes.getValue("t")
                         value.clear()
                     }
@@ -134,7 +157,7 @@ object XlsxReader {
             override fun endElement(uri: String?, localName: String?, qName: String) {
                 when (qName) {
                     "v", "t" -> collecting = false
-                    "c" -> row[column] = when (type) {
+                    "c" -> if (column >= 0) row[column] = when (type) {
                         "s" -> value.toString().trim().toIntOrNull()?.let { strings.getOrNull(it) }.orEmpty()
                         "b" -> if (value.toString() == "1") "1" else "0"
                         "str", "inlineStr", "e" -> value.toString()

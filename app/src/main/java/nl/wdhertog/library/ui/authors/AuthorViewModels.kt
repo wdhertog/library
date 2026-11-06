@@ -73,9 +73,13 @@ class AuthorViewModel(
 
     val lookingUp = MutableStateFlow(false)
 
+    /** Geen auteur met dit id of deze naam (meer), bijv. na samenvoegen of verwijderen: niet eindeloos laden. */
+    val notFound = MutableStateFlow(false)
+
     init {
         viewModelScope.launch {
-            val id = authorId.value ?: authors.findId(route.name)?.also { authorId.value = it } ?: return@launch
+            val id = authorId.value ?: authors.findId(route.name)?.also { authorId.value = it }
+                ?: run { notFound.value = true; return@launch }
             if (mayLookUp()) authors.refreshInfo(id)
         }
     }
@@ -88,7 +92,11 @@ class AuthorViewModel(
             combine(reading.observeReadBookIds(), authors.observeAverageRating(id), ::Pair),
             series.observeSummaries(),
         ) { author, links, library, (readIds, rating), allSeries ->
-            author ?: return@combine null
+            if (author == null) {
+                notFound.value = true
+                return@combine null
+            }
+            notFound.value = false
             val byId = library.associateBy { it.book.id }
             val read = readIds.toSet()
             val works = links.groupBy { it.workId }.mapNotNull { (workId, workLinks) ->
