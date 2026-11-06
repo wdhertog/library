@@ -100,4 +100,45 @@ class AchievementsTest {
         assertFalse(open.achieved)
         assertEquals(60, open.progress)
     }
+
+    @Test
+    fun `new badges, what earned them and goal progress`() {
+        val books = (1L..12L).associateWith { item(it, author = "Auteur") }
+        val sessions = (1L..12L).map { id ->
+            ReadingSession(
+                id = id, bookId = id, status = ReadingStatus.FINISHED,
+                startedAt = LocalDate.of(2014 + id.toInt(), 1, 1), finishedAt = LocalDate.of(2014 + id.toInt(), 1, if (id == 3L) 5 else 20),
+            )
+        }
+        val badges = Achievements.evaluate(
+            sessions, books, listOf(ReadingGoal(2026, 16)), emptyList(),
+            lentDates = List(10) { LocalDate.of(2020, 1, it + 1) }, today = LocalDate.of(2026, 11, 6),
+        )
+        badges.get("fast").let {
+            assertTrue(it.achieved)
+            assertEquals(LocalDate.of(2017, 1, 5), it.achievedOn)
+            assertEquals("Boek 3", it.achievedWith)
+        }
+        badges.get("years").let {
+            assertTrue(it.achieved)
+            assertEquals("2024", it.achievedWith)
+        }
+        assertEquals(LocalDate.of(2020, 1, 10), badges.get("lender").achievedOn)
+        assertEquals(12, badges.get("collector").progress)
+        badges.get("author").let { assertEquals("Auteur", it.achievedWith) }
+        badges.get("goal").let {
+            assertFalse(it.achieved)
+            assertEquals(1, it.progress) // één boek in 2026
+            assertEquals(16, it.target)
+            assertEquals("dit jaar", it.progressNote)
+        }
+    }
+
+    @Test
+    fun `newly earned badges`() {
+        val before = listOf(Badge("a", BadgeKind.BOOKS, "A", "", 9, 10, false), Badge("goal", BadgeKind.GOAL, "Doel", "", 1, 1, true, times = 1))
+        val after = listOf(Badge("a", BadgeKind.BOOKS, "A", "", 10, 10, true), Badge("goal", BadgeKind.GOAL, "Doel", "", 1, 1, true, times = 2))
+        assertEquals(listOf("a", "goal"), BadgeService.newlyEarned(before, after).map { it.id })
+        assertEquals(emptyList<String>(), BadgeService.newlyEarned(after, after).map { it.id })
+    }
 }

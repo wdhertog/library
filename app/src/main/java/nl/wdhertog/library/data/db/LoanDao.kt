@@ -108,6 +108,10 @@ interface LoanDao {
     @Query("SELECT COUNT(*) FROM loan WHERE bookId = :bookId AND returnedAt IS NULL")
     suspend fun activeLoanCount(bookId: Long): Int
 
+    /** Wanneer elke uitlening begon (leeg = onbekend), voor de badge Uitlener. */
+    @Query("SELECT lentAt FROM loan")
+    fun observeLentDates(): Flow<List<LocalDate?>>
+
     @Query("SELECT COUNT(*) FROM loan WHERE bookId = :bookId")
     suspend fun loanCount(bookId: Long): Int
 

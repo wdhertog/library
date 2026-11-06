@@ -1,6 +1,14 @@
 package nl.wdhertog.library.ui.reading
 
 import androidx.compose.foundation.background
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,7 +71,7 @@ import java.util.Locale
 private val longDate = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.forLanguageTag("nl"))
 
 internal fun readingViewModel(container: AppContainer) =
-    ReadingViewModel(container.bookRepository, container.readingRepository, container.seriesRepository)
+    ReadingViewModel(container.bookRepository, container.readingRepository, container.badgeService)
 
 private val BadgeKind.icon: ImageVector
     get() = when (this) {
@@ -76,7 +84,50 @@ private val BadgeKind.icon: ImageVector
         BadgeKind.AUTHOR -> Icons.Default.Favorite
         BadgeKind.REREAD -> Icons.Default.Replay
         BadgeKind.STREAK -> Icons.Default.LocalFireDepartment
+        BadgeKind.FAST -> Icons.Default.Speed
+        BadgeKind.YEARS -> Icons.Default.CalendarMonth
+        BadgeKind.LENDER -> Icons.Default.VolunteerActivism
+        BadgeKind.COLLECTOR -> Icons.Default.Inventory2
     }
+
+/** "73 van 100", "14 van 16 dit jaar" of "60% van je verste serie". */
+private fun Badge.progressText(): String = when (kind) {
+    BadgeKind.SERIES -> "$progress% van je verste serie"
+    else -> "$progress van $target" + (progressNote?.let { " $it" } ?: "")
+}
+
+/** Details van een badge: wanneer en waarmee behaald, of hoe ver je bent. */
+@Composable
+private fun BadgeDialog(badge: Badge, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { BadgeIcon(badge, 56.dp) },
+        title = { Text(if (badge.times > 1) "${badge.title} ×${badge.times}" else badge.title, textAlign = TextAlign.Center) },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text(badge.description, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(12.dp))
+                if (badge.achieved) {
+                    Text(badge.whenText()?.let { "Behaald $it" } ?: "Behaald (datum onbekend)", fontWeight = FontWeight.Medium)
+                    badge.achievedWith?.let { Text("Met: $it", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    if (badge.times > 1) Text("${badge.times} keer gehaald", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else if (badge.target > 1) {
+                    LinearProgressIndicator(
+                        progress = { badge.progress.toFloat() / badge.target },
+                        Modifier.fillMaxWidth().height(6.dp),
+                        trackColor = MaterialTheme.colorScheme.outlineVariant,
+                        drawStopIndicator = {},
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(badge.progressText(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text("Nog niet behaald", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Sluiten") } },
+    )
+}
 
 /** Wanneer behaald, of null als dat niet bekend is. */
 private fun Badge.whenText(): String? = achievedOn?.let { if (yearOnly) "in ${it.year}" else "op ${longDate.format(it)}" }
@@ -125,6 +176,8 @@ fun BadgesScreen(
     viewModel: ReadingViewModel = appViewModel { container, _ -> readingViewModel(container) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var opened by rememberSaveable { mutableStateOf<String?>(null) }
+    state?.badges?.firstOrNull { it.id == opened }?.let { BadgeDialog(it, onDismiss = { opened = null }) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -144,11 +197,11 @@ fun BadgesScreen(
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
             if (achieved.isNotEmpty()) {
                 item { SectionHeader("Behaald · ${achieved.size}") }
-                items(achieved, key = { it.id }) { BadgeRow(it) }
+                items(achieved, key = { it.id }) { BadgeRow(it, onClick = { opened = it.id }) }
             }
             if (open.isNotEmpty()) {
                 item { SectionHeader("Nog te halen") }
-                items(open, key = { it.id }) { BadgeRow(it) }
+                items(open, key = { it.id }) { BadgeRow(it, onClick = { opened = it.id }) }
             }
             item {
                 Text(
@@ -174,9 +227,9 @@ private fun SectionHeader(text: String) {
 }
 
 @Composable
-private fun BadgeRow(badge: Badge) {
+private fun BadgeRow(badge: Badge, onClick: () -> Unit) {
     Column {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             BadgeIcon(badge)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
@@ -195,8 +248,7 @@ private fun BadgeRow(badge: Badge) {
                         trackColor = MaterialTheme.colorScheme.outlineVariant,
                         drawStopIndicator = {},
                     )
-                    val progress = if (badge.kind == BadgeKind.SERIES) "${badge.progress}% van je verste serie" else "${badge.progress} van ${badge.target}"
-                    Text(progress, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(badge.progressText(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import nl.wdhertog.library.data.repository.Achievements
 import nl.wdhertog.library.data.repository.Badge
 import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.BookRepository
@@ -18,7 +17,7 @@ import nl.wdhertog.library.data.repository.ReadEntry
 import nl.wdhertog.library.data.repository.ReadingRepository
 import nl.wdhertog.library.data.repository.ReadingStats
 import nl.wdhertog.library.data.repository.ReadingStreaks
-import nl.wdhertog.library.data.repository.SeriesRepository
+import nl.wdhertog.library.data.repository.BadgeService
 import nl.wdhertog.library.data.repository.Streaks
 import nl.wdhertog.library.data.repository.YearStats
 import java.time.LocalDate
@@ -36,7 +35,7 @@ data class ReadingUiState(
 class ReadingViewModel(
     books: BookRepository,
     private val reading: ReadingRepository,
-    series: SeriesRepository,
+    badgeService: BadgeService,
 ) : ViewModel() {
 
     val year = MutableStateFlow(LocalDate.now().year)
@@ -45,8 +44,8 @@ class ReadingViewModel(
         combine(
             books.observeLibrary(),
             combine(reading.observeSessions(), reading.observeLoggedDays()) { sessions, logged -> sessions to logged },
-            reading.observeGoals(), series.observeSummaries(), year,
-        ) { library, (sessions, logged), goals, seriesSummaries, year ->
+            reading.observeGoals(), badgeService.observe(), year,
+        ) { library, (sessions, logged), goals, badges, year ->
             val byId = library.associateBy { it.book.id }
             val days = Streaks.readingDays(sessions, logged)
             ReadingUiState(
@@ -56,7 +55,7 @@ class ReadingViewModel(
                 stats = ReadingStats.forYear(year, sessions, byId, goals.firstOrNull { it.year == year }?.target),
                 undated = ReadingStats.undated(sessions),
                 streaks = Streaks.of(sessions, days = days),
-                badges = Achievements.evaluate(sessions, byId, goals, seriesSummaries, days),
+                badges = badges,
             )
         }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

@@ -122,6 +122,7 @@ fun BookDetailScreen(
             container.locationRepository,
             container.loanRepository,
             container.readingRepository,
+            container.badgeService,
         )
     },
 ) {

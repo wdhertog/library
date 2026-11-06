@@ -49,6 +49,9 @@ class AppContainer(val app: Application) {
     val locationRepository by lazy { LocationRepository(database) }
     val loanRepository by lazy { LoanRepository(database, bookRepository) }
     val readingRepository by lazy { ReadingRepository(database) }
+    val badgeService by lazy {
+        nl.wdhertog.library.data.repository.BadgeService(database, bookRepository, readingRepository, seriesRepository)
+    }
     val seriesRepository by lazy {
         SeriesRepository(database, bookRepository, WikidataSource(http)) { settings.isSourceEnabled(nl.wdhertog.library.lookup.LookupSource.WIKIDATA) }
     }

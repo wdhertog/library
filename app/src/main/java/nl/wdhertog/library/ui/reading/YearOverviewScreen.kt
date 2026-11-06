@@ -51,6 +51,7 @@ import androidx.navigation.toRoute
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import nl.wdhertog.library.data.repository.BookRepository
 import nl.wdhertog.library.data.repository.ReadEntry
@@ -68,8 +69,19 @@ import nl.wdhertog.library.ui.theme.BookTitleStyle
 import nl.wdhertog.library.util.Languages
 import nl.wdhertog.library.util.Share
 
-class YearOverviewViewModel(handle: SavedStateHandle, books: BookRepository, reading: ReadingRepository) : ViewModel() {
+class YearOverviewViewModel(
+    handle: SavedStateHandle,
+    books: BookRepository,
+    reading: ReadingRepository,
+    badgeService: nl.wdhertog.library.data.repository.BadgeService? = null,
+) : ViewModel() {
     val year = handle.toRoute<YearOverviewRoute>().year
+
+    /** Badges die in dit jaar behaald zijn. */
+    val badges: StateFlow<List<nl.wdhertog.library.data.repository.Badge>> =
+        (badgeService?.observe() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+            .map { all -> all.filter { it.achieved && it.achievedOn?.year == year }.sortedBy { it.achievedOn } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val stats: StateFlow<YearStats?> =
         combine(books.observeLibrary(), reading.observeSessions(), reading.observeGoals()) { library, sessions, goals ->
@@ -84,10 +96,11 @@ fun YearOverviewScreen(
     onBack: () -> Unit,
     onOpenBook: (Long) -> Unit,
     viewModel: YearOverviewViewModel = appViewModel { container, handle ->
-        YearOverviewViewModel(handle, container.bookRepository, container.readingRepository)
+        YearOverviewViewModel(handle, container.bookRepository, container.readingRepository, container.badgeService)
     },
 ) {
     val stats by viewModel.stats.collectAsStateWithLifecycle()
+    val badges by viewModel.badges.collectAsStateWithLifecycle()
     val overview = remember(stats) { stats?.let { YearOverview.of(it) } }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -172,6 +185,24 @@ fun YearOverviewScreen(
             }
             if (o.languages.size > 1) {
                 item { Fact("Talen", o.languages.joinToString(" · ") { (code, n) -> "${Languages.displayName(code)} $n" }, null) }
+            }
+            if (badges.isNotEmpty()) {
+                item {
+                    Section("Badges in ${o.year}") {
+                        badges.forEach { badge ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                BadgeIcon(badge, 36.dp)
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(badge.title, style = MaterialTheme.typography.bodyLarge)
+                                    badge.achievedWith?.let {
+                                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

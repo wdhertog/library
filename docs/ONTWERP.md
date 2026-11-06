@@ -925,7 +925,7 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 
 ### 7. Badges
 
-**Gebouwd (5 november 2026):** `data/repository/Achievements.kt` met de hele eerste set hieronder (serie: minstens 3 delen); kaart "Badges" op Lezen (laatste drie) en scherm `BadgesScreen` (behaald met datum, nog te halen met voortgang). Material Icons in een gouden cirkel. Nog niet: melding bij "Uitgelezen" en badges in het jaaroverzicht.
+**Gebouwd (5 november 2026):** `data/repository/Achievements.kt` met de hele eerste set hieronder (serie: minstens 3 delen); kaart "Badges" op Lezen (laatste drie) en scherm `BadgesScreen` (behaald met datum, nog te halen met voortgang). Material Icons in een gouden cirkel. Versie 2 (6 november 2026): melding bij "Uitgelezen" als je een badge haalt, badges in het jaaroverzicht, tikken op een badge toont wanneer en waarmee, voortgang bij "Doel gehaald" (dit jaar), en Vlotte lezer, Trouwe lezer, Uitlener en Verzamelaar (`BadgeService`).
 
 **Doel:** mijlpalen zichtbaar maken op Lezen, afgeleid uit bestaande gegevens — niets opslaan.
 
