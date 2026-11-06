@@ -29,7 +29,7 @@ interface BookDao {
      * Alle boeken voor lijsten, zonder beschrijving en notities (die zijn groot en staan alleen op de
      * boekpagina). Niet gebruiken om te bewaren of te exporteren: die velden zijn hier leeg.
      */
-    @Query("SELECT id, uuid, isbn13, isbn10, title, subtitle, language, translators, publisher, publishedYear, pages, format, NULL AS description, coverUrl, coverFile, tags, ownership, disposalReason, disposedTo, disposedAt, favorite, owner, borrowedFromPersonId, borrowedDueDate, locationId, shelfPosition, NULL AS notes, wantToRead, enrichStatus, enrichedSources, lockedFields, openLibraryEditionId, storygraphId, hirtId, importRunId, searchText, addedAt, updatedAt FROM book")
+    @Query("SELECT id, uuid, isbn13, isbn10, title, subtitle, language, translators, publisher, publishedYear, pages, format, NULL AS description, coverUrl, coverFile, tags, ownership, disposalReason, disposedTo, disposedAt, favorite, owner, borrowedFromPersonId, borrowedDueDate, locationId, shelfPosition, NULL AS notes, wantToRead, enrichStatus, enrichedSources, lockedFields, openLibraryEditionId, storygraphId, hirtId, externalIds, importRunId, searchText, addedAt, updatedAt FROM book")
     fun observeBookList(): Flow<List<Book>>
 
     @Query("SELECT * FROM book WHERE id = :id")

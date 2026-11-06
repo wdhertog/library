@@ -23,6 +23,8 @@ import nl.wdhertog.library.data.repository.AuthorDuplicates
 import nl.wdhertog.library.data.repository.AuthorRepository
 import nl.wdhertog.library.data.repository.BookListItem
 import nl.wdhertog.library.data.repository.BookRepository
+import nl.wdhertog.library.data.repository.Editions
+import nl.wdhertog.library.data.repository.editionFacts
 import nl.wdhertog.library.data.repository.ReadingRepository
 import nl.wdhertog.library.data.repository.SeriesOrder
 import nl.wdhertog.library.data.repository.SeriesRepository
@@ -125,7 +127,8 @@ class AuthorViewModel(
             val byId = library.associateBy { it.book.id }
             val read = readIds.toSet()
             val works = links.groupBy { it.workId }.mapNotNull { (workId, workLinks) ->
-                val items = workLinks.mapNotNull { byId[it.bookId] }.sortedBy { it.book.language }
+                // De hoofdeditie eerst: die titel en cover.
+                val items = Editions.ordered(workLinks.mapNotNull { byId[it.bookId] }, workLinks.first().primaryBookUuid) { it.book.editionFacts }
                 val first = items.firstOrNull() ?: return@mapNotNull null
                 AuthorWork(
                     workId = workId,

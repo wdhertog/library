@@ -44,6 +44,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import nl.wdhertog.library.data.repository.editionFacts
+import nl.wdhertog.library.data.repository.Editions
 import nl.wdhertog.library.util.Share
 import androidx.compose.material.icons.filled.Share
 import nl.wdhertog.library.ui.theme.Literata
@@ -265,6 +267,7 @@ fun BookDetailScreen(
                     },
                     locationLabel = { id -> id?.let { locationIndex[it]?.pathLabel } },
                     onOpenBook = onOpenBook,
+                    onSetPrimary = viewModel::setPrimaryEdition,
                     onOpenLocation = onOpenLocation,
                     onPickLocation = { pickingLocation = true },
                     onEditOwner = { editingOwner = true },
@@ -460,6 +463,7 @@ private fun DetailContent(
     secondaryAction: Pair<String, () -> Unit>?,
     locationLabel: (Long?) -> String?,
     onOpenBook: (Long) -> Unit,
+    onSetPrimary: () -> Unit,
     onOpenLocation: (Long) -> Unit,
     onPickLocation: () -> Unit,
     onEditOwner: () -> Unit,
@@ -592,8 +596,25 @@ private fun DetailContent(
             }
 
             if (detail.otherEditions.isNotEmpty()) {
+                val primaryUuid = detail.works.firstOrNull()?.primaryBookUuid
+                val all = listOf(detail.book) + detail.otherEditions
+                val primary = Editions.primaryOf(all, primaryUuid) { it.editionFacts }
+                val chosen = Editions.isChosen(all, primaryUuid) { it.editionFacts }
                 DetailCard("Andere edities in je collectie") {
-                    detail.otherEditions.forEach { EditionRow(it, locationLabel(it.locationId), onClick = { onOpenBook(it.id) }) }
+                    detail.otherEditions.forEach {
+                        EditionRow(it, locationLabel(it.locationId), isPrimary = it.id == primary?.id, onClick = { onOpenBook(it.id) })
+                    }
+                    if (primary?.id == detail.book.id) {
+                        Text(
+                            if (chosen) "★ Dit is de hoofdeditie (zelf gekozen)" else "★ Dit is nu de hoofdeditie",
+                            Modifier.padding(top = 8.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (!(chosen && primary?.id == detail.book.id)) {
+                        TextButton(onClick = onSetPrimary) { Text("Als hoofdeditie instellen") }
+                    }
                 }
             }
 
@@ -679,7 +700,7 @@ private fun DetailRow(label: String, value: String?) {
 }
 
 @Composable
-private fun EditionRow(book: Book, location: String?, onClick: () -> Unit) {
+private fun EditionRow(book: Book, location: String?, isPrimary: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -688,7 +709,7 @@ private fun EditionRow(book: Book, location: String?, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column {
             Text(book.title, style = MaterialTheme.typography.bodyLarge)
-            MetaLine(listOfNotNull(book.language?.let(Languages::displayName), book.publishedYear?.toString(), location?.let { "📍 $it" }))
+            MetaLine(listOfNotNull("★ hoofdeditie".takeIf { isPrimary }, book.language?.let(Languages::displayName), book.publishedYear?.toString(), location?.let { "📍 $it" }))
         }
     }
 }

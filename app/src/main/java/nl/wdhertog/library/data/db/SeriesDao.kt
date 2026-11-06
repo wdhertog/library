@@ -34,6 +34,10 @@ data class SeriesBookRow(
     val coverUrl: String?,
     val coverFile: String?,
     val read: Boolean,
+    val bookUuid: String = "",
+    val addedAt: java.time.Instant = java.time.Instant.EPOCH,
+    /** De zelf gekozen hoofdeditie van het werk (Work.primaryBookUuid). */
+    val primaryBookUuid: String? = null,
 )
 
 @Dao
@@ -77,6 +81,7 @@ interface SeriesDao {
                (SELECT GROUP_CONCAT(a.name, ', ') FROM work_author wa JOIN author a ON a.id = wa.authorId
                  WHERE wa.workId = w.id) AS authors,
                b.id AS bookId, b.title AS bookTitle, b.language, b.ownership, b.coverUrl, b.coverFile,
+               b.uuid AS bookUuid, b.addedAt, w.primaryBookUuid,
                EXISTS (SELECT 1 FROM reading_session rs JOIN book_work x ON x.bookId = rs.bookId
                         WHERE x.workId = w.id AND rs.status = 'FINISHED') AS read
         FROM work w

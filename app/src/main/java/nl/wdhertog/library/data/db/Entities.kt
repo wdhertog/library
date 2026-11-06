@@ -66,6 +66,8 @@ data class Book(
     val storygraphId: String? = null,
     /** Id uit de Have I Read That-export, voor herhaald importeren zonder dubbelen. */
     val hirtId: Long? = null,
+    /** Id's bij andere diensten, komma-gescheiden, bijv. "goodreads:12345" (opnieuw importeren zonder dubbelen). */
+    val externalIds: String? = null,
     /** De import die dit boek heeft aangemaakt; zo kan een import ongedaan worden gemaakt. */
     val importRunId: Long? = null,
     /** Genormaliseerde zoektekst (titel, auteurs, serie, ISBN, tags) voor snel zoeken. */
@@ -92,6 +94,11 @@ data class Work(
     val awards: String? = null,
     val openLibraryWorkId: String? = null,
     val wikidataId: String? = null,
+    /**
+     * De editie die "het" boek is voor dit werk (uuid van een boek, zodat sync het meteen kent): die cover
+     * en titel in series en op de auteurspagina. Leeg of verwijzend naar een ander werk: zie primaryOf.
+     */
+    val primaryBookUuid: String? = null,
     val updatedAt: Instant = Instant.now(),
 )
 

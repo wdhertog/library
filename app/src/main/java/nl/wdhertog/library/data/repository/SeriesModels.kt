@@ -41,6 +41,11 @@ object ManualParts {
         decode(text).mapNotNull { it.ordinal.trim().toIntOrNull() }.filter { it in 1..SeriesOrder.MAX_PLAUSIBLE_INDEX }.maxOrNull()
 }
 
+private fun factsOf(row: SeriesBookRow) = EditionFacts(
+    row.bookUuid, row.ownership == nl.wdhertog.library.data.db.Ownership.OWNED, (row.coverFile ?: row.coverUrl) != null,
+    row.language, row.addedAt.toEpochMilli(),
+)
+
 object SeriesOrder {
 
     /**
@@ -95,12 +100,15 @@ object SeriesOrder {
         parts: List<SeriesPart> = emptyList(),
         manual: List<ManualPart> = emptyList(),
     ): List<SeriesVolume> {
-        val present = rows.groupBy { it.workId }.map { (workId, books) ->
+        val present = rows.groupBy { it.workId }.map { (workId, unordered) ->
+            // De hoofdeditie eerst: die cover. Zelf gekozen, dan ook die titel (anders de titel van het werk).
+            val primaryUuid = unordered.first().primaryBookUuid
+            val books = Editions.ordered(unordered, primaryUuid, ::factsOf)
             val first = books.first()
             SeriesVolume.Present(
                 index = first.seriesIndex,
                 workId = workId,
-                title = first.workTitle.ifBlank { first.bookTitle },
+                title = if (Editions.isChosen(books, primaryUuid, ::factsOf)) first.bookTitle else first.workTitle.ifBlank { first.bookTitle },
                 authors = first.authors,
                 books = books,
                 read = books.any { it.read },

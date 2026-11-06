@@ -114,6 +114,13 @@ class BookDetailViewModel(
         .map { items -> items.filter { it.book.id != bookId } }
         .flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    fun setPrimaryEdition() {
+        viewModelScope.launch {
+            repository.setPrimaryEdition(bookId)
+            _messages.send("Hoofdeditie: deze cover en titel in series en op de auteurspagina")
+        }
+    }
+
     fun linkAsSameWork(otherBookId: Long) {
         viewModelScope.launch {
             repository.linkAsSameWork(bookId, otherBookId)

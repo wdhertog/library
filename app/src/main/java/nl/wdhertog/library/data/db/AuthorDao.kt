@@ -9,7 +9,7 @@ import java.time.Instant
 data class AuthorSummary(val id: Long, val name: String, val books: Int, val works: Int)
 
 /** Welk boek bij welk werk hoort, voor de boeken van een auteur. */
-data class BookWorkLink(val bookId: Long, val workId: Long)
+data class BookWorkLink(val bookId: Long, val workId: Long, val primaryBookUuid: String? = null)
 
 @Dao
 interface AuthorDao {
@@ -63,8 +63,9 @@ interface AuthorDao {
 
     @Query(
         """
-        SELECT DISTINCT bw.bookId, bw.workId FROM book_work bw
+        SELECT DISTINCT bw.bookId, bw.workId, w.primaryBookUuid FROM book_work bw
         JOIN work_author wa ON wa.workId = bw.workId
+        JOIN work w ON w.id = bw.workId
         WHERE wa.authorId = :authorId
         """
     )
