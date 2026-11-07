@@ -84,6 +84,7 @@ class AppContainer(val app: Application) {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val http by lazy { LookupHttp() }
+    val coverCandidates by lazy { nl.wdhertog.library.lookup.OpenLibraryCovers(http) }
     val enrichmentService by lazy {
         EnrichmentService(
             repository = bookRepository,

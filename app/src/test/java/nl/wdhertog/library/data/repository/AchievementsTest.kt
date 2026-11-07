@@ -125,6 +125,10 @@ class AchievementsTest {
         }
         assertEquals(LocalDate.of(2020, 1, 10), badges.get("lender").achievedOn)
         assertEquals(12, badges.get("collector").progress)
+        badges.get("collector-1000").let { assertEquals("Bibliothecaris", it.title); assertEquals(1000, it.target) }
+        assertEquals(1000, badges.get("books-1000").target)
+        assertEquals(100_000, badges.get("pages-100000").target)
+        assertEquals("Een jaar lang", badges.get("streak-days-365").title)
         badges.get("author").let { assertEquals("Auteur", it.achievedWith) }
         badges.get("goal").let {
             assertFalse(it.achieved)

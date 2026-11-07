@@ -432,6 +432,17 @@ class BookRepository(
     }
 
     /** Eigen cover-foto instellen (of met null weghalen); de vorige foto wordt opgeruimd. */
+    /**
+     * Een cover van een bron kiezen (bijv. van een andere editie bij Open Library). Vergrendeld, zodat
+     * verrijking hem niet terugzet; een eigen foto maakt plaats.
+     */
+    suspend fun chooseCover(bookId: Long, url: String) = db.withTransaction {
+        val book = dao.getBook(bookId) ?: return@withTransaction
+        val locked = book.lockedFields.toFieldSet() + "cover"
+        dao.updateBook(book.copy(coverUrl = url, coverFile = null, lockedFields = locked.sorted().joinToString(","), updatedAt = Instant.now()))
+        book.coverFile?.let { deleteCoverIfUnused(it) }
+    }
+
     suspend fun setCoverFile(bookId: Long, coverFile: String?) {
         val previous = dao.getBook(bookId)?.coverFile
         dao.setCoverFile(bookId, coverFile, Instant.now())
