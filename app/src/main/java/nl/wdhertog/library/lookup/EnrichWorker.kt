@@ -22,7 +22,11 @@ class EnrichWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         var failedInARow = 0
         while (!isStopped) {
             val pending = repository.booksAwaitingEnrichment(limit = 20)
-            if (pending.isEmpty()) return Result.success()
+            if (pending.isEmpty()) {
+                // Nieuwe boeken zijn opgezocht: nu ook hun genres.
+                GenreWorker.schedule(applicationContext, wifiOnly = container.settings.wifiOnly.value)
+                return Result.success()
+            }
             for (bookId in pending) {
                 if (isStopped) return Result.success()
                 try {

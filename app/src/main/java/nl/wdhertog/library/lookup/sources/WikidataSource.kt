@@ -4,6 +4,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import nl.wdhertog.library.lookup.LookupHttp
 
 data class WikidataWork(
@@ -41,6 +43,24 @@ class WikidataSource(private val http: LookupHttp) {
     }
 
     /**
+     * Genres (P136) van werken, als Nederlands label (anders Engels): werk-id → genres. Null bij geen
+     * verbinding. Alleen de werk-id's gaan naar Wikidata.
+     */
+    suspend fun genres(workIds: List<String>): Map<String, List<String>>? {
+        val ids = workIds.filter { it.matches(Regex("Q\\d+")) }.distinct()
+        if (ids.isEmpty()) return emptyMap()
+        val query = """
+            SELECT ?work ?genre ?label (LANG(?label) AS ?lang) WHERE {
+              VALUES ?work { ${ids.joinToString(" ") { "wd:$it" }} }
+              ?work wdt:P136 ?genre .
+              ?genre rdfs:label ?label . FILTER(LANG(?label) IN ("nl", "en"))
+            }
+        """.trimIndent()
+        val body = http.postForm(ENDPOINT, mapOf("query" to query), accept = "application/sparql-results+json") ?: return null
+        return parseGenres(body)
+    }
+
+    /**
      * Alle genummerde delen van een serie: via de serie-id als die bekend is, anders via de
      * Wikidata-id's van werken uit die serie. Null bij geen verbinding; leeg als Wikidata niets weet.
      */
@@ -62,6 +82,18 @@ class WikidataSource(private val http: LookupHttp) {
 
     companion object {
         private const val ENDPOINT = "https://query.wikidata.org/sparql"
+
+        /** Per werk per genre het Nederlandse label, anders het Engelse. */
+        internal fun parseGenres(json: String): Map<String, List<String>> {
+            val rows = Json.parseToJsonElement(json).jsonObject["results"]!!.jsonObject["bindings"]!!.jsonArray.map { it.jsonObject }
+            fun value(row: JsonObject, key: String) = row[key]?.jsonObject?.get("value")?.jsonPrimitive?.contentOrNull
+            // Per genre het Nederlandse label, anders het Engelse.
+            return rows.groupBy { value(it, "work")!!.substringAfterLast('/') }.mapValues { (_, list) ->
+                list.groupBy { value(it, "genre") }.values.mapNotNull { labels ->
+                    (labels.firstOrNull { value(it, "lang") == "nl" } ?: labels.firstOrNull())?.let { value(it, "label") }
+                }.distinct()
+            }
+        }
 
         fun buildAuthorQuery(authorId: String?, workIds: List<String>): String? {
             val start = when {
