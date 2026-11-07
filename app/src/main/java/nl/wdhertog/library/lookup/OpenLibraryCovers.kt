@@ -9,6 +9,9 @@ import kotlinx.serialization.json.jsonObject
 import nl.wdhertog.library.util.LanguageCodes
 import nl.wdhertog.library.util.Languages
 
+/** Covers om uit te kiezen; [byTitle] = het werk is op titel en auteur gevonden (dus niet zeker hetzelfde). */
+data class CoverChoices(val candidates: List<CoverCandidate>, val byTitle: Boolean = false)
+
 /** Een cover om uit te kiezen: klein voor de lijst, groot om op te slaan, en waar hij bij hoort. */
 data class CoverCandidate(val id: Long, val label: String, val sameIsbn: Boolean) {
     val thumbnailUrl: String get() = "https://covers.openlibrary.org/b/id/$id-M.jpg"
@@ -31,15 +34,35 @@ class OpenLibraryCovers(private val http: LookupHttp) {
         workId: String?,
         language: String?,
         otherIsbns: List<String> = emptyList(),
+        /** Laatste redmiddel: titels (bijv. de eigen en de oorspronkelijke) en de eerste auteur. */
+        titles: List<String> = emptyList(),
+        author: String? = null,
         limit: Int = 60,
-    ): List<CoverCandidate> {
+    ): CoverChoices {
         val edition = isbn13?.let { http.get("$BASE/isbn/$it.json") }?.let(::parseEdition)
-        val work = workId ?: edition?.workId ?: otherIsbns.take(3).firstNotNullOfOrNull { other ->
+        val known = workId ?: edition?.workId ?: otherIsbns.take(3).firstNotNullOfOrNull { other ->
             http.get("$BASE/isbn/$other.json")?.let(::parseEdition)?.workId
         }
+        val byTitle = if (known == null && edition?.covers.isNullOrEmpty()) {
+            titles.filter(String::isNotBlank).distinct().take(2).firstNotNullOfOrNull { title -> searchWork(title, author) }
+        } else {
+            null
+        }
+        val work = known ?: byTitle
         val others = work?.let { http.get("$BASE/works/$it/editions.json?limit=300") }?.let(::parseEditions).orEmpty()
-        return combine(edition, others, language, limit)
+        return CoverChoices(combine(edition, others, language, limit), byTitle = byTitle != null)
     }
+
+    /** Het werk zoeken op titel (en auteur); stuurt alleen die naar Open Library. */
+    private suspend fun searchWork(title: String, author: String?): String? {
+        val query = buildString {
+            append("$BASE/search.json?fields=key,title,cover_i&limit=5&title=").append(encode(title))
+            author?.takeIf(String::isNotBlank)?.let { append("&author=").append(encode(it)) }
+        }
+        return http.get(query)?.let { parseSearch(it, title) }
+    }
+
+    private fun encode(text: String) = java.net.URLEncoder.encode(text, "UTF-8")
 
     internal data class Edition(val covers: List<Long>, val label: String, val workId: String?, val language: String? = null)
 
@@ -51,6 +74,15 @@ class OpenLibraryCovers(private val http: LookupHttp) {
             val rest = others.sortedByDescending { language != null && it.language == language }
                 .flatMap { e -> e.covers.map { CoverCandidate(it, e.label, sameIsbn = false) } }
             return (own + rest).distinctBy { it.id }.take(limit)
+        }
+
+        /** Het werk uit een zoekresultaat: liefst met precies deze titel, anders het eerste met een cover. */
+        internal fun parseSearch(json: String, title: String): String? {
+            val docs = (Json.parseToJsonElement(json).jsonObject["docs"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+            fun key(doc: JsonObject) = (doc["key"] as? JsonPrimitive)?.contentOrNull?.substringAfterLast('/')
+            fun norm(text: String?) = text?.let(nl.wdhertog.library.util.TextNormalizer::titleSortKey)
+            val exact = docs.firstOrNull { norm((it["title"] as? JsonPrimitive)?.contentOrNull) == norm(title) }
+            return key(exact ?: docs.firstOrNull { it["cover_i"] != null } ?: return null)
         }
 
         internal fun parseEdition(json: String): Edition = edition(Json.parseToJsonElement(json).jsonObject)

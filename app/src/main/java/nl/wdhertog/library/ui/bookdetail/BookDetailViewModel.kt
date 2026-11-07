@@ -54,7 +54,7 @@ class BookDetailViewModel(
     /** "Andere cover kiezen…": null = dicht, lege lijst na laden = niets gevonden. */
     sealed interface CoverChoice {
         data object Loading : CoverChoice
-        data class Loaded(val candidates: List<nl.wdhertog.library.lookup.CoverCandidate>) : CoverChoice
+        data class Loaded(val candidates: List<nl.wdhertog.library.lookup.CoverCandidate>, val byTitle: Boolean = false) : CoverChoice
         data class Failed(val message: String) : CoverChoice
     }
 
@@ -66,10 +66,13 @@ class BookDetailViewModel(
         coverChoice.value = CoverChoice.Loading
         viewModelScope.launch {
             coverChoice.value = try {
-                CoverChoice.Loaded(source.candidates(
+                val choices = source.candidates(
                     detail.book.isbn13, detail.works.firstOrNull()?.openLibraryWorkId, detail.book.language,
                     otherIsbns = detail.otherEditions.mapNotNull { it.isbn13 },
-                ))
+                    titles = listOfNotNull(detail.book.title, detail.works.firstOrNull()?.originalTitle),
+                    author = detail.authors.firstOrNull(),
+                )
+                CoverChoice.Loaded(choices.candidates, choices.byTitle)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
