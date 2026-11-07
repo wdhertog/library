@@ -22,10 +22,21 @@ data class CoverCandidate(val id: Long, val label: String, val sameIsbn: Boolean
  */
 class OpenLibraryCovers(private val http: LookupHttp) {
 
-    /** [language]: ISO 639-1 van het boek; edities in die taal komen eerst. */
-    suspend fun candidates(isbn13: String?, workId: String?, language: String?, limit: Int = 60): List<CoverCandidate> {
+    /**
+     * [language]: ISO 639-1 van het boek; edities in die taal komen eerst. [otherIsbns]: ISBN's van je andere
+     * edities van hetzelfde werk; kent Open Library dit ISBN of het werk niet, dan vinden we het werk daarlangs.
+     */
+    suspend fun candidates(
+        isbn13: String?,
+        workId: String?,
+        language: String?,
+        otherIsbns: List<String> = emptyList(),
+        limit: Int = 60,
+    ): List<CoverCandidate> {
         val edition = isbn13?.let { http.get("$BASE/isbn/$it.json") }?.let(::parseEdition)
-        val work = workId ?: edition?.workId
+        val work = workId ?: edition?.workId ?: otherIsbns.take(3).firstNotNullOfOrNull { other ->
+            http.get("$BASE/isbn/$other.json")?.let(::parseEdition)?.workId
+        }
         val others = work?.let { http.get("$BASE/works/$it/editions.json?limit=300") }?.let(::parseEditions).orEmpty()
         return combine(edition, others, language, limit)
     }

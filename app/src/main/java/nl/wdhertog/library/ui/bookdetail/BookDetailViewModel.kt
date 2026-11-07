@@ -66,7 +66,10 @@ class BookDetailViewModel(
         coverChoice.value = CoverChoice.Loading
         viewModelScope.launch {
             coverChoice.value = try {
-                CoverChoice.Loaded(source.candidates(detail.book.isbn13, detail.works.firstOrNull()?.openLibraryWorkId, detail.book.language))
+                CoverChoice.Loaded(source.candidates(
+                    detail.book.isbn13, detail.works.firstOrNull()?.openLibraryWorkId, detail.book.language,
+                    otherIsbns = detail.otherEditions.mapNotNull { it.isbn13 },
+                ))
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {

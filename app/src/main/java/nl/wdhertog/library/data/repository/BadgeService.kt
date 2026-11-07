@@ -28,7 +28,7 @@ class BadgeService(
             Achievements.evaluate(
                 sessions, library.associateBy { it.book.id }, goals, summaries,
                 readingDays = Streaks.readingDays(sessions, logged), lentDates = lent,
-                authorCountries = countries.associate { it.name to it.country },
+                authorCountries = countries.associate { it.name to nl.wdhertog.library.util.CountryNames.normalize(it.country) },
             )
         }.flowOn(Dispatchers.Default)
 
