@@ -227,4 +227,39 @@ class RoomSyncTest {
             nl.wdhertog.library.data.repository.ManualParts.decode(other.manualParts),
         )
     }
+
+    @Test
+    fun `a shelf arriving before its bookcase still ends up in it, and nothing goes back as loose`() = runBlocking {
+        val room = a.locations.add("Woonkamer", LocationType.ROOM, null)
+        val case = a.locations.add("Kast rechts", LocationType.BOOKCASE, room)
+        a.locations.add("Plank 1", LocationType.SHELF, case)
+        a.engine.prepareOutgoing()
+        // De plank vóór de kast (zoals na het opruimen van de outbox kan gebeuren).
+        val changes = a.engine.changesAfter(0)
+        val reordered = changes.sortedByDescending { change ->
+            change.entity == "location" && change.fields["name"]?.toString()?.contains("Plank") == true
+        }.mapIndexed { i, c -> c.copy(seq = i + 1L) }
+        b.engine.applyIncoming(reordered)
+        val shelf = b.db.locationDao().getLocations().single { it.name == "Plank 1" }
+        val bookcase = b.db.locationDao().getLocations().single { it.name == "Kast rechts" }
+        assertEquals(bookcase.id, shelf.parentId)
+        // En b stuurt geen "losse plank" terug.
+        b.engine.prepareOutgoing()
+        val back = b.engine.changesAfter(0).filter { it.entity == "location" && it.hlc.endsWith("-b") }
+        assertEquals(emptyList<SyncChange>(), back)
+    }
+
+    @Test
+    fun `a location can be moved, but not into itself`() = runBlocking {
+        val room = a.locations.add("Woonkamer", LocationType.ROOM, null)
+        val case = a.locations.add("Kast rechts", LocationType.BOOKCASE, room)
+        val shelf = a.locations.add("Plank 1", LocationType.SHELF, null)
+        assertEquals(true, a.locations.move(shelf, case))
+        assertEquals(case, a.db.locationDao().getLocation(shelf)!!.parentId)
+        assertEquals(false, a.locations.move(room, shelf)) // kamer in zijn eigen plank: kring
+        assertEquals(null, a.db.locationDao().getLocation(room)!!.parentId)
+        sync()
+        val onB = b.db.locationDao().getLocations()
+        assertEquals(onB.single { it.name == "Kast rechts" }.id, onB.single { it.name == "Plank 1" }.parentId)
+    }
 }
