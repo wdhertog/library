@@ -41,19 +41,20 @@ data class Badge(
  */
 object Achievements {
 
-    private val bookCounts = listOf(10, 50, 100, 250, 500)
-    private val pageCounts = listOf(10_000, 50_000)
+    private val bookCounts = listOf(10, 50, 100, 250, 500, 1000)
+    private val pageCounts = listOf(10_000, 50_000, 100_000)
     private const val THICK = 1000
     private val languageCounts = listOf(3, 5)
     private const val AUTHOR_BOOKS = 10
     private const val REREADS = 3
     private const val MIN_SERIES = 3
     private val streakMonths = listOf(6, 12)
-    private val streakDays = listOf(7, 30, 100)
+    private val streakDays = listOf(7, 30, 100, 365)
     private const val FAST_DAYS = 7
     private const val YEARS = 10
     private const val LOANS = 10
-    private const val COLLECTION = 500
+    /** Verzamelaar (500) en Bibliothecaris (1000). */
+    private val collections = listOf(500 to "Verzamelaar", 1000 to "Bibliothecaris")
 
     /** Een uitgelezen sessie met het moment waarop, gesorteerd: oudste eerst, zonder datum achteraan. */
     private data class Read(val session: ReadingSession, val item: BookListItem?) {
@@ -94,7 +95,7 @@ object Achievements {
             add(fast(reads))
             add(years(reads))
             add(lender(lentDates))
-            add(collector(books.values))
+            collections.forEach { (n, title) -> add(collector(books.values, n, title)) }
         }
     }
 
@@ -253,13 +254,13 @@ object Achievements {
         )
     }
 
-    /** Verzamelaar: [COLLECTION] boeken in bezit; behaald op de dag dat het [COLLECTION]e erbij kwam. */
-    private fun collector(books: Collection<BookListItem>): Badge {
+    /** [target] boeken in bezit; behaald op de dag dat het [target]e erbij kwam. */
+    private fun collector(books: Collection<BookListItem>, target: Int, title: String): Badge {
         val owned = books.filter { it.book.ownership == nl.wdhertog.library.data.db.Ownership.OWNED }.sortedBy { it.book.addedAt }
-        val at = owned.getOrNull(COLLECTION - 1)
+        val at = owned.getOrNull(target - 1)
         return Badge(
-            "collector", BadgeKind.COLLECTOR, "Verzamelaar", "$COLLECTION boeken in bezit",
-            progress = owned.size.coerceAtMost(COLLECTION), target = COLLECTION, achieved = at != null,
+            if (target == 500) "collector" else "collector-$target", BadgeKind.COLLECTOR, title, "$target boeken in bezit",
+            progress = owned.size.coerceAtMost(target), target = target, achieved = at != null,
             achievedOn = at?.book?.addedAt?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate(),
             achievedWith = at?.book?.displayTitle,
         )
@@ -268,8 +269,8 @@ object Achievements {
     private fun dayStreak(days: Set<LocalDate>, longest: Int, length: Int): Badge {
         val on = Streaks.daysReachedOn(days, length)
         return Badge(
-            "streak-days-$length", BadgeKind.STREAK, "$length dagen op rij",
-            "$length dagen achter elkaar gelezen (één dag per week overslaan mag)",
+            "streak-days-$length", BadgeKind.STREAK, if (length == 365) "Een jaar lang" else "$length dagen op rij",
+            (if (length == 365) "Een jaar lang elke dag" else "$length dagen achter elkaar") + " gelezen (één dag per week overslaan mag)",
             progress = longest.coerceAtMost(length), target = length, achieved = on != null, achievedOn = on,
         )
     }
