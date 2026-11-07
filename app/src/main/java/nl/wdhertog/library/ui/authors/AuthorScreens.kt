@@ -242,6 +242,23 @@ fun AuthorScreen(
         when (dialog) {
             "rename" -> RenameAuthorDialog(author.name, onRename = { viewModel.rename(it); dialog = null }, onDismiss = { dialog = null })
             "merge" -> MergeAuthorDialog(author, allAuthors, onPick = { viewModel.mergeInto(it.id); dialog = null }, onDismiss = { dialog = null })
+            "reject" -> AlertDialog(
+                onDismissRequest = { dialog = null },
+                title = { Text("Niet deze persoon?") },
+                text = {
+                    Text(
+                        "De gegevens van Wikidata (levensjaren, land, beschrijving) horen bij iemand anders met dezelfde naam. " +
+                            "Ze worden weggehaald en de app koppelt deze auteur niet meer vanzelf. Via \"Opnieuw opzoeken\" kan het weer.",
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        dialog = null
+                        viewModel.reject { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+                    }) { Text("Loskoppelen") }
+                },
+                dismissButton = { TextButton(onClick = { dialog = null }) { Text("Annuleren") } },
+            )
         }
     }
 
@@ -264,6 +281,12 @@ fun AuthorScreen(
                                 enabled = page != null,
                                 onClick = { menuOpen = false; dialog = "merge" },
                             )
+                            if (page?.author?.wikidataId != null) {
+                                DropdownMenuItem(
+                                    text = { Text("Niet deze persoon") },
+                                    onClick = { menuOpen = false; dialog = "reject" },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Opnieuw opzoeken op Wikidata") },
                                 enabled = !lookingUp,

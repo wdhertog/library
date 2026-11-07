@@ -60,6 +60,7 @@ class AppContainer(val app: Application) {
             database, WikidataSource(http),
             wikidataEnabled = { settings.isSourceEnabled(nl.wdhertog.library.lookup.LookupSource.WIKIDATA) },
             books = bookRepository,
+            openLibrary = OpenLibrarySource(http),
         )
     }
     val syncRepository by lazy { SyncRepository(database) }
@@ -127,6 +128,18 @@ class LibraryApp : Application() {
             nl.wdhertog.library.lookup.AuthorInfoWorker.schedule(this, wifiOnly = container.settings.wifiOnly.value)
             nl.wdhertog.library.lookup.GenreWorker.schedule(this, wifiOnly = container.settings.wifiOnly.value)
         }
+        // Eenmalig (1.11): auteurs zonder koppeling opnieuw nalopen met de betere zoekmethode.
+        val authorMaintenance = getSharedPreferences("onderhoud", MODE_PRIVATE)
+        if (!authorMaintenance.getBoolean(KEY_AUTHORS_RETRY, false)) {
+            container.appScope.launch {
+                runCatching { container.authorRepository.retryUnlinked() }.onSuccess {
+                    authorMaintenance.edit().putBoolean(KEY_AUTHORS_RETRY, true).apply()
+                    if (container.settings.autoLookup.value) {
+                        nl.wdhertog.library.lookup.AuthorInfoWorker.schedule(this@LibraryApp, wifiOnly = container.settings.wifiOnly.value)
+                    }
+                }
+            }
+        }
         // Eenmalig (1.10): genres uit je tags naar het genreveld van het werk.
         val tagMaintenance = getSharedPreferences("onderhoud", MODE_PRIVATE)
         if (!tagMaintenance.getBoolean(KEY_GENRE_TAGS, false)) {
@@ -157,5 +170,6 @@ class LibraryApp : Application() {
     private companion object {
         const val KEY_ISBN_LANGUAGES = "isbn-talen-1"
         const val KEY_GENRE_TAGS = "genres-veld-1"
+        const val KEY_AUTHORS_RETRY = "auteurs-koppelen-1"
     }
 }

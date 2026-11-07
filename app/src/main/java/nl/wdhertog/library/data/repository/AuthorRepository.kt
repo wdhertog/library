@@ -20,6 +20,8 @@ class AuthorRepository(
     private val wikidataEnabled: () -> Boolean = { true },
     /** Voor zoektekst en vergrendelen na hernoemen of samenvoegen. */
     private val books: BookRepository? = null,
+    /** Om een auteur via Open Library aan Wikidata te koppelen. */
+    private val openLibrary: nl.wdhertog.library.lookup.sources.OpenLibrarySource? = null,
 ) {
     private val dao = db.authorDao()
 
@@ -117,8 +119,14 @@ class AuthorRepository(
         val author = dao.get(id) ?: return false
         val fetched = author.infoFetchedAt
         if (!force && fetched != null && fetched.isAfter(Instant.now().minus(INFO_MAX_AGE))) return true
+        // "Niet deze persoon": niets automatisch koppelen.
+        if (author.wikidataRejected) {
+            dao.setInfo(id, null, null, null, null, null, Instant.now())
+            return true
+        }
         val info = try {
             source.authorInfo(author.wikidataId, dao.workWikidataIds(id), author.name)
+                ?: findId(author)?.let { found -> source.authorInfo(found, emptyList(), author.name) }
         } catch (e: kotlin.coroutines.cancellation.CancellationException) {
             throw e
         } catch (e: Exception) { // ook een onverwacht antwoord (parsefout), niet alleen geen verbinding
@@ -136,6 +144,38 @@ class AuthorRepository(
         )
         return true
     }
+
+    /**
+     * Een auteur zonder koppeling vinden: eerst via Open Library (de auteur van zijn werk daar, met een
+     * Wikidata-id; precies), dan op exacte naam in Wikidata (alleen bij één treffer).
+     */
+    private suspend fun findId(author: Author): String? {
+        if (author.wikidataId != null) return null
+        val wanted = AuthorDuplicates.key(author.name)
+        openLibrary?.let { ol ->
+            for (work in dao.openLibraryWorkIds(author.id)) {
+                val authors = ol.workAuthorWikidataIds(work) ?: continue
+                // Zelfde naam; of anders dezelfde achternaam ("Ὅμηρος" en "Homerus" niet, "Stephen Covey" en
+                // "Stephen R. Covey" wel).
+                val match = authors.firstOrNull { (name, _) -> AuthorDuplicates.key(name) == wanted }
+                    ?: authors.filter { (name, _) -> AuthorDuplicates.key(name).substringAfterLast(' ') == wanted.substringAfterLast(' ') }.singleOrNull()
+                match?.second?.let { return it }
+            }
+        }
+        return wikidata?.findAuthorByName(author.name)
+    }
+
+    /** "Niet deze persoon": koppeling weg en niet opnieuw automatisch. "Opnieuw opzoeken" heft dat op. */
+    suspend fun reject(id: Long) = dao.reject(id, Instant.now())
+
+    /** Zelf gevraagd: opnieuw zoeken, ook als je eerder "Niet deze persoon" koos. */
+    suspend fun lookUpAgain(id: Long): Boolean {
+        dao.unreject(id)
+        return refreshInfo(id, force = true)
+    }
+
+    /** Eenmalig na een betere zoekmethode: auteurs zonder koppeling opnieuw laten nalopen. */
+    suspend fun retryUnlinked(): Int = dao.retryUnlinked()
 
     companion object {
         private const val TAG = "AuthorRepository"

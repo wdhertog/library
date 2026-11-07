@@ -117,6 +117,9 @@ data class Author(
     val country: String? = null,
     val description: String? = null,
     val infoFetchedAt: Instant? = null,
+    /** "Niet deze persoon": niet (opnieuw) automatisch aan Wikidata koppelen. */
+    @ColumnInfo(defaultValue = "0")
+    val wikidataRejected: Boolean = false,
 )
 
 @Entity(

@@ -77,7 +77,37 @@ class WikidataSource(private val http: LookupHttp) {
     suspend fun authorInfo(authorId: String?, workIds: List<String>, name: String): WikidataAuthor? {
         val query = buildAuthorQuery(authorId, workIds) ?: return null
         val body = http.postForm(ENDPOINT, mapOf("query" to query), accept = "application/sparql-results+json") ?: return null
-        return parseAuthor(body, name)
+        // Een al bekend (of elders gevonden) id: de label hoeft niet te kloppen ("Homerus" en "Ὅμηρος").
+        return parseAuthor(body, name, trustId = authorId != null && idPattern.matches(authorId))
+    }
+
+    /**
+     * Een auteur zoeken op precies deze naam: een mens die als auteur van een werk staat, en anders een mens
+     * met als beroep schrijver (of een soort schrijver). Alleen bij precies één treffer; twee mensen met
+     * dezelfde naam = niet koppelen. Null ook bij geen verbinding (dan [LookupException]).
+     */
+    suspend fun findAuthorByName(name: String): String? {
+        val labels = nameVariants(name)
+        if (labels.isEmpty()) return null
+        val values = labels.flatMap { l -> listOf("nl", "en", "mul").map { "${literal(l)}@$it" } }.joinToString(" ")
+        for (condition in listOf("?work wdt:P50 ?person .", "?person wdt:P106 ?job . ?job wdt:P279* wd:Q36180 .")) {
+            val query = """
+                PREFIX wd: <http://www.wikidata.org/entity/>
+                PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                SELECT DISTINCT ?person WHERE {
+                  VALUES ?label { $values }
+                  ?person rdfs:label ?label ; wdt:P31 wd:Q5 .
+                  $condition
+                } LIMIT 5
+            """.trimIndent()
+            val body = http.postForm(ENDPOINT, mapOf("query" to query), accept = "application/sparql-results+json")
+                ?: return null
+            val found = parsePeople(body)
+            if (found.size == 1) return found.single()
+            if (found.size > 1) return null // dubbelzinnig: liever niet dan verkeerd
+        }
+        return null
     }
 
     companion object {
@@ -121,7 +151,21 @@ class WikidataSource(private val http: LookupHttp) {
         }
 
         /** Kiest de auteur met dezelfde naam (ook "Achternaam, Voornaam"); Nederlandse teksten gaan voor. */
-        fun parseAuthor(json: String, name: String): WikidataAuthor? {
+        /** "Tolkien, J.R.R." → ook "J.R.R. Tolkien". */
+        internal fun nameVariants(name: String): List<String> {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) return emptyList()
+            val parts = trimmed.split(',').map(String::trim)
+            val turned = if (parts.size == 2 && parts.all(String::isNotEmpty)) "${parts[1]} ${parts[0]}" else null
+            return listOfNotNull(trimmed, turned).distinct()
+        }
+
+        internal fun parsePeople(json: String): List<String> =
+            Json.parseToJsonElement(json).jsonObject["results"]?.jsonObject?.get("bindings")?.jsonArray.orEmpty()
+                .mapNotNull { (it as JsonObject)["person"]?.jsonObject?.get("value")?.jsonPrimitive?.contentOrNull?.substringAfterLast('/') }
+                .distinct()
+
+        fun parseAuthor(json: String, name: String, trustId: Boolean = false): WikidataAuthor? {
             val rows = Json.parseToJsonElement(json).jsonObject["results"]?.jsonObject?.get("bindings")?.jsonArray
                 ?.map { binding -> (binding as JsonObject).mapValues { (_, v) -> v.str("value").orEmpty() } }
                 .orEmpty()
@@ -129,7 +173,11 @@ class WikidataSource(private val http: LookupHttp) {
             val wanted = setOfNotNull(key(name), name.split(',').takeIf { it.size == 2 }?.let { (last, first) -> key("$first $last") })
             val byAuthor = rows.groupBy { it["author"].orEmpty().substringAfterLast('/') }.filterKeys { it.isNotEmpty() }
             val (id, authorRows) = byAuthor.entries.firstOrNull { (_, r) -> r.any { key(it["label"].orEmpty()) in wanted } }
-                ?: byAuthor.entries.singleOrNull()?.takeIf { (_, r) -> r.any { key(it["label"].orEmpty()).let { l -> wanted.any { w -> l.contains(w) || w.contains(l) } } } }
+                ?: byAuthor.entries.singleOrNull()?.takeIf { (_, r) ->
+                    // Een label zonder Latijnse letters ("Ὅμηρος") wordt leeg en past dan nergens op.
+                    r.any { key(it["label"].orEmpty()).let { l -> l.isNotEmpty() && wanted.any { w -> w.isNotEmpty() && (l.contains(w) || w.contains(l)) } } }
+                }
+                ?: byAuthor.entries.singleOrNull()?.takeIf { trustId }
                 ?: return null
             fun preferDutch(field: String, lang: String) =
                 authorRows.filter { !it[field].isNullOrBlank() }.minByOrNull { if (it[lang] == "nl") 0 else 1 }?.get(field)

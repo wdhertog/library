@@ -16,5 +16,7 @@ class CountryNamesTest {
         assertEquals("China", CountryNames.normalize("Wu"))
         assertEquals("Verenigde Staten", CountryNames.normalize("Verenigde Staten"))
         assertEquals("Sovjet-Unie", CountryNames.normalize("Sovjet-Unie"))
+        assertEquals("Duitsland", CountryNames.normalize("Duitse Rijk"))
+        assertEquals("Polen", CountryNames.normalize("Tweede Poolse Republiek"))
     }
 }

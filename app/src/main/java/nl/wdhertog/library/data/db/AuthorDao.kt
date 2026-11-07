@@ -41,6 +41,21 @@ interface AuthorDao {
     @Query("SELECT id FROM author WHERE infoFetchedAt IS NULL AND id IN (SELECT authorId FROM work_author) ORDER BY id LIMIT :limit")
     suspend fun withoutInfo(limit: Int): List<Long>
 
+    /** Open Library-werken van deze auteur, om hem daar te vinden. */
+    @Query("SELECT DISTINCT w.openLibraryWorkId FROM work w JOIN work_author wa ON wa.workId = w.id WHERE wa.authorId = :authorId AND w.openLibraryWorkId IS NOT NULL LIMIT 5")
+    suspend fun openLibraryWorkIds(authorId: Long): List<String>
+
+    /** "Niet deze persoon": koppeling en gegevens weg, en niet opnieuw automatisch koppelen. */
+    @Query("UPDATE author SET wikidataId = NULL, birthYear = NULL, deathYear = NULL, country = NULL, description = NULL, wikidataRejected = 1, infoFetchedAt = :now WHERE id = :id")
+    suspend fun reject(id: Long, now: Instant)
+
+    @Query("UPDATE author SET wikidataRejected = 0 WHERE id = :id")
+    suspend fun unreject(id: Long)
+
+    /** Auteurs zonder koppeling opnieuw laten nalopen (na een betere zoekmethode). */
+    @Query("UPDATE author SET infoFetchedAt = NULL WHERE wikidataId IS NULL AND wikidataRejected = 0")
+    suspend fun retryUnlinked(): Int
+
     /** Naam → land, voor de badges per land. */
     @Query("SELECT name, country FROM author WHERE country IS NOT NULL")
     fun observeCountries(): Flow<List<AuthorCountry>>
