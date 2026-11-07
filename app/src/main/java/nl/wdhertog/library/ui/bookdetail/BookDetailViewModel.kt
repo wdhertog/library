@@ -48,7 +48,44 @@ class BookDetailViewModel(
     private val loans: LoanRepository,
     private val reading: ReadingRepository,
     private val badges: BadgeService? = null,
+    private val coverSource: nl.wdhertog.library.lookup.OpenLibraryCovers? = null,
 ) : ViewModel() {
+
+    /** "Andere cover kiezen…": null = dicht, lege lijst na laden = niets gevonden. */
+    sealed interface CoverChoice {
+        data object Loading : CoverChoice
+        data class Loaded(val candidates: List<nl.wdhertog.library.lookup.CoverCandidate>) : CoverChoice
+        data class Failed(val message: String) : CoverChoice
+    }
+
+    val coverChoice = kotlinx.coroutines.flow.MutableStateFlow<CoverChoice?>(null)
+
+    fun openCoverChoice() {
+        val detail = (state.value as? BookDetailUiState.Loaded)?.detail ?: return
+        val source = coverSource ?: return
+        coverChoice.value = CoverChoice.Loading
+        viewModelScope.launch {
+            coverChoice.value = try {
+                CoverChoice.Loaded(source.candidates(detail.book.isbn13, detail.works.firstOrNull()?.openLibraryWorkId, detail.book.language))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                CoverChoice.Failed("Open Library is nu niet bereikbaar")
+            }
+        }
+    }
+
+    fun closeCoverChoice() {
+        coverChoice.value = null
+    }
+
+    fun chooseCover(candidate: nl.wdhertog.library.lookup.CoverCandidate) {
+        coverChoice.value = null
+        viewModelScope.launch {
+            repository.chooseCover(bookId, candidate.url)
+            _messages.send("Cover gekozen; opnieuw ophalen zet hem niet terug")
+        }
+    }
 
     val bookId = savedStateHandle.toRoute<BookDetailRoute>().bookId
 

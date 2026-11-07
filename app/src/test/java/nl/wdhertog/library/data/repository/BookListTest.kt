@@ -56,4 +56,14 @@ class BookListTest {
         books.splitFromWork(nl)
         assertNull(db.bookDao().getPrimaryWork(en)!!.primaryBookUuid)
     }
+
+    @Test
+    fun `chosen cover is locked against enrichment`() = runBlocking {
+        val id = books.save(0, BookDraft(title = "The Two Towers", isbn = "9780261102361"))
+        books.chooseCover(id, "https://covers.openlibrary.org/b/id/111-L.jpg")
+        books.applyMetadata(id, nl.wdhertog.library.lookup.BookMetadata(source = "Open Library", title = "The Two Towers", coverUrl = "https://andere.jpg"), refresh = true, status = null)
+        val book = db.bookDao().getBook(id)!!
+        assertEquals("https://covers.openlibrary.org/b/id/111-L.jpg", book.coverUrl)
+        assertEquals(true, "cover" in book.lockedFields.orEmpty().split(","))
+    }
 }

@@ -1,5 +1,8 @@
 package nl.wdhertog.library.ui.bookdetail
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -123,6 +126,7 @@ fun BookDetailScreen(
             container.loanRepository,
             container.readingRepository,
             container.badgeService,
+            container.coverCandidates,
         )
     },
 ) {
@@ -189,6 +193,14 @@ fun BookDetailScreen(
                                     onClick = {
                                         menuOpen = false
                                         (state as? BookDetailUiState.Loaded)?.detail?.let { Share.open(context, Share.book(it.book, it.authors)) }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Andere cover kiezen…") },
+                                    leadingIcon = { Icon(Icons.Default.Image, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        viewModel.openCoverChoice()
                                     },
                                 )
                                 DropdownMenuItem(
@@ -385,6 +397,11 @@ fun BookDetailScreen(
             onSave = { page, percent -> viewModel.updateProgress(session.id, page, percent); progressFor = null },
             onDismiss = { progressFor = null },
         )
+    }
+
+    val coverChoice by viewModel.coverChoice.collectAsStateWithLifecycle()
+    coverChoice?.let { choice ->
+        CoverChoiceDialog(choice, onPick = viewModel::chooseCover, onDismiss = viewModel::closeCoverChoice)
     }
 
     val loadedDetail = (state as? BookDetailUiState.Loaded)?.detail
@@ -753,4 +770,58 @@ private fun LocationLine(label: String?, onOpen: (() -> Unit)?, onChange: () -> 
         )
         TextButton(onClick = onChange) { Text(if (label != null) "Verplaatsen" else "Plek kiezen") }
     }
+}
+
+/** Covers van dit ISBN en van andere edities bij Open Library; tik er een aan. */
+@Composable
+private fun CoverChoiceDialog(
+    choice: BookDetailViewModel.CoverChoice,
+    onPick: (nl.wdhertog.library.lookup.CoverCandidate) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Andere cover kiezen") },
+        text = {
+            when (choice) {
+                BookDetailViewModel.CoverChoice.Loading -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                }
+                is BookDetailViewModel.CoverChoice.Failed -> Text(choice.message)
+                is BookDetailViewModel.CoverChoice.Loaded -> if (choice.candidates.isEmpty()) {
+                    Text("Open Library heeft geen covers voor dit boek of andere edities ervan. Je kunt zelf een foto maken.")
+                } else {
+                    Column {
+                        Text(
+                            "Eerst de covers van dit ISBN, dan die van andere edities van hetzelfde werk.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                            modifier = Modifier.heightIn(max = 460.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            items(choice.candidates.size, key = { choice.candidates[it].id }) { i ->
+                                val candidate = choice.candidates[i]
+                                Column(Modifier.clickable { onPick(candidate) }) {
+                                    CoverImage(candidate.label, candidate.thumbnailUrl, Modifier.fillMaxWidth().aspectRatio(2f / 3f), showTitle = false)
+                                    Text(
+                                        candidate.label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (candidate.sameIsbn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
+    )
 }
