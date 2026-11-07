@@ -262,4 +262,22 @@ class RoomSyncTest {
         val onB = b.db.locationDao().getLocations()
         assertEquals(onB.single { it.name == "Kast rechts" }.id, onB.single { it.name == "Plank 1" }.parentId)
     }
+
+    @Test
+    fun `a field this version does not know is not sent back as empty`() = runBlocking {
+        a.books.save(0, BookDraft(title = "Dune"))
+        sync()
+        val uuid = b.bookByTitle("Dune").uuid
+        // Een nieuwere telefoon stuurt een veld dat deze versie (nog) niet kent (zoals "genres" voor 1.9).
+        val future = SyncChange(
+            999, "book", uuid,
+            kotlinx.serialization.json.JsonObject(mapOf("veldUitDeToekomst" to kotlinx.serialization.json.JsonPrimitive("fantasy"))),
+            "%015d-00000-c".format(System.currentTimeMillis() + 1000), false,
+        )
+        b.engine.applyIncoming(listOf(future))
+        b.books.save(b.bookByTitle("Dune").id, BookDraft(title = "Dune (b)"))
+        b.engine.prepareOutgoing()
+        val sent = b.engine.changesAfter(0).filter { it.uuid == uuid }.last()
+        assertEquals(false, "veldUitDeToekomst" in sent.fields.keys)
+    }
 }

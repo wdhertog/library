@@ -48,7 +48,22 @@ class BackupViewModel(
     private val scheduler: EnrichScheduler,
     private val prefs: SharedPreferences,
     private val app: Application,
+    private val genres: nl.wdhertog.library.data.repository.GenreService? = null,
 ) : ViewModel() {
+
+    /** Genres terughalen uit de tags van een oude back-up (zie GenreService.restoreFromTags). */
+    fun restoreGenres(resolver: ContentResolver, uri: Uri) = work("Genres herstellen…") {
+        val service = genres ?: error("niet beschikbaar")
+        val input = withContext(Dispatchers.IO) { resolver.openInputStream(uri) } ?: error("Bestand niet te openen")
+        val (file, check) = backup.inspect(input)
+        try {
+            if (check is BackupFormat.Check.Problem) error(check.message)
+            val count = service.restoreFromTags(backup.readTags(file))
+            if (count == 0) "Geen genres gevonden om terug te zetten" else "Genres teruggezet bij $count werken"
+        } finally {
+            file.delete()
+        }
+    }
 
     private val auto = AutoBackupSettings(app)
     private val running = MutableStateFlow(false)

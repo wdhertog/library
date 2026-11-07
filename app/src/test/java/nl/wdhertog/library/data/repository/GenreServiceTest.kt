@@ -64,4 +64,16 @@ class GenreServiceTest {
         assertEquals("sciencefiction", work(book.id).genres)
         assertEquals("to-reread, space opera", book.tags)
     }
+
+    @Test
+    fun `genres come back from the tags in an old backup`() = runBlocking {
+        val dune = books.save(0, BookDraft(title = "Dune", tags = "halloboek"))
+        service.setGenres(work(dune).id, listOf("avontuur"))
+        val uuid = db.bookDao().getBook(dune)!!.uuid
+        val restored = service.restoreFromTags(mapOf(uuid to "fictie, sci-fi, halloboek", "onbekend-boek" to "thriller"))
+        assertEquals(1, restored)
+        assertEquals("avontuur, fictie, sciencefiction", work(dune).genres)
+        assertEquals("halloboek", db.bookDao().getBook(dune)!!.tags) // tags blijven zoals ze zijn
+        assertEquals(0, service.restoreFromTags(mapOf(uuid to "fictie"))) // al aanwezig
+    }
 }

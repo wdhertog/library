@@ -70,6 +70,7 @@ fun BackupScreen(
             container.enrichScheduler,
             container.app.getSharedPreferences(BackupViewModel.PREFS, Context.MODE_PRIVATE),
             container.app,
+            container.genreService,
         )
     },
 ) {
@@ -90,6 +91,9 @@ fun BackupScreen(
     val today = LocalDate.now()
     val createBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let { viewModel.createBackup(context.contentResolver, it) }
+    }
+    val pickGenreBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { viewModel.restoreGenres(context.contentResolver, it) }
     }
     val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.inspect(context.contentResolver, it) }
@@ -208,6 +212,19 @@ fun BackupScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(onClick = { exportCsv.launch("bibliotheek-$today.csv") }) { Text("Exporteren…") }
+                }
+            }
+
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Genres herstellen uit een back-up", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Haalt de genres terug die in een oude back-up (van vóór versie 1.10) nog als tags stonden, " +
+                            "bijvoorbeeld als ze bij het synchroniseren met een oudere versie zijn gewist. Verder verandert er niets.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(onClick = { pickGenreBackup.launch(arrayOf("application/zip", "application/octet-stream")) }) { Text("Back-up kiezen…") }
                 }
             }
 
