@@ -480,6 +480,10 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.14 (7 november 2026)
+- **Filter "Zonder locatie"**: boeken in bezit die nog geen locatie hebben.
+- **Genre-badges als tegels**: eigen sectie "Genres" met per genre één tegel (aantal, hoogste trede, voortgang naar de volgende). De badgeteller telt per badge, niet per trede.
+
 ### Gebouwd in 1.13 (7 november 2026)
 - **Sync-fout opgelost**: een telefoon met een oudere versie maakte velden die hij niet kent leeg en stuurde dat terug (1.9 wiste zo de genres van 1.10). Nu gaan alleen bekende velden mee. "Genres herstellen uit een back-up" haalt verloren genres terug.
 
