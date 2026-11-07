@@ -22,4 +22,11 @@ class OpenLibraryCoversTest {
         assertTrue(list[1].label.startsWith("Houghton Mifflin · 1999"))
         assertEquals("https://covers.openlibrary.org/b/id/111-L.jpg", list[1].url)
     }
+
+    @Test
+    fun `search picks the work with exactly this title`() {
+        // Volgorde omgedraaid: de verzameleditie staat eerst, maar Mickey7 zelf heeft precies deze titel.
+        assertEquals("OL24546118W", OpenLibraryCovers.parseSearch(resource("search.json"), "Mickey7"))
+        assertEquals(null, OpenLibraryCovers.parseSearch("{\"docs\":[]}", "Mickey7"))
+    }
 }

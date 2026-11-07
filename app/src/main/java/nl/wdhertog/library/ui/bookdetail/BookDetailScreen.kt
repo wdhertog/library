@@ -793,7 +793,11 @@ private fun CoverChoiceDialog(
                 } else {
                     Column {
                         Text(
-                            "Eerst de covers van dit ISBN, dan die van andere edities van hetzelfde werk.",
+                            if (choice.byTitle) {
+                                "Gevonden op titel en auteur: covers van andere edities, meestal niet die van jouw druk."
+                            } else {
+                                "Eerst de covers van dit ISBN, dan die van andere edities van hetzelfde werk."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
