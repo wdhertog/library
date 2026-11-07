@@ -40,7 +40,7 @@ import nl.wdhertog.library.data.sync.SyncTriggers
         SyncOutbox::class,
         SyncPeer::class,
     ],
-    version = 9,
+    version = 10,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -53,6 +53,8 @@ import nl.wdhertog.library.data.sync.SyncTriggers
         AutoMigration(from = 7, to = 8),
         // Genres op het werk (work.genres, work.genresFetchedAt).
         AutoMigration(from = 8, to = 9),
+        // Auteur: "Niet deze persoon" (author.wikidataRejected).
+        AutoMigration(from = 9, to = 10),
     ],
     exportSchema = true,
 )

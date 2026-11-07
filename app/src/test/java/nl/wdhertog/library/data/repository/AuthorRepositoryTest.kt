@@ -88,4 +88,17 @@ class AuthorRepositoryTest {
         assertEquals(setOf(1L), found.map { it.keep.id }.toSet())
         assertEquals(1, AuthorDuplicates.find(list, ignored = setOf(found.first().key)).size)
     }
+
+    @Test
+    fun `not this person removes the link and stays unlinked`() = runBlocking {
+        books.save(0, BookDraft(title = "Dracula", authors = listOf("Christopher Lee")))
+        val id = authors.findId("Christopher Lee")!!
+        db.authorDao().setInfo(id, "Q141178698", 1950, null, "Verenigd Koninkrijk", "acteur", java.time.Instant.now())
+        authors.reject(id)
+        val author = db.authorDao().get(id)!!
+        assertEquals(null, author.wikidataId)
+        assertEquals(null, author.country)
+        assertEquals(true, author.wikidataRejected)
+        assertEquals(0, authors.retryUnlinked()) // afgewezen auteurs worden niet opnieuw nagelopen
+    }
 }

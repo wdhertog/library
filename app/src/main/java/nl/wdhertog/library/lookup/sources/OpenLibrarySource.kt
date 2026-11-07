@@ -17,6 +17,17 @@ class OpenLibrarySource(private val http: LookupHttp) : BookSource {
     override suspend fun quickLookup(isbn13: String): BookMetadata? =
         http.get("$BASE/api/books?bibkeys=ISBN:$isbn13&format=json&jscmd=data")?.let { parseData(it, isbn13) }
 
+    /**
+     * De auteurs van een werk bij Open Library met hun Wikidata-id (als Open Library dat kent): naam → id.
+     * Null bij geen verbinding.
+     */
+    suspend fun workAuthorWikidataIds(workId: String): List<Pair<String, String?>>? {
+        val work = http.get("$BASE/works/$workId.json") ?: return null
+        val keys = Json.parseToJsonElement(work).jsonObject.arr("authors").orEmpty()
+            .mapNotNull { (it as? JsonObject)?.obj("author")?.str("key") }.take(5)
+        return keys.mapNotNull { key -> http.get("$BASE$key.json")?.let(::parseAuthorRecord) }
+    }
+
     /** De onderwerpen ("subjects") van een werk; null bij geen verbinding. */
     suspend fun workSubjects(workId: String): List<String>? =
         http.get("$BASE/works/$workId.json")?.let(::parseSubjects)
@@ -72,6 +83,13 @@ class OpenLibrarySource(private val http: LookupHttp) : BookSource {
                 seriesIndex = seriesMatch?.groupValues?.get(2),
                 openLibraryWorkId = edition.arr("works")?.firstOrNull()?.str("key")?.substringAfterLast('/'),
             )
+        }
+
+        /** Naam en Wikidata-id van een Open Library-auteur. */
+        fun parseAuthorRecord(json: String): Pair<String, String?>? {
+            val author = Json.parseToJsonElement(json).jsonObject
+            val name = author.str("name") ?: return null
+            return name to author.obj("remote_ids")?.str("wikidata")?.takeIf { it.matches(Regex("Q\\d+")) }
         }
 
         fun parseSubjects(json: String): List<String> =

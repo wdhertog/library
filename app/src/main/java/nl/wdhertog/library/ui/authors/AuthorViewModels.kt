@@ -177,11 +177,20 @@ class AuthorViewModel(
     }
 
     /** Opnieuw bij Wikidata kijken. */
+    /** De koppeling met Wikidata klopt niet: weghalen en niet opnieuw automatisch koppelen. */
+    fun reject(done: (String) -> Unit) {
+        val id = authorId.value ?: return
+        viewModelScope.launch {
+            authors.reject(id)
+            done("Losgekoppeld van Wikidata")
+        }
+    }
+
     fun lookUp(done: (String) -> Unit) {
         val id = authorId.value ?: return
         lookingUp.value = true
         viewModelScope.launch {
-            val ok = authors.refreshInfo(id, force = true)
+            val ok = authors.lookUpAgain(id)
             lookingUp.value = false
             done(if (ok) "Bijgewerkt vanuit Wikidata" else "Wikidata is nu niet bereikbaar")
         }
