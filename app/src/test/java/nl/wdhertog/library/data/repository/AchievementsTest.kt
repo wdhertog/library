@@ -170,4 +170,29 @@ class AchievementsTest {
         // Zonder bekende landen: alleen het eerste doel.
         assertEquals(listOf("countries-5"), Achievements.evaluate(sessions, books, emptyList(), emptyList()).filter { it.kind == BadgeKind.COUNTRIES }.map { it.id })
     }
+
+    @Test
+    fun `genre explorer and levels per genre`() {
+        val books = (1L..30L).associateWith { item(it) }
+        val sessions = (1L..30L).map { read(it, LocalDate.of(2020, 1, 1).plusDays(it)) }
+        // 26 fantasyboeken (ook fictie), en 4 boeken in elk een ander genre.
+        val genresOf = (1L..26L).associateWith { listOf("fantasy", "fictie") } +
+            mapOf(27L to listOf("thriller"), 28L to listOf("detective"), 29L to listOf("humor"), 30L to listOf("poëzie", "non-fictie"))
+        val badges = Achievements.evaluate(sessions, books, emptyList(), emptyList(), genresOf = genresOf)
+
+        badges.get("genres-5").let {
+            assertTrue(it.achieved) // fantasy, thriller, detective, humor, poëzie; fictie/non-fictie tellen niet
+            assertEquals("poëzie (Boek 30)", it.achievedWith)
+        }
+        assertFalse(badges.get("genres-10").achieved)
+
+        val fantasy = badges.filter { it.group == "genre-fantasy" }
+        assertEquals(listOf(5, 10, 25, 50), fantasy.map { it.target }) // behaalde treden + de volgende
+        assertTrue(fantasy.first { it.target == 25 }.achieved)
+        assertEquals(LocalDate.of(2020, 1, 26), fantasy.first { it.target == 25 }.achievedOn)
+        assertEquals(26, fantasy.first { it.target == 50 }.progress)
+        assertEquals(true, fantasy.first().details.single().startsWith("Treden: 5: 6 jan 2020 (Boek 5); 10: "))
+        assertEquals(listOf(5), badges.filter { it.group == "genre-thriller" }.map { it.target })
+        assertTrue(badges.none { it.group == "genre-fictie" })
+    }
 }

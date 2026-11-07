@@ -8,7 +8,7 @@ import nl.wdhertog.library.data.db.SeriesSummary
 import java.time.LocalDate
 
 /** Soort badge; bepaalt het pictogram. */
-enum class BadgeKind { BOOKS, PAGES, THICK_BOOK, GOAL, LANGUAGES, SERIES, AUTHOR, REREAD, STREAK, FAST, YEARS, LENDER, COLLECTOR, COUNTRIES }
+enum class BadgeKind { BOOKS, PAGES, THICK_BOOK, GOAL, LANGUAGES, SERIES, AUTHOR, REREAD, STREAK, FAST, YEARS, LENDER, COLLECTOR, COUNTRIES, GENRES, GENRE }
 
 /**
  * Een badge met hoe ver je bent.
@@ -35,6 +35,8 @@ data class Badge(
     val progressNote: String? = null,
     /** Extra regels voor de details, bijv. de landen die je al hebt. */
     val details: List<String> = emptyList(),
+    /** Treden van dezelfde badge (bijv. "Fantasy · 5/10/25"): de lijst toont de hoogste behaalde en de volgende. */
+    val group: String? = null,
 )
 
 /**
@@ -56,6 +58,12 @@ object Achievements {
     private const val YEARS = 10
     private const val LOANS = 10
     private const val COUNTRY_STEP = 5
+    private val genreCounts = listOf(5, 10, 15, 20)
+    private val perGenreLevels = listOf(5, 10, 25, 50, 100)
+    private val shortDate = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.forLanguageTag("nl"))
+
+    /** Te breed om als genre mee te tellen. */
+    private val broadGenres = setOf("fictie", "non-fictie")
     /** Verzamelaar (500) en Bibliothecaris (1000). */
     private val collections = listOf(500 to "Verzamelaar", 1000 to "Bibliothecaris")
 
@@ -77,6 +85,8 @@ object Achievements {
         lentDates: List<LocalDate?> = emptyList(),
         /** Auteursnaam → land (Wikidata), voor de badges per land. */
         authorCountries: Map<String, String> = emptyMap(),
+        /** Boek-id → genres van zijn werk, voor de badges per genre. */
+        genresOf: Map<Long, List<String>> = emptyMap(),
         today: LocalDate = LocalDate.now(),
     ): List<Badge> {
         val reads = sessions.filter { it.status == ReadingStatus.FINISHED }
@@ -102,6 +112,8 @@ object Achievements {
             add(lender(lentDates))
             collections.forEach { (n, title) -> add(collector(books.values, n, title)) }
             addAll(countries(reads, authorCountries))
+            addAll(genreExplorer(reads, genresOf))
+            addAll(perGenre(reads, genresOf))
         }
     }
 
@@ -297,6 +309,54 @@ object Achievements {
                 achievedWith = at?.let { (country, pair) -> "$country: ${pair.second}" + (pair.first.title?.let { " ($it)" } ?: "") },
                 details = listOf("Landen tot nu toe (${all.size}): " + all.joinToString(", ")).takeIf { all.isNotEmpty() }.orEmpty(),
             )
+        }
+    }
+
+    /** Genreverkenner: boeken uitgelezen in 5, 10, 15, 20 verschillende genres (zonder fictie/non-fictie). */
+    private fun genreExplorer(reads: List<Read>, genresOf: Map<Long, List<String>>): List<Badge> {
+        val first = linkedMapOf<String, Read>()
+        for (read in reads) {
+            genresOf[read.session.bookId].orEmpty().filter { it !in broadGenres }.forEach { if (it !in first) first[it] = read }
+        }
+        val found = first.entries.toList()
+        return genreCounts.map { n ->
+            val at = found.getOrNull(n - 1)
+            Badge(
+                "genres-$n", BadgeKind.GENRES, "$n genres", "Boeken uitgelezen in $n verschillende genres",
+                progress = found.size.coerceAtMost(n), target = n, achieved = at != null,
+                achievedOn = at?.value?.date, yearOnly = at?.value?.yearOnly == true,
+                achievedWith = at?.let { (genre, read) -> genre + (read.title?.let { " ($it)" } ?: "") },
+                details = listOf("Genres tot nu toe (${found.size}): " + found.map { it.key }.sorted().joinToString(", ")).takeIf { found.isNotEmpty() }.orEmpty(),
+                group = "genres",
+            )
+        }
+    }
+
+    /**
+     * Per genre 5, 10, 25, 50, 100 uitgelezen boeken. Alleen genres waarin je las; per genre alle behaalde
+     * treden plus de volgende (de lijst toont daarvan de hoogste en de volgende, zie [Badge.group]).
+     */
+    private fun perGenre(reads: List<Read>, genresOf: Map<Long, List<String>>): List<Badge> {
+        val byGenre = linkedMapOf<String, MutableList<Read>>()
+        for (read in reads) genresOf[read.session.bookId].orEmpty().filter { it !in broadGenres }.forEach { byGenre.getOrPut(it) { mutableListOf() } += read }
+        return byGenre.toSortedMap().flatMap { (genre, list) ->
+            val name = genre.replaceFirstChar { it.uppercase() }
+            val achievedLevels = perGenreLevels.filter { list.size >= it }
+            val history = achievedLevels.map { n ->
+                val read = list[n - 1]
+                "$n: " + (read.date?.let { if (read.yearOnly) "${it.year}" else shortDate.format(it) } ?: "datum onbekend") + (read.title?.let { " ($it)" } ?: "")
+            }
+            val shown = achievedLevels + listOfNotNull(perGenreLevels.firstOrNull { it > list.size })
+            shown.map { n ->
+                val at = list.getOrNull(n - 1)?.takeIf { list.size >= n }
+                Badge(
+                    "genre-$genre-$n", BadgeKind.GENRE, "$name · $n", "$n boeken in het genre $genre uitgelezen",
+                    progress = list.size.coerceAtMost(n), target = n, achieved = at != null,
+                    achievedOn = at?.date, yearOnly = at?.yearOnly == true, achievedWith = at?.title,
+                    details = listOf("Treden: " + history.joinToString("; ")).takeIf { history.isNotEmpty() }.orEmpty(),
+                    group = "genre-$genre",
+                )
+            }
         }
     }
 

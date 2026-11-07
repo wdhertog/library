@@ -32,7 +32,7 @@ object YearImage {
     private const val GREEN = 0xFF2E4A3F.toInt()
     private const val LINE = 0xFFE7E1D6.toInt()
 
-    suspend fun render(context: Context, overview: YearOverview, books: List<ReadEntry>, badges: List<String> = emptyList()): Bitmap {
+    suspend fun render(context: Context, overview: YearOverview, books: List<ReadEntry>, badges: List<String> = emptyList(), genres: List<String> = emptyList()): Bitmap {
         val serif = ResourcesCompat.getFont(context, R.font.literata) ?: Typeface.SERIF
         val sans = Typeface.create("sans-serif", Typeface.NORMAL)
         val sansBold = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -99,6 +99,7 @@ object YearImage {
             if (badges.isNotEmpty()) add((if (badges.size == 1) "BADGE" else "BADGES") to badges.joinToString(" · "))
             overview.bestRated.firstOrNull()?.let { add((if (overview.bestRated.size > 1) "FAVORIETEN" else "FAVORIET") to overview.bestRated.joinToString(", ") { e -> short(e) }) }
             overview.topAuthor?.let { (name, n) -> add("MEEST GELEZEN AUTEUR" to "$name · $n boeken") }
+            if (genres.isNotEmpty()) add("GENRES" to genres.joinToString(" · "))
             overview.busiestMonth?.let { (m, n) -> add("DRUKSTE MAAND" to "${YearOverview.monthName(m).replaceFirstChar { it.uppercase() }} · $n ${if (n == 1) "boek" else "boeken"}") }
             if (overview.languages.size > 1) add("TALEN" to overview.languages.joinToString(" · ") { (code, n) -> "${Languages.displayName(code)} $n" })
         }
