@@ -132,7 +132,8 @@ class BackupViewModel(
         val index = LocationTree.index(locations.observeTree().first())
         val sessions = reading.observeSessions().first().groupBy { it.bookId }
         val lent = loans.observeActiveLoans().first().associate { it.bookId to it.personName }
-        val csv = CsvExport.write(library, { index[it]?.pathLabel }, sessions, lent)
+        val genres = books.observePrimaryWorks().first().associate { it.bookId to it.genres }
+        val csv = CsvExport.write(library, { index[it]?.pathLabel }, sessions, lent, genresOf = { genres[it] })
         withContext(Dispatchers.IO) { resolver.openOutputStream(uri)?.use { it.write(csv.toByteArray()) } ?: error("Kan niet schrijven") }
         "${library.size} boeken geëxporteerd"
     }

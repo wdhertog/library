@@ -49,7 +49,14 @@ class BookDetailViewModel(
     private val reading: ReadingRepository,
     private val badges: BadgeService? = null,
     private val coverSource: nl.wdhertog.library.lookup.OpenLibraryCovers? = null,
+    private val genreService: nl.wdhertog.library.data.repository.GenreService? = null,
 ) : ViewModel() {
+
+    /** Genres van het werk zelf kiezen. */
+    fun setGenres(genres: List<String>) {
+        val workId = (state.value as? BookDetailUiState.Loaded)?.detail?.works?.firstOrNull()?.id ?: return
+        viewModelScope.launch { genreService?.setGenres(workId, genres) }
+    }
 
     /** "Andere cover kiezen…": null = dicht, lege lijst na laden = niets gevonden. */
     sealed interface CoverChoice {

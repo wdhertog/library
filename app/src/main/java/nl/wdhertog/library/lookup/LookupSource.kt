@@ -8,5 +8,5 @@ enum class LookupSource(val key: String, val label: String, val description: Str
     BNE("bne", "Biblioteca Nacional de España", "Voor Spaanse ISBN's (978-84) en als aanvulling voor Latijns-Amerika"),
     SBN("sbn", "Servizio Bibliotecario Nazionale", "Voor Italiaanse ISBN's (978-88, 979-12)"),
     OPEN_LIBRARY("openlibrary", "Open Library", "Voor alle andere ISBN's, en als aanvulling op de nationale bibliotheken"),
-    WIKIDATA("wikidata", "Wikidata", "Serie, deelnummer, eerste uitgave en de delen van een serie"),
+    WIKIDATA("wikidata", "Wikidata", "Serie, deelnummer, eerste uitgave, de delen van een serie, genres en het land van de auteur"),
 }

@@ -276,6 +276,7 @@ fun LibraryScreen(
 private fun FilterRow(state: LibraryUiState, viewModel: LibraryViewModel, onOpenFilters: () -> Unit) {
     val active = buildList<Pair<String, () -> Unit>> {
         state.language?.let { add(Languages.displayName(it).replaceFirstChar(Char::uppercase) to { viewModel.setLanguage(null) }) }
+        state.genre?.let { add(it.replaceFirstChar(Char::uppercase) to { viewModel.setGenre(null) }) }
         state.location?.let { add(it.location.name to { viewModel.setLocation(null) }) }
         state.owner?.let { add(it to { viewModel.setOwner(null) }) }
         if (state.ownership != OwnershipFilter.IN_HOUSE) add(state.ownership.label to { viewModel.setOwnership(OwnershipFilter.IN_HOUSE) })
@@ -331,6 +332,7 @@ private fun FilterSheet(state: LibraryUiState, viewModel: LibraryViewModel, onPi
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LanguageFilter(state.language, state.availableLanguages, viewModel::setLanguage)
+                if (state.availableGenres.isNotEmpty()) GenreFilter(state.genre, state.availableGenres, viewModel::setGenre)
                 if (state.locationTree.isNotEmpty()) {
                     FilterChip(
                         selected = state.location != null,
@@ -501,6 +503,29 @@ private fun LanguageFilter(current: String?, available: List<String>, onSelect: 
                     text = { Text(Languages.displayName(code)) },
                     leadingIcon = { if (code == current) Icon(Icons.Default.Check, contentDescription = null) },
                     onClick = { onSelect(code); open = false },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenreFilter(current: String?, available: List<Pair<String, Int>>, onSelect: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = current != null,
+            onClick = { open = true },
+            label = { Text(current ?: "Genre") },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text("Alle genres") }, onClick = { onSelect(null); open = false })
+            available.forEach { (genre, count) ->
+                DropdownMenuItem(
+                    text = { Text("$genre · $count") },
+                    leadingIcon = { if (genre == current) Icon(Icons.Default.Check, contentDescription = null) },
+                    onClick = { onSelect(genre); open = false },
                 )
             }
         }

@@ -16,7 +16,7 @@ object CsvExport {
     val header = listOf(
         "Titel", "Ondertitel", "Auteur", "Vertaler", "ISBN", "Uitgever", "Jaar", "Pagina's", "Taal", "Formaat",
         "Serie", "Deel", "Locatie", "Eigenaar", "Niet meer in bezit", "Weggegeven aan", "Uitgeleend aan",
-        "Tags", "Favoriet", "Wil ik lezen", "Gelezen", "Keer gelezen", "Waardering", "Notities", "Toegevoegd",
+        "Tags", "Genres", "Favoriet", "Wil ik lezen", "Gelezen", "Keer gelezen", "Waardering", "Notities", "Toegevoegd",
     )
 
     fun write(
@@ -24,6 +24,8 @@ object CsvExport {
         locationPath: (Long) -> String?,
         sessions: Map<Long, List<ReadingSession>>,
         lentTo: Map<Long, String?>,
+        /** Genres van het werk per boek-id. */
+        genresOf: (Long) -> String? = { null },
     ): String {
         val rows = books.sortedBy { it.book.title.lowercase() }.map { item ->
             val book = item.book
@@ -48,6 +50,7 @@ object CsvExport {
                 book.disposedTo,
                 if (book.id in lentTo) lentTo[book.id] ?: "ja" else null,
                 book.tags,
+                genresOf(book.id),
                 if (book.favorite) "ja" else null,
                 if (book.wantToRead) "ja" else null,
                 when {

@@ -99,6 +99,10 @@ data class Work(
      * en titel in series en op de auteurspagina. Leeg of verwijzend naar een ander werk: zie primaryOf.
      */
     val primaryBookUuid: String? = null,
+    /** Genres uit de vaste lijst (util.Genres), komma-gescheiden. */
+    val genres: String? = null,
+    /** Wanneer de genres bij Wikidata/Open Library zijn opgehaald; daarna niet opnieuw (weggehaald blijft weg). */
+    val genresFetchedAt: Instant? = null,
     val updatedAt: Instant = Instant.now(),
 )
 

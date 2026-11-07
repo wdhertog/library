@@ -17,6 +17,10 @@ class OpenLibrarySource(private val http: LookupHttp) : BookSource {
     override suspend fun quickLookup(isbn13: String): BookMetadata? =
         http.get("$BASE/api/books?bibkeys=ISBN:$isbn13&format=json&jscmd=data")?.let { parseData(it, isbn13) }
 
+    /** De onderwerpen ("subjects") van een werk; null bij geen verbinding. */
+    suspend fun workSubjects(workId: String): List<String>? =
+        http.get("$BASE/works/$workId.json")?.let(::parseSubjects)
+
     override suspend fun lookup(isbn13: String): BookMetadata? {
         val data = quickLookup(isbn13) ?: return null
         val edition = http.get("$BASE/isbn/$isbn13.json")?.let(::parseEdition)
@@ -69,6 +73,9 @@ class OpenLibrarySource(private val http: LookupHttp) : BookSource {
                 openLibraryWorkId = edition.arr("works")?.firstOrNull()?.str("key")?.substringAfterLast('/'),
             )
         }
+
+        fun parseSubjects(json: String): List<String> =
+            Json.parseToJsonElement(json).jsonObject.arr("subjects").orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
 
         fun parseWork(json: String): BookMetadata {
             val work = Json.parseToJsonElement(json).jsonObject

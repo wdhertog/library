@@ -85,6 +85,13 @@ class AppContainer(val app: Application) {
 
     private val http by lazy { LookupHttp() }
     val coverCandidates by lazy { nl.wdhertog.library.lookup.OpenLibraryCovers(http) }
+    val genreService by lazy {
+        nl.wdhertog.library.data.repository.GenreService(
+            database, bookRepository, WikidataSource(http), OpenLibrarySource(http),
+            wikidataEnabled = { settings.isSourceEnabled(nl.wdhertog.library.lookup.LookupSource.WIKIDATA) },
+            openLibraryEnabled = { settings.isSourceEnabled(nl.wdhertog.library.lookup.LookupSource.OPEN_LIBRARY) },
+        )
+    }
     val enrichmentService by lazy {
         EnrichmentService(
             repository = bookRepository,
@@ -118,6 +125,15 @@ class LibraryApp : Application() {
         // Land en levensjaren van auteurs (badges per land); alleen als automatisch opzoeken aan staat.
         if (container.settings.autoLookup.value) {
             nl.wdhertog.library.lookup.AuthorInfoWorker.schedule(this, wifiOnly = container.settings.wifiOnly.value)
+            nl.wdhertog.library.lookup.GenreWorker.schedule(this, wifiOnly = container.settings.wifiOnly.value)
+        }
+        // Eenmalig (1.10): genres uit je tags naar het genreveld van het werk.
+        val tagMaintenance = getSharedPreferences("onderhoud", MODE_PRIVATE)
+        if (!tagMaintenance.getBoolean(KEY_GENRE_TAGS, false)) {
+            container.appScope.launch {
+                runCatching { container.genreService.moveGenresFromTags() }
+                    .onSuccess { tagMaintenance.edit().putBoolean(KEY_GENRE_TAGS, true).apply() }
+            }
         }
         if (container.settings.loanReminders.value) LoanReminderWorker.schedule(this)
         if (AutoBackupSettings(this).folder != null) AutoBackupWorker.schedule(this)
@@ -140,5 +156,6 @@ class LibraryApp : Application() {
 
     private companion object {
         const val KEY_ISBN_LANGUAGES = "isbn-talen-1"
+        const val KEY_GENRE_TAGS = "genres-veld-1"
     }
 }

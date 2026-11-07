@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.Flow
 data class BookAuthorRow(val bookId: Long, val name: String)
 
 /** Het (eerste) werk van een boek; edities van hetzelfde werk delen dit id. */
-data class BookWorkRow(val bookId: Long, val workId: Long, val primaryBookUuid: String? = null)
+/** Een werk met zijn id's bij Wikidata en Open Library, voor de genres. */
+data class GenreTarget(val workId: Long, val wikidataId: String?, val openLibraryWorkId: String?)
+
+data class BookWorkRow(val bookId: Long, val workId: Long, val primaryBookUuid: String? = null, val genres: String? = null)
 
 data class BookSeriesRow(
     val bookId: Long,
@@ -242,7 +245,18 @@ interface BookDao {
     @Query("DELETE FROM book_work WHERE bookId = :bookId AND workId = :workId")
     suspend fun deleteBookWork(bookId: Long, workId: Long)
 
-    @Query("SELECT bw.bookId, bw.workId, w.primaryBookUuid FROM book_work bw JOIN work w ON w.id = bw.workId WHERE bw.position = 0")
+    /** Werken (met boeken) waarvan de genres nog niet zijn opgehaald en die bij Wikidata of Open Library bekend zijn. */
+    @Query(
+        """
+        SELECT id AS workId, wikidataId, openLibraryWorkId FROM work
+        WHERE genresFetchedAt IS NULL AND (wikidataId IS NOT NULL OR openLibraryWorkId IS NOT NULL)
+          AND id IN (SELECT workId FROM book_work)
+        ORDER BY id LIMIT :limit
+        """
+    )
+    suspend fun worksWithoutGenres(limit: Int): List<GenreTarget>
+
+    @Query("SELECT bw.bookId, bw.workId, w.primaryBookUuid, w.genres FROM book_work bw JOIN work w ON w.id = bw.workId WHERE bw.position = 0")
     fun observePrimaryWorks(): Flow<List<BookWorkRow>>
 
     @Query("SELECT * FROM work WHERE id = :id")

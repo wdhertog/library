@@ -127,6 +127,7 @@ fun BookDetailScreen(
             container.readingRepository,
             container.badgeService,
             container.coverCandidates,
+            container.genreService,
         )
     },
 ) {
@@ -139,6 +140,7 @@ fun BookDetailScreen(
     val personNames by viewModel.personNames.collectAsStateWithLifecycle()
     val ownerNames by viewModel.ownerNames.collectAsStateWithLifecycle()
     var editingOwner by rememberSaveable { mutableStateOf(false) }
+    var editingGenres by rememberSaveable { mutableStateOf(false) }
     var editionDialog by rememberSaveable { mutableStateOf<String?>(null) }
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     var sessionDialog by remember { mutableStateOf<Pair<String, ReadingSession>?>(null) }
@@ -281,6 +283,7 @@ fun BookDetailScreen(
                     locationLabel = { id -> id?.let { locationIndex[it]?.pathLabel } },
                     onOpenBook = onOpenBook,
                     onSetPrimary = viewModel::setPrimaryEdition,
+                    onEditGenres = { editingGenres = true },
                     onOpenLocation = onOpenLocation,
                     onPickLocation = { pickingLocation = true },
                     onEditOwner = { editingOwner = true },
@@ -399,6 +402,11 @@ fun BookDetailScreen(
         )
     }
 
+    if (editingGenres) {
+        val current = nl.wdhertog.library.util.Genres.decode((state as? BookDetailUiState.Loaded)?.detail?.works?.firstOrNull()?.genres)
+        GenresDialog(current, onSave = { viewModel.setGenres(it); editingGenres = false }, onDismiss = { editingGenres = false })
+    }
+
     val coverChoice by viewModel.coverChoice.collectAsStateWithLifecycle()
     coverChoice?.let { choice ->
         CoverChoiceDialog(choice, onPick = viewModel::chooseCover, onDismiss = viewModel::closeCoverChoice)
@@ -482,6 +490,7 @@ private fun DetailContent(
     locationLabel: (Long?) -> String?,
     onOpenBook: (Long) -> Unit,
     onSetPrimary: () -> Unit,
+    onEditGenres: () -> Unit,
     onOpenLocation: (Long) -> Unit,
     onPickLocation: () -> Unit,
     onEditOwner: () -> Unit,
@@ -579,6 +588,18 @@ private fun DetailContent(
             loanSection?.let { DetailCard("Bezit en uitlenen") { it() } }
 
             val original = detail.works.firstOrNull()?.originalTitle?.takeIf { it != book.title }
+            val genres = nl.wdhertog.library.util.Genres.decode(detail.works.firstOrNull()?.genres)
+            DetailCard("Genres") {
+                if (genres.isEmpty()) {
+                    Text("Nog geen genres.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        genres.forEach { genre -> SuggestionChip(onClick = onEditGenres, label = { Text(genre) }) }
+                    }
+                }
+                TextButton(onClick = onEditGenres) { Text(if (genres.isEmpty()) "Kiezen…" else "Wijzigen…") }
+            }
+
             val tags = book.tags?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty()
             if (book.description != null || original != null || tags.isNotEmpty() || book.notes != null) {
                 DetailCard("Beschrijving") {
@@ -827,5 +848,37 @@ private fun CoverChoiceDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
+    )
+}
+
+/** Genres kiezen uit de vaste lijst; geldt voor het werk, dus ook voor andere edities. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun GenresDialog(current: List<String>, onSave: (List<String>) -> Unit, onDismiss: () -> Unit) {
+    var chosen by rememberSaveable { mutableStateOf(current.toList()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Genres") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    "Geldt voor dit werk, dus ook voor andere edities. Wat je weghaalt, komt niet terug bij het opzoeken.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    nl.wdhertog.library.util.Genres.all.forEach { genre ->
+                        androidx.compose.material3.FilterChip(
+                            selected = genre in chosen,
+                            onClick = { chosen = if (genre in chosen) chosen - genre else chosen + genre },
+                            label = { Text(genre) },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(chosen) }) { Text("Opslaan") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Annuleren") } },
     )
 }

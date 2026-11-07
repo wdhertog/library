@@ -547,7 +547,7 @@ class BookRepository(
         val authors = work?.let { dao.getAuthorNames(it.id) }.orEmpty()
         val series = work?.seriesId?.let { dao.getSeries(it)?.name }
         val text = TextNormalizer.searchKey(
-            listOf(book.title, book.subtitle, work?.originalTitle, series, book.isbn13, book.publisher, book.tags, book.translators, book.owner) + authors,
+            listOf(book.title, book.subtitle, work?.originalTitle, series, book.isbn13, book.publisher, book.tags, work?.genres, book.translators, book.owner) + authors,
         )
         if (text != book.searchText) dao.updateBook(book.copy(searchText = text))
     }

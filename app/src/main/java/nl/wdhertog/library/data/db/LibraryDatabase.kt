@@ -40,7 +40,7 @@ import nl.wdhertog.library.data.sync.SyncTriggers
         SyncOutbox::class,
         SyncPeer::class,
     ],
-    version = 8,
+    version = 9,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -51,6 +51,8 @@ import nl.wdhertog.library.data.sync.SyncTriggers
         AutoMigration(from = 6, to = 7),
         // Hoofdeditie (work.primaryBookUuid) en id's bij andere diensten (book.externalIds, Goodreads).
         AutoMigration(from = 7, to = 8),
+        // Genres op het werk (work.genres, work.genresFetchedAt).
+        AutoMigration(from = 8, to = 9),
     ],
     exportSchema = true,
 )
