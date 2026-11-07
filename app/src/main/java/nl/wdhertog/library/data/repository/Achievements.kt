@@ -60,6 +60,7 @@ object Achievements {
     private const val COUNTRY_STEP = 5
     private val genreCounts = listOf(5, 10, 15, 20)
     private val perGenreLevels = listOf(5, 10, 25, 50, 100)
+    private val shortDate = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.forLanguageTag("nl"))
 
     /** Te breed om als genre mee te tellen. */
     private val broadGenres = setOf("fictie", "non-fictie")
@@ -343,7 +344,7 @@ object Achievements {
             val achievedLevels = perGenreLevels.filter { list.size >= it }
             val history = achievedLevels.map { n ->
                 val read = list[n - 1]
-                "$n: " + (read.date?.let { if (read.yearOnly) "${it.year}" else it.toString() } ?: "datum onbekend") + (read.title?.let { " ($it)" } ?: "")
+                "$n: " + (read.date?.let { if (read.yearOnly) "${it.year}" else shortDate.format(it) } ?: "datum onbekend") + (read.title?.let { " ($it)" } ?: "")
             }
             val shown = achievedLevels + listOfNotNull(perGenreLevels.firstOrNull { it > list.size })
             shown.map { n ->

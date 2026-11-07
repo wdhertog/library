@@ -191,7 +191,7 @@ class AchievementsTest {
         assertTrue(fantasy.first { it.target == 25 }.achieved)
         assertEquals(LocalDate.of(2020, 1, 26), fantasy.first { it.target == 25 }.achievedOn)
         assertEquals(26, fantasy.first { it.target == 50 }.progress)
-        assertEquals(true, fantasy.first().details.single().startsWith("Treden: 5: 2020-01-06 (Boek 5); 10: "))
+        assertEquals(true, fantasy.first().details.single().startsWith("Treden: 5: 6 jan 2020 (Boek 5); 10: "))
         assertEquals(listOf(5), badges.filter { it.group == "genre-thriller" }.map { it.target })
         assertTrue(badges.none { it.group == "genre-fictie" })
     }
