@@ -11,10 +11,10 @@ import kotlinx.coroutines.flow.Flow
 data class BookAuthorRow(val bookId: Long, val name: String)
 
 /** Het (eerste) werk van een boek; edities van hetzelfde werk delen dit id. */
-/** Een boek met de id's van zijn werk bij Wikidata en Open Library, voor de genres. */
-data class GenreTarget(val bookId: Long, val wikidataId: String?, val openLibraryWorkId: String?)
+/** Een werk met zijn id's bij Wikidata en Open Library, voor de genres. */
+data class GenreTarget(val workId: Long, val wikidataId: String?, val openLibraryWorkId: String?)
 
-data class BookWorkRow(val bookId: Long, val workId: Long, val primaryBookUuid: String? = null)
+data class BookWorkRow(val bookId: Long, val workId: Long, val primaryBookUuid: String? = null, val genres: String? = null)
 
 data class BookSeriesRow(
     val bookId: Long,
@@ -245,20 +245,18 @@ interface BookDao {
     @Query("DELETE FROM book_work WHERE bookId = :bookId AND workId = :workId")
     suspend fun deleteBookWork(bookId: Long, workId: Long)
 
-    /** Boeken die nog geen genres hebben gekregen en waarvan het werk bij Wikidata of Open Library bekend is. */
+    /** Werken (met boeken) waarvan de genres nog niet zijn opgehaald en die bij Wikidata of Open Library bekend zijn. */
     @Query(
         """
-        SELECT b.id AS bookId, w.wikidataId, w.openLibraryWorkId FROM book b
-        JOIN book_work bw ON bw.bookId = b.id AND bw.position = 0
-        JOIN work w ON w.id = bw.workId
-        WHERE (b.enrichedSources IS NULL OR b.enrichedSources NOT LIKE '%' || :marker || '%')
-          AND (w.wikidataId IS NOT NULL OR w.openLibraryWorkId IS NOT NULL)
-        ORDER BY b.id LIMIT :limit
+        SELECT id AS workId, wikidataId, openLibraryWorkId FROM work
+        WHERE genresFetchedAt IS NULL AND (wikidataId IS NOT NULL OR openLibraryWorkId IS NOT NULL)
+          AND id IN (SELECT workId FROM book_work)
+        ORDER BY id LIMIT :limit
         """
     )
-    suspend fun booksWithoutGenres(marker: String, limit: Int): List<GenreTarget>
+    suspend fun worksWithoutGenres(limit: Int): List<GenreTarget>
 
-    @Query("SELECT bw.bookId, bw.workId, w.primaryBookUuid FROM book_work bw JOIN work w ON w.id = bw.workId WHERE bw.position = 0")
+    @Query("SELECT bw.bookId, bw.workId, w.primaryBookUuid, w.genres FROM book_work bw JOIN work w ON w.id = bw.workId WHERE bw.position = 0")
     fun observePrimaryWorks(): Flow<List<BookWorkRow>>
 
     @Query("SELECT * FROM work WHERE id = :id")

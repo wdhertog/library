@@ -25,7 +25,7 @@ object SyncSchema {
         ),
         WORK to listOf(
             "title", "originalTitle", "originalLanguage", "firstPublishedYear", "series", "seriesIndex", "awards",
-            "openLibraryWorkId", "wikidataId", "authors", "primaryBook",
+            "openLibraryWorkId", "wikidataId", "authors", "primaryBook", "genres", "genresFetched",
         ),
         SERIES to listOf("name", "totalVolumes", "wikidataId", "manualParts"),
         LOCATION to listOf("parent", "name", "type", "sortOrder"),

@@ -1,51 +1,75 @@
 package nl.wdhertog.library.util
 
 /**
- * Een vaste Nederlandse lijst van genres (ontwerp §12, genres), zodat varianten uit Wikidata, Open Library
- * en je eigen tags samenvallen: "krimi", "detectivefictie" en "mysterie" worden "detective", "sci-fi"
- * wordt "sciencefiction". Wat niet in de lijst staat, blijft zoals het is (in kleine letters).
+ * Een vaste Nederlandse lijst van genres (het veld Work.genres). Namen uit Wikidata, Open Library en je
+ * eigen tags vallen daarop samen:
+ * - een **synoniem** ("krimi", "sci-fi", "kinderliteratuur") ís het genre en verdwijnt uit de tags;
+ * - een **subgenre** ("high fantasy", "cyberpunk", "legal thriller") geeft het hoofdgenre, en blijft als
+ *   tag staan om verder te verfijnen.
+ * Andere namen zijn geen genre in deze lijst en blijven gewoon tag.
  */
 object Genres {
 
-    /** Variant (kleine letters) → genre. */
-    private val variants: Map<String, String> = buildMap {
-        fun to(genre: String, vararg names: String) = names.forEach { put(it, genre) }
-        to("fantasy", "fantasy", "high fantasy", "historical fantasy", "science fantasy", "epic fantasy", "urban fantasy", "fantastic fiction", "fantasy fiction", "english fantasy fiction")
-        to("sciencefiction", "sciencefiction", "science fiction", "sci-fi", "scifi", "zachte sciencefiction", "harde sciencefiction", "maatschappelijke sciencefiction", "planetary romance", "space opera", "cyberpunk", "militaire sciencefiction")
-        to("dystopie", "dystopische fictie", "dystopian fiction", "dystopie", "dystopia", "dystopias")
-        to("detective", "detective", "krimi", "detectivefictie", "detectiveverhaal", "misdaadliteratuur", "misdaadroman", "mysterie", "historical mystery", "detective and mystery stories", "mystery fiction", "crime fiction", "mystery and detective stories")
-        to("thriller", "thriller", "thrillers", "psychologische thriller", "legal thriller", "politieke thriller", "psychological thriller", "suspense")
-        to("spionage", "spionage", "spy-fiction", "spy-novel", "spy fiction", "spionageroman", "spy stories")
-        to("historische roman", "historische roman", "historische fictie", "historical fiction")
-        to("avontuur", "avontuur", "avonturenfictie", "avonturenroman", "adventure stories", "adventure fiction")
-        to("kinderboek", "kinderboek", "kinderliteratuur", "kinderfictie", "kinder- en jeugdliteratuur", "children's fiction", "children's literature", "juvenile fiction")
-        to("jeugd", "jeugd", "young adult fiction", "young adult", "jeugdliteratuur", "jeugdboek")
-        to("humor", "humor", "humour", "comic novel", "komedie", "tragikomedie", "humorous fiction", "humorous stories")
-        to("romantiek", "romantiek", "romance", "romantische fictie", "love stories", "romance fiction")
-        to("horror", "horror", "horror fiction", "horror tales", "griezelroman")
-        to("biografie", "biografie", "biography", "autobiografie", "autobiography")
-        to("memoires", "memoires", "memoir", "memoirs")
-        to("geschiedenis", "geschiedenis", "history")
-        to("militaire geschiedenis", "militaire geschiedenis", "militaire-geschiedenis", "military history")
-        to("filosofie", "filosofie", "philosophy")
-        to("poëzie", "poëzie", "poetry", "gedichten")
-        to("strip", "strip", "graphic-novel", "graphic novel", "graphic novels", "comics", "comic books, strips, etc", "stripverhaal")
-        to("naslag", "naslag", "reference", "naslagwerk", "dictionaries", "woordenboek")
-        to("zelfhulp", "zelfhulp", "self-help", "self help")
-        to("essay", "essay", "essays")
-        to("mythologie", "mythologie", "mythology")
-        to("sprookjes", "sprookje", "sprookjes", "fairy tales", "tale")
-        to("oorlogsroman", "oorlogsroman", "war stories", "war fiction")
-        to("wetenschap", "wetenschap", "science", "popular science")
-        to("kunst", "kunst", "art")
-        to("non-fictie", "non-fictie", "non-fictieliteratuur", "nonfiction", "non-fiction")
-        to("fictie", "fictie", "fiction")
-    }
+    private class Entry(val genre: String, val synonyms: List<String>, val subgenres: List<String> = emptyList())
 
-    /** Het genre voor een tag of label: uit de lijst, of de tekst zelf in kleine letters. */
-    fun canonical(name: String): String {
-        val key = name.trim().lowercase()
-        return variants[key] ?: key
+    private val list = listOf(
+        Entry("fantasy", listOf("fantasy fiction", "fantastic fiction", "english fantasy fiction"),
+            listOf("high fantasy", "historical fantasy", "science fantasy", "epic fantasy", "urban fantasy", "juvenile fantasy")),
+        Entry("sciencefiction", listOf("science fiction", "sci-fi", "scifi"),
+            listOf("zachte sciencefiction", "harde sciencefiction", "maatschappelijke sciencefiction", "militaire sciencefiction", "planetary romance", "space opera", "cyberpunk")),
+        Entry("dystopie", listOf("dystopische fictie", "dystopian fiction", "dystopia", "dystopias")),
+        Entry("detective", listOf("krimi", "detectivefictie", "detectiveverhaal", "misdaadliteratuur", "misdaadroman", "mysterie",
+            "detective and mystery stories", "mystery and detective stories", "mystery fiction", "crime fiction"),
+            listOf("historical mystery")),
+        Entry("thriller", listOf("thrillers", "suspense"),
+            listOf("psychologische thriller", "legal thriller", "politieke thriller", "psychological thriller")),
+        Entry("spionage", listOf("spy-fiction", "spy-novel", "spy fiction", "spionageroman", "spy stories")),
+        Entry("historische roman", listOf("historische fictie", "historical fiction")),
+        Entry("avontuur", listOf("avonturenfictie", "avonturenroman", "adventure stories", "adventure fiction")),
+        Entry("kinderboek", listOf("kinderliteratuur", "kinderfictie", "kinder- en jeugdliteratuur", "children's fiction", "children's literature", "juvenile fiction")),
+        Entry("jeugd", listOf("young adult fiction", "young adult", "jeugdliteratuur", "jeugdboek")),
+        Entry("humor", listOf("humour", "comic novel", "humorous fiction", "humorous stories"), listOf("komedie", "tragikomedie")),
+        Entry("romantiek", listOf("romance", "romantische fictie", "love stories", "romance fiction")),
+        Entry("horror", listOf("horror fiction", "horror tales", "griezelroman")),
+        Entry("biografie", listOf("biography"), listOf("autobiografie", "autobiography")),
+        Entry("memoires", listOf("memoir", "memoirs")),
+        Entry("geschiedenis", listOf("history")),
+        Entry("militaire geschiedenis", listOf("militaire-geschiedenis", "military history")),
+        Entry("filosofie", listOf("philosophy")),
+        Entry("poëzie", listOf("poetry", "gedichten")),
+        Entry("strip", listOf("graphic-novel", "graphic novel", "graphic novels", "comics", "comic books, strips, etc", "stripverhaal")),
+        Entry("naslag", listOf("reference", "naslagwerk", "dictionaries"), listOf("woordenboek")),
+        Entry("zelfhulp", listOf("self-help", "self help")),
+        Entry("essay", listOf("essays")),
+        Entry("mythologie", listOf("mythology")),
+        Entry("sprookjes", listOf("sprookje", "fairy tales", "tale")),
+        Entry("oorlogsroman", listOf("war stories", "war fiction")),
+        Entry("wetenschap", listOf("science", "popular science")),
+        Entry("kunst", listOf("art")),
+        Entry("non-fictie", listOf("non-fictieliteratuur", "nonfiction", "non-fiction")),
+        Entry("fictie", listOf("fiction")),
+    )
+
+    /** De genres van de lijst, voor kiezen en filteren. */
+    val all: List<String> = list.map { it.genre }.sorted()
+
+    private val genreOf: Map<String, String> = buildMap {
+        list.forEach { e -> (listOf(e.genre) + e.synonyms + e.subgenres).forEach { put(it, e.genre) } }
+    }
+    private val subgenres: Set<String> = list.flatMap { it.subgenres }.toSet()
+
+    /** Het genre van de lijst bij deze naam (genre, synoniem of subgenre); null = geen genre uit de lijst. */
+    fun genreOf(name: String): String? = genreOf[name.trim().lowercase()]
+
+    /** Een subgenre blijft als tag staan (om te verfijnen); genres en synoniemen niet. */
+    fun isSubgenre(name: String): Boolean = name.trim().lowercase() in subgenres
+
+    /** Tags splitsen in genres (voor Work.genres) en de tags die blijven (eigen tags en subgenres). */
+    fun split(tags: List<String>): Pair<List<String>, List<String>> {
+        val clean = tags.map(String::trim).filter(String::isNotEmpty)
+        val genres = clean.mapNotNull(::genreOf).distinct()
+        val remaining = clean.filter { genreOf(it) == null || isSubgenre(it) }.distinctBy(String::lowercase)
+        return genres to remaining
     }
 
     /**
@@ -57,10 +81,10 @@ object Genres {
         "romantiek", "biografie", "memoires", "poëzie", "zelfhulp", "mythologie", "oorlogsroman", "humor",
     )
 
-    /** Alleen bekende genres uit Open Library-subjects (die zijn vaak rommelig); null = overslaan. */
-    fun fromOpenLibrary(subject: String): String? = variants[subject.trim().lowercase()]?.takeIf { it in fromOpenLibraryAllowed }
+    fun fromOpenLibrary(subject: String): String? = genreOf(subject)?.takeIf { it in fromOpenLibraryAllowed }
 
-    /** Tags gelijktrekken: varianten naar het genre, dubbelen weg, volgorde behouden. */
-    fun normalizeTags(tags: List<String>): List<String> =
-        tags.map(String::trim).filter(String::isNotEmpty).map { tag -> variants[tag.lowercase()] ?: tag }.distinctBy(String::lowercase)
+    /** Komma-gescheiden opslag in Work.genres; op lijstvolgorde, zonder dubbelen. */
+    fun encode(genres: Collection<String>): String? = genres.mapNotNull(::genreOf).distinct().sorted().joinToString(", ").ifEmpty { null }
+
+    fun decode(text: String?): List<String> = text?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty()
 }

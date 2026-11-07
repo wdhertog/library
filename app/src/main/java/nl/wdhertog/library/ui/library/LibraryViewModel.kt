@@ -59,6 +59,9 @@ data class LibraryUiState(
     val sort: SortOrder = SortOrder.TITLE,
     val language: String? = null,
     val availableLanguages: List<String> = emptyList(),
+    val genre: String? = null,
+    /** Genres die in je bibliotheek voorkomen (met aantal), voor de filter. */
+    val availableGenres: List<Pair<String, Int>> = emptyList(),
     /** Filter op deze locatie inclusief alles erbinnen. */
     val location: LocationNode? = null,
     val locationTree: List<LocationNode> = emptyList(),
@@ -80,7 +83,7 @@ data class LibraryUiState(
 
     val activeFilterCount: Int
         get() = listOf(
-            language != null, location != null, owner != null, favoritesOnly, read != ReadFilter.ALL,
+            language != null, genre != null, location != null, owner != null, favoritesOnly, read != ReadFilter.ALL,
             ownership != OwnershipFilter.IN_HOUSE, multipleEditions,
         ).count { it }
 }
@@ -89,6 +92,7 @@ private data class Filters(
     val query: String = "",
     val sort: SortOrder = SortOrder.TITLE,
     val language: String? = null,
+    val genre: String? = null,
     val locationId: Long? = null,
     val owner: String? = null,
     val favoritesOnly: Boolean = false,
@@ -174,6 +178,7 @@ class LibraryViewModel(
         combine(indexed, locations.observeTree(), filters, readState, repository.observePrimaryWorks()) { all, tree, filters, readState, works ->
             val workOf = works.associate { it.bookId to it.workId }
             val chosenPrimary = works.associate { it.workId to it.primaryBookUuid }
+            val genresOf = works.associate { it.bookId to nl.wdhertog.library.util.Genres.decode(it.genres) }
             val flat = LocationTree.flatten(tree)
             val byId = flat.associateBy { it.id }
             val selected = filters.locationId?.let(byId::get)
@@ -203,6 +208,7 @@ class LibraryViewModel(
             }
             val visible = (if (filters.multipleEditions) editionGroups.values.flatten() else inScope)
                 .filter { filters.language == null || it.item.book.language == filters.language }
+                .filter { filters.genre == null || filters.genre in genresOf[it.item.book.id].orEmpty() }
                 .filter { inSelected == null || it.item.book.locationId in inSelected }
                 .filter { filters.owner == null || it.item.book.owner == filters.owner }
                 .filter { !filters.favoritesOnly || it.item.book.favorite }
@@ -229,6 +235,9 @@ class LibraryViewModel(
                 sort = filters.sort,
                 language = filters.language,
                 availableLanguages = all.mapNotNull { it.item.book.language }.distinct().sorted(),
+                genre = filters.genre,
+                availableGenres = inScope.flatMap { genresOf[it.item.book.id].orEmpty() }.groupingBy { it }.eachCount()
+                    .toList().sortedBy { it.first },
                 location = selected,
                 locationTree = tree,
                 locationLabels = flat.associate { it.id to it.pathLabel },
@@ -250,6 +259,8 @@ class LibraryViewModel(
     fun setSort(value: SortOrder) = changeFilters { it.copy(sort = value) }
 
     fun setLanguage(value: String?) = changeFilters { it.copy(language = value) }
+
+    fun setGenre(value: String?) = changeFilters { it.copy(genre = value) }
 
     fun setLocation(value: Long?) = changeFilters { it.copy(locationId = value) }
 

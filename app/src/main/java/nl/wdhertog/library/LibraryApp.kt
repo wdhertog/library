@@ -127,11 +127,11 @@ class LibraryApp : Application() {
             nl.wdhertog.library.lookup.AuthorInfoWorker.schedule(this, wifiOnly = container.settings.wifiOnly.value)
             nl.wdhertog.library.lookup.GenreWorker.schedule(this, wifiOnly = container.settings.wifiOnly.value)
         }
-        // Eenmalig (1.10): varianten in bestaande tags gelijktrekken met de vaste genrelijst.
+        // Eenmalig (1.10): genres uit je tags naar het genreveld van het werk.
         val tagMaintenance = getSharedPreferences("onderhoud", MODE_PRIVATE)
         if (!tagMaintenance.getBoolean(KEY_GENRE_TAGS, false)) {
             container.appScope.launch {
-                runCatching { container.genreService.normalizeExistingTags() }
+                runCatching { container.genreService.moveGenresFromTags() }
                     .onSuccess { tagMaintenance.edit().putBoolean(KEY_GENRE_TAGS, true).apply() }
             }
         }
@@ -156,6 +156,6 @@ class LibraryApp : Application() {
 
     private companion object {
         const val KEY_ISBN_LANGUAGES = "isbn-talen-1"
-        const val KEY_GENRE_TAGS = "genre-tags-1"
+        const val KEY_GENRE_TAGS = "genres-veld-1"
     }
 }

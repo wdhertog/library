@@ -51,6 +51,6 @@ class BackupFormatTest {
         val fields = csv.lines()[1]
         assertTrue(fields.startsWith("\"Leven; lot\";;Vasili Grossman;;9789028260191;"))
         assertTrue(fields.contains(";Serie;2;Woonkamer/Kast 2;"))
-        assertTrue(fields.contains(";Jan;fictie;ja;;2024-03-01;1;4,5;"))
+        assertTrue(fields.contains(";Jan;fictie;;ja;;2024-03-01;1;4,5;")) // lege kolom Genres na Tags
     }
 }

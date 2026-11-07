@@ -970,6 +970,14 @@ Zo is er ook zonder keuze een betere standaard dan `first()`.
 
 **Open vraag:** pictogrammen zelf tekenen (vector, in het groen-goud palet) of Material Icons? Voorstel: Material Icons in een gouden cirkel, past bij `Gold`.
 
+### 8. Genres (gebouwd 7 november 2026, database versie 9)
+
+- **Eigen veld op het werk** (`work.genres`, gesynchroniseerd), want een genre hoort bij het werk en niet bij de editie. Alleen een vaste lijst van 30 genres (`util/Genres`).
+- **Synoniemen** ("krimi", "sci-fi", "kinderliteratuur") zijn het genre zelf en verdwijnen uit de tags; **subgenres** ("high fantasy", "cyberpunk", "legal thriller") geven het hoofdgenre en blijven als tag om te verfijnen. Andere labels uit Wikidata worden niet toegevoegd.
+- **Ophalen** (`GenreService`, `GenreWorker`): Wikidata P136 van het werk, anders de echte genres uit de onderwerpen bij Open Library (geen doelgroep of vorm: die onderwerpen komen van alle edities samen). Per werk één keer (`work.genresFetchedAt`, gesynchroniseerd): weggehaald blijft weg.
+- **Eenmalig** bij 1.10: genres uit de bestaande tags naar het veld.
+- Boekpagina: kaart "Genres" met kiezen uit de lijst; bibliotheek: filter "Genre"; zoektekst, CSV-kolom "Genres", JSON (via het werk); import zet genres uit tags op het werk.
+
 ### Te beslissen vóór het bouwen
 
 1. JSON-export: ook automatisch in de ZIP?

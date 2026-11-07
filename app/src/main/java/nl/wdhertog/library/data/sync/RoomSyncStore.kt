@@ -75,6 +75,7 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                 "firstPublishedYear" to w.firstPublishedYear, "series" to w.seriesId?.let { dao.seriesUuid(it) },
                 "seriesIndex" to w.seriesIndex, "awards" to w.awards, "openLibraryWorkId" to w.openLibraryWorkId,
                 "wikidataId" to w.wikidataId, "authors" to bookDao.getAuthorNames(w.id), "primaryBook" to w.primaryBookUuid,
+                "genres" to w.genres, "genresFetched" to w.genresFetchedAt?.toEpochMilli(),
             )
         }
         SERIES -> dao.series(uuid)?.let {
@@ -144,6 +145,8 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
                     seriesId = f.ref("series", w.seriesId) { dao.series(it)?.id }, seriesIndex = f.str("seriesIndex", w.seriesIndex),
                     awards = f.str("awards", w.awards), openLibraryWorkId = f.str("openLibraryWorkId", w.openLibraryWorkId),
                     wikidataId = f.str("wikidataId", w.wikidataId), primaryBookUuid = f.str("primaryBook", w.primaryBookUuid),
+                    genres = f.str("genres", w.genres),
+                    genresFetchedAt = f.long("genresFetched", w.genresFetchedAt?.toEpochMilli())?.let(Instant::ofEpochMilli),
                     updatedAt = now,
                 )
                 val id = if (existing == null) bookDao.insertWork(w) else w.id.also { bookDao.updateWork(w) }

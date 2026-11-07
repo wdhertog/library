@@ -1,5 +1,6 @@
 package nl.wdhertog.library.importer
 
+import nl.wdhertog.library.util.Genres
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import nl.wdhertog.library.data.db.Book
@@ -112,7 +113,8 @@ class ImportService(
                 isbn13 = imported.isbn13,
                 isbn10 = imported.isbn13?.let(Isbn::toIsbn10),
                 title = imported.title,
-                tags = imported.tags.joinToString(", ").ifEmpty { null },
+                // Genres uit de lijst gaan naar het werk; eigen tags en subgenres blijven tag.
+                tags = Genres.split(imported.tags).second.joinToString(", ").ifEmpty { null },
                 notes = imported.notes,
                 ownership = if (imported.owned) Ownership.OWNED else Ownership.NOT_OWNED,
                 disposalReason = imported.disposalReason.takeIf { !imported.owned },
@@ -130,7 +132,9 @@ class ImportService(
                 addedAt = imported.addedAt?.atStartOfDay(ZoneId.systemDefault())?.toInstant() ?: Instant.now(),
             ),
         )
-        val workId = bookDao.insertWork(Work(title = imported.originalTitle ?: imported.title, awards = imported.awards))
+        val workId = bookDao.insertWork(
+            Work(title = imported.originalTitle ?: imported.title, awards = imported.awards, genres = Genres.encode(Genres.split(imported.tags).first)),
+        )
         bookDao.insertBookWork(BookWork(bookId, workId, position = 0))
         books.applyMetadata(bookId, imported.toMetadata(source), refresh = false, status = null)
         addReadings(bookId, imported, overwrite = false)
@@ -141,10 +145,16 @@ class ImportService(
 
     private suspend fun merge(decision: ImportDecision.Merge, source: String, imported: ImportedBook) {
         val book = bookDao.getBook(decision.bookId) ?: return
+        // Genres uit het bestand bij de genres van het werk.
+        Genres.split(imported.tags).first.takeIf { it.isNotEmpty() }?.let { genres ->
+            bookDao.getPrimaryWork(book.id)?.let { work ->
+                bookDao.updateWork(work.copy(genres = Genres.encode(Genres.decode(work.genres) + genres), updatedAt = Instant.now()))
+            }
+        }
         val importedAdded = imported.addedAt?.atStartOfDay(ZoneId.systemDefault())?.toInstant()
         bookDao.updateBook(
             book.copy(
-                tags = (book.tags?.split(',').orEmpty().map(String::trim) + imported.tags)
+                tags = (book.tags?.split(',').orEmpty().map(String::trim) + Genres.split(imported.tags).second)
                     .filter(String::isNotEmpty).distinctBy(String::lowercase).joinToString(", ").ifEmpty { null },
                 wantToRead = book.wantToRead || imported.wantToRead,
                 favorite = book.favorite || imported.favorite,
