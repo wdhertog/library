@@ -23,13 +23,21 @@ class AuthorInfoWorker(context: Context, params: WorkerParameters) : CoroutineWo
     override suspend fun doWork(): Result {
         val authors = (applicationContext as LibraryApp).container.authorRepository
         if (!authors.mayAskWikidata()) return Result.success()
+        var failuresInARow = 0
         while (!isStopped) {
             val pending = authors.withoutInfo(limit = 20)
             if (pending.isEmpty()) return Result.success()
             for (id in pending) {
                 if (isStopped) return Result.success()
-                // false = Wikidata nu niet bereikbaar: later verder.
-                if (!authors.refreshInfo(id)) return Result.retry()
+                if (authors.refreshInfo(id)) {
+                    failuresInARow = 0
+                } else {
+                    // Wikidata geeft soms even een serverfout (502/503): kort wachten en verder; pas na een
+                    // paar keer op rij later opnieuw.
+                    if (++failuresInARow >= 3) return Result.retry()
+                    kotlinx.coroutines.delay(15_000)
+                    break // dezelfde auteur staat dan weer vooraan
+                }
             }
         }
         return Result.success()
@@ -46,7 +54,7 @@ class AuthorInfoWorker(context: Context, params: WorkerParameters) : CoroutineWo
                         .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
                         .build(),
                 )
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 1, TimeUnit.MINUTES) // niet steeds langer wachten
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, request)
         }
