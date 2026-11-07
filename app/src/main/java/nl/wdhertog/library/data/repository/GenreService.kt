@@ -55,6 +55,30 @@ class GenreService(
         return targets.size
     }
 
+    /**
+     * Genres terughalen uit de tags van een oude back-up (van vóór 1.10, toen genres nog tags waren): bij
+     * elk boek dat hier nog bestaat, de genres uit die tags bij zijn werk erbij. Wat het werk al heeft, blijft.
+     * Geeft het aantal werken dat genres kreeg.
+     */
+    suspend fun restoreFromTags(tagsByBookUuid: Map<String, String?>): Int {
+        val byUuid = dao.getBooks().associateBy { it.uuid }
+        val perWork = mutableMapOf<Long, MutableSet<String>>()
+        for ((uuid, tags) in tagsByBookUuid) {
+            val book = byUuid[uuid] ?: continue
+            val genres = Genres.split(tags?.split(',').orEmpty()).first
+            if (genres.isEmpty()) continue
+            val work = dao.getPrimaryWork(book.id) ?: continue
+            perWork.getOrPut(work.id) { mutableSetOf() } += genres
+        }
+        var changed = 0
+        for ((workId, genres) in perWork) {
+            val before = dao.getWork(workId)?.genres
+            addGenres(workId, genres.toList(), fetched = false)
+            if (dao.getWork(workId)?.genres != before) changed++
+        }
+        return changed
+    }
+
     /** Zelf gekozen genres voor een werk; telt ook als opgehaald, zodat er niets bij komt wat je weghaalde. */
     suspend fun setGenres(workId: Long, genres: Collection<String>) = db.withTransaction {
         val work = dao.getWork(workId) ?: return@withTransaction

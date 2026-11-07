@@ -118,7 +118,7 @@ class SyncEngine(
                     added++
                 }
                 else -> store.read(dirty.entity, dirty.uuid)?.let { current ->
-                    val changed = changedFields(shadow?.let(::parse) ?: JsonObject(emptyMap()), current)
+                    val changed = changedFields(shadow?.let(::parse) ?: JsonObject(emptyMap()), current, SyncSchema.fields[dirty.entity])
                     if (changed.isNotEmpty()) {
                         val hlc = tick()
                         changed.keys.forEach { store.setClock(dirty.entity, dirty.uuid, it, hlc) }
@@ -225,8 +225,13 @@ class SyncEngine(
         }
 
         /** Velden waarvan de waarde anders is dan in de schaduw; een ontbrekend veld telt als null. */
-        internal fun changedFields(old: JsonObject, current: JsonObject): Map<String, JsonElement> =
-            (old.keys + current.keys)
+        /**
+         * Alleen velden die deze versie kent ([known]): een nieuwer veld van een andere telefoon (in de schaduw)
+         * ontbreekt hier in [current] en zou anders als "leeg gemaakt" teruggaan en daar alles wissen. Zo
+         * wiste 1.9 de genres van 1.10.
+         */
+        internal fun changedFields(old: JsonObject, current: JsonObject, known: Collection<String>? = null): Map<String, JsonElement> =
+            (old.keys + current.keys).filter { known == null || it in known }
                 .filter { (old[it] ?: JsonNull) != (current[it] ?: JsonNull) }
                 .associateWith { current[it] ?: JsonNull }
     }

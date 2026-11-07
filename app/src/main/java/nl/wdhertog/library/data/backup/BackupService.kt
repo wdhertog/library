@@ -162,6 +162,32 @@ class BackupService(
         }
     }
 
+    /**
+     * Tags per boek-uuid uit een back-up, zonder iets terug te zetten (voor "Genres herstellen"). Pakt de
+     * database uit naar een tijdelijke map en leest alleen.
+     */
+    suspend fun readTags(zipFile: File): Map<String, String?> = withContext(Dispatchers.IO) {
+        val dir = File(context.cacheDir, "back-up-lezen").apply { deleteRecursively(); mkdirs() }
+        try {
+            ZipFile(zipFile).use { zip ->
+                for (name in listOf(BackupFormat.DATABASE, BackupFormat.DATABASE_WAL)) {
+                    val entry = zip.getEntry(name) ?: continue
+                    val target = File(dir, if (name == BackupFormat.DATABASE) DB_NAME else "$DB_NAME-wal")
+                    zip.getInputStream(entry).use { source -> target.outputStream().use { source.copyTo(it) } }
+                }
+            }
+            val file = File(dir, DB_NAME)
+            if (!file.isFile) throw IllegalStateException("Geen database in de back-up")
+            SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.NO_LOCALIZED_COLLATORS).use { db ->
+                db.rawQuery("SELECT uuid, tags FROM book", null).use { c ->
+                    buildMap { while (c.moveToNext()) put(c.getString(0), c.getString(1)) }
+                }
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     /** Een echte SQLite-database, heel, en niet van een nieuwere app-versie dan deze. */
     private fun checkDatabase(file: File, maxVersion: Int) {
         if (!file.isFile) throw IllegalStateException("Geen database in de back-up")
