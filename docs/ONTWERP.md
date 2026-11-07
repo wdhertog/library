@@ -480,6 +480,12 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.10 (7 november 2026)
+- **Genres** (§12.8): eigen veld op het werk uit een vaste lijst van 30, opgehaald bij Wikidata en Open Library; genres uit je tags verhuisd. Kaart op de boekpagina, filter in de bibliotheek. Database versie 9.
+- **Andere cover kiezen…**: covers van dit ISBN, van andere edities van het werk, of gevonden op titel en auteur (Open Library).
+- **Land van de auteur** op de achtergrond van Wikidata, met badges per 5 landen.
+- **Badges**: 1000 boeken, 100.000 pagina's, Bibliothecaris (1000 in bezit), een jaar lang.
+
 ### Gebouwd in 1.9 (6 november 2026)
 - **JSON-export** (§12.1): knop op het Back-up-scherm, om je gegevens ergens anders te gebruiken.
 - **Have I Read That-import weg** (§12.5); Goodreads neemt de plaats in.
