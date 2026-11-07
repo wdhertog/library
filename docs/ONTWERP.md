@@ -480,6 +480,9 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.12 (7 november 2026)
+- **Locaties verplaatsen** ("Verplaatsen naar…"), en een **sync-fout** opgelost waardoor planken buiten hun kast raakten (een plank die vóór zijn kast binnenkwam, werd los en dat ging terug naar de andere telefoon).
+
 ### Gebouwd in 1.11 (7 november 2026)
 - **Auteurs beter gekoppeld** aan Wikidata: ook via Open Library en op exacte naam (alleen bij één treffer); "Niet deze persoon" op de auteurspagina (database versie 10). Bij de gebruiker van 165 naar 394 van 545 auteurs.
 - **Badges per genre** (5, 10, 25, 50, 100) en **genreverkenner** (5, 10, 15, 20 genres); meest gelezen genres in het jaaroverzicht.
