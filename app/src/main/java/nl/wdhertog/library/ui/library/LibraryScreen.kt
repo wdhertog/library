@@ -278,6 +278,7 @@ private fun FilterRow(state: LibraryUiState, viewModel: LibraryViewModel, onOpen
         state.language?.let { add(Languages.displayName(it).replaceFirstChar(Char::uppercase) to { viewModel.setLanguage(null) }) }
         state.genre?.let { add(it.replaceFirstChar(Char::uppercase) to { viewModel.setGenre(null) }) }
         state.location?.let { add(it.location.name to { viewModel.setLocation(null) }) }
+        if (state.withoutLocation) add("Zonder locatie" to { viewModel.setWithoutLocation(false) })
         state.owner?.let { add(it to { viewModel.setOwner(null) }) }
         if (state.ownership != OwnershipFilter.IN_HOUSE) add(state.ownership.label to { viewModel.setOwnership(OwnershipFilter.IN_HOUSE) })
         if (state.read != ReadFilter.ALL) add(state.read.label to { viewModel.setRead(ReadFilter.ALL) })
@@ -341,6 +342,11 @@ private fun FilterSheet(state: LibraryUiState, viewModel: LibraryViewModel, onPi
                         trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
                     )
                 }
+                FilterChip(
+                    selected = state.withoutLocation,
+                    onClick = { viewModel.setWithoutLocation(!state.withoutLocation) },
+                    label = { Text("Zonder locatie") },
+                )
                 if (state.availableOwners.isNotEmpty()) {
                     ChoiceChip(
                         label = state.owner ?: "Eigenaar",

@@ -64,6 +64,8 @@ data class LibraryUiState(
     val availableGenres: List<Pair<String, Int>> = emptyList(),
     /** Filter op deze locatie inclusief alles erbinnen. */
     val location: LocationNode? = null,
+    /** Alleen boeken die je hebt maar die nog geen plek hebben. */
+    val withoutLocation: Boolean = false,
     val locationTree: List<LocationNode> = emptyList(),
     /** Pad per locatie-id, voor de 📍-regel in de lijst. */
     val locationLabels: Map<Long, String> = emptyMap(),
@@ -83,7 +85,7 @@ data class LibraryUiState(
 
     val activeFilterCount: Int
         get() = listOf(
-            language != null, genre != null, location != null, owner != null, favoritesOnly, read != ReadFilter.ALL,
+            language != null, genre != null, location != null, withoutLocation, owner != null, favoritesOnly, read != ReadFilter.ALL,
             ownership != OwnershipFilter.IN_HOUSE, multipleEditions,
         ).count { it }
 }
@@ -94,6 +96,7 @@ private data class Filters(
     val language: String? = null,
     val genre: String? = null,
     val locationId: Long? = null,
+    val withoutLocation: Boolean = false,
     val owner: String? = null,
     val favoritesOnly: Boolean = false,
     val read: ReadFilter = ReadFilter.ALL,
@@ -210,6 +213,7 @@ class LibraryViewModel(
                 .filter { filters.language == null || it.item.book.language == filters.language }
                 .filter { filters.genre == null || filters.genre in genresOf[it.item.book.id].orEmpty() }
                 .filter { inSelected == null || it.item.book.locationId in inSelected }
+                .filter { !filters.withoutLocation || (it.item.book.locationId == null && it.item.book.ownership == Ownership.OWNED) }
                 .filter { filters.owner == null || it.item.book.owner == filters.owner }
                 .filter { !filters.favoritesOnly || it.item.book.favorite }
                 .filter {
@@ -239,6 +243,7 @@ class LibraryViewModel(
                 availableGenres = inScope.flatMap { genresOf[it.item.book.id].orEmpty() }.groupingBy { it }.eachCount()
                     .toList().sortedBy { it.first },
                 location = selected,
+                withoutLocation = filters.withoutLocation,
                 locationTree = tree,
                 locationLabels = flat.associate { it.id to it.pathLabel },
                 owner = filters.owner,
@@ -262,7 +267,10 @@ class LibraryViewModel(
 
     fun setGenre(value: String?) = changeFilters { it.copy(genre = value) }
 
-    fun setLocation(value: Long?) = changeFilters { it.copy(locationId = value) }
+    fun setLocation(value: Long?) = changeFilters { it.copy(locationId = value, withoutLocation = it.withoutLocation && value == null) }
+
+    /** Boeken in bezit zonder locatie; sluit een gekozen locatie uit. */
+    fun setWithoutLocation(value: Boolean) = changeFilters { it.copy(withoutLocation = value, locationId = if (value) null else it.locationId) }
 
     fun setOwner(value: String?) = changeFilters { it.copy(owner = value) }
 
