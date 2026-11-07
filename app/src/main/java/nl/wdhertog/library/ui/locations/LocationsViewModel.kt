@@ -35,6 +35,8 @@ data class LocationDetailState(
     /** Boeken direct op deze locatie, in plankvolgorde. */
     val books: List<BookListItem>,
     val loaded: Boolean,
+    /** De hele boom, om naartoe te verplaatsen. */
+    val tree: List<LocationNode> = emptyList(),
 )
 
 class LocationDetailViewModel(
@@ -51,12 +53,19 @@ class LocationDetailViewModel(
             val books = library
                 .filter { it.book.locationId == locationId }
                 .sortedWith(compareBy<BookListItem, Int?>(nullsLast()) { it.book.shelfPosition }.thenBy { it.book.title })
-            LocationDetailState(node, books, loaded = true)
+            LocationDetailState(node, books, loaded = true, tree = tree)
         }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocationDetailState(null, emptyList(), loaded = false))
 
     fun addChild(name: String, type: LocationType) {
         viewModelScope.launch { repository.add(name, type, locationId) }
     }
+
+    /** Verplaatsen naar een andere locatie (null = hoofdniveau). */
+    fun move(newParentId: Long?) {
+        viewModelScope.launch { repository.move(locationId, newParentId) }
+    }
+
+    suspend fun createLocation(name: String, type: LocationType, parentId: Long?): Long = repository.add(name, type, parentId)
 
     fun update(name: String, type: LocationType) {
         viewModelScope.launch { repository.update(locationId, name, type) }

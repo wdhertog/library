@@ -162,8 +162,16 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
             }
             LOCATION -> {
                 val existing = dao.location(uuid)
+                // Een plank kan binnenkomen vóór zijn kast (volgorde in de outbox). Dan niet "geen kast" maken
+                // (dat zou daarna als eigen wijziging terug gaan): de kast koppelen zodra hij er is (afterApply).
+                val parentUuid = f.str("parent", null)
                 val l = (existing ?: Location(uuid = uuid, name = "")).let {
-                    it.copy(parentId = f.ref("parent", it.parentId) { p -> dao.location(p)?.id }, name = f.str("name", it.name) ?: "",
+                    val parentId = when {
+                        !f.has("parent") -> it.parentId
+                        parentUuid == null -> null
+                        else -> dao.location(parentUuid)?.id ?: it.parentId.also { pendingParents[uuid] = parentUuid }
+                    }
+                    it.copy(parentId = parentId, name = f.str("name", it.name) ?: "",
                         type = f.enum("type", it.type) { t -> LocationType.valueOf(t) } ?: LocationType.OTHER,
                         sortOrder = f.int("sortOrder", it.sortOrder) ?: 0, updatedAt = now)
                 }
@@ -229,7 +237,17 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
     // In stukken: SQLite heeft een grens aan het aantal parameters per query.
     override suspend fun deleteOutbox(seqs: List<Long>) = seqs.chunked(500).forEach { dao.deleteOutbox(it) }
 
+    /** Locatie-uuid → uuid van de bovenliggende locatie die nog niet bestond toen de locatie binnenkwam. */
+    private val pendingParents = mutableMapOf<String, String>()
+
     override suspend fun afterApply(touched: Set<Pair<String, String>>) {
+        // Planken waarvan de kast later in dezelfde ronde binnenkwam, nu aan die kast koppelen.
+        for ((child, parent) in pendingParents) {
+            val location = dao.location(child) ?: continue
+            val parentId = dao.location(parent)?.id ?: continue
+            if (location.parentId != parentId) db.locationDao().update(location.copy(parentId = parentId, updatedAt = Instant.now()))
+        }
+        pendingParents.clear()
         books.deleteOrphans()
         val bookIds = touched.mapNotNull { (entity, uuid) ->
             when (entity) {
@@ -284,7 +302,7 @@ class RoomSyncStore(private val db: LibraryDatabase, private val books: BookRepo
     /** Binnengekomen velden; een ontbrekend veld houdt de huidige waarde. */
     private class Fields(private val json: JsonObject) {
         private fun value(name: String) = json[name] as? JsonPrimitive
-        private fun has(name: String) = name in json
+        fun has(name: String) = name in json
 
         fun str(name: String, current: String?): String? = if (has(name)) value(name)?.contentOrNull else current
         fun int(name: String, current: Int?): Int? = if (has(name)) value(name)?.intOrNull else current

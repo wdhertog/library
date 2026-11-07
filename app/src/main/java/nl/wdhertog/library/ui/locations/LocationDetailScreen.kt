@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -121,6 +122,11 @@ fun LocationDetailScreen(
                                     onClick = { menuOpen = false; dialog = "edit" },
                                 )
                                 DropdownMenuItem(
+                                    text = { Text("Verplaatsen naar…") },
+                                    leadingIcon = { Icon(Icons.Default.DriveFileMove, contentDescription = null) },
+                                    onClick = { menuOpen = false; dialog = "move" },
+                                )
+                                DropdownMenuItem(
                                     text = { Text("Verwijderen") },
                                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
                                     onClick = { menuOpen = false; dialog = "delete" },
@@ -207,6 +213,21 @@ fun LocationDetailScreen(
                 onConfirm = { name, type -> dialog = null; viewModel.update(name, type) },
                 onDismiss = { dialog = null },
             )
+            "move" -> {
+                // Niet in zichzelf of een eigen sublocatie.
+                val own = LocationTree.descendantIds(node)
+                fun prune(nodes: List<LocationNode>): List<LocationNode> =
+                    nodes.filter { it.id !in own }.map { it.copy(children = prune(it.children)) }
+                LocationPickerDialog(
+                    title = "${node.location.name} verplaatsen naar",
+                    tree = prune(state.tree),
+                    selectedId = node.location.parentId,
+                    onSelect = { dialog = null; viewModel.move(it) },
+                    onCreate = viewModel::createLocation,
+                    onDismiss = { dialog = null },
+                    noneLabel = "Hoofdniveau (los, niet in een kamer of kast)",
+                )
+            }
             "delete" -> AlertDialog(
                 onDismissRequest = { dialog = null },
                 title = { Text("${node.location.name} verwijderen?") },

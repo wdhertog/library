@@ -51,6 +51,24 @@ class LocationRepository(private val db: LibraryDatabase) {
         dao.update(location.copy(name = name.trim(), type = type, updatedAt = Instant.now()))
     }
 
+    /**
+     * Een locatie (met alles erin) verplaatsen, bijv. een plank terug in zijn kast. Niet in zichzelf of in
+     * een eigen sublocatie. Het volgnummer blijft, zodat planken op hun oude plek terugkomen.
+     */
+    suspend fun move(id: Long, newParentId: Long?): Boolean = db.withTransaction {
+        val location = dao.getLocation(id) ?: return@withTransaction false
+        if (newParentId != null) {
+            // Omhoog lopen vanaf de nieuwe plek: komen we langs [id], dan zou het een kring worden.
+            var current: Long? = newParentId
+            while (current != null) {
+                if (current == id) return@withTransaction false
+                current = dao.getLocation(current)?.parentId
+            }
+        }
+        dao.update(location.copy(parentId = newParentId, updatedAt = Instant.now()))
+        true
+    }
+
     /** Verwijdert de locatie met alle sublocaties; de boeken blijven, zonder locatie. */
     suspend fun delete(id: Long) = dao.delete(id)
 
