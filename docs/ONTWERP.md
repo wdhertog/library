@@ -480,6 +480,10 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.11 (7 november 2026)
+- **Auteurs beter gekoppeld** aan Wikidata: ook via Open Library en op exacte naam (alleen bij één treffer); "Niet deze persoon" op de auteurspagina (database versie 10). Bij de gebruiker van 165 naar 394 van 545 auteurs.
+- **Badges per genre** (5, 10, 25, 50, 100) en **genreverkenner** (5, 10, 15, 20 genres); meest gelezen genres in het jaaroverzicht.
+
 ### Gebouwd in 1.10 (7 november 2026)
 - **Genres** (§12.8): eigen veld op het werk uit een vaste lijst van 30, opgehaald bij Wikidata en Open Library; genres uit je tags verhuisd. Kaart op de boekpagina, filter in de bibliotheek. Database versie 9.
 - **Andere cover kiezen…**: covers van dit ISBN, van andere edities van het werk, of gevonden op titel en auteur (Open Library).
