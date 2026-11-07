@@ -1,6 +1,7 @@
 package nl.wdhertog.library.ui.reading
 
 import androidx.compose.foundation.background
+import nl.wdhertog.library.data.repository.GenreTile
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Public
@@ -163,7 +164,8 @@ internal fun BadgesCard(badges: List<Badge>, onClick: () -> Unit) {
     AppCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), onClick = onClick) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Badges · ${badges.count { it.achieved }} van ${badges.size}", style = MaterialTheme.typography.titleSmall)
+                val (got, total) = Achievements.summary(badges)
+                Text("Badges · $got van $total", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     recent.forEach { badge ->
@@ -206,10 +208,13 @@ fun BadgesScreen(
             return@Scaffold
         }
         // Treden van dezelfde badge (per genre, genreverkenner): de hoogste behaalde en de eerstvolgende.
-        val achieved = s.badges.filter { it.achieved }
+        // De badges per genre staan apart als tegels (zie hieronder), anders wordt de lijst te lang.
+        val main = s.badges.filter { it.kind != BadgeKind.GENRE }
+        val tiles = Achievements.genreTiles(s.badges)
+        val achieved = main.filter { it.achieved }
             .groupBy { it.group ?: it.id }.values.map { level -> level.maxBy { it.target } }
             .sortedWith(compareByDescending<Badge, java.time.LocalDate?>(nullsFirst()) { it.achievedOn })
-        val open = s.badges.filter { !it.achieved }
+        val open = main.filter { !it.achieved }
             .groupBy { it.group ?: it.id }.values.map { level -> level.minBy { it.target } }
             .sortedByDescending { it.progress.toFloat() / it.target }
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
@@ -221,6 +226,17 @@ fun BadgesScreen(
                 item { SectionHeader("Nog te halen") }
                 items(open, key = { it.id }) { BadgeRow(it, onClick = { opened = it.id }) }
             }
+            if (tiles.isNotEmpty()) {
+                item { SectionHeader("Genres · ${tiles.size}") }
+                items(tiles.chunked(2), key = { row -> "genres-" + row.first().genre }) { row ->
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { tile ->
+                            GenreTileCard(tile, Modifier.weight(1f), onClick = { opened = (tile.highest ?: tile.next)?.id })
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
             item {
                 Text(
                     "Badges komen uit je eigen leessessies en tellen met terugwerkende kracht. " +
@@ -229,6 +245,35 @@ fun BadgesScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
                 )
+            }
+        }
+    }
+}
+
+/** Eén genre: hoeveel boeken, de hoogste trede en een balk naar de volgende. */
+@Composable
+private fun GenreTileCard(tile: GenreTile, modifier: Modifier, onClick: () -> Unit) {
+    AppCard(modifier, onClick = onClick) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            BadgeIcon(tile.highest ?: tile.next!!, 36.dp)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tile.genre.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "${tile.amount} ${if (tile.amount == 1) "boek" else "boeken"}" + (tile.highest?.let { " · ★ ${it.target}" } ?: ""),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                tile.next?.let { next ->
+                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { tile.amount.toFloat() / next.target },
+                        Modifier.fillMaxWidth().height(4.dp),
+                        trackColor = MaterialTheme.colorScheme.outlineVariant,
+                        drawStopIndicator = {},
+                    )
+                    Text("volgende: ${next.target}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }

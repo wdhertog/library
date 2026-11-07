@@ -37,7 +37,12 @@ data class Badge(
     val details: List<String> = emptyList(),
     /** Treden van dezelfde badge (bijv. "Fantasy · 5/10/25"): de lijst toont de hoogste behaalde en de volgende. */
     val group: String? = null,
+    /** Het echte aantal (bijv. 39 fantasyboeken), ook boven de hoogste trede uit. */
+    val amount: Int? = null,
 )
+
+/** Eén genre op het badgesscherm: het aantal boeken, de hoogste behaalde trede en de volgende. */
+data class GenreTile(val genre: String, val amount: Int, val highest: Badge?, val next: Badge?)
 
 /**
  * Badges (ontwerp §12.7): mijlpalen afgeleid uit je leessessies en boeken, niets opgeslagen.
@@ -116,6 +121,21 @@ object Achievements {
             addAll(perGenre(reads, genresOf))
         }
     }
+
+    /** Behaald en totaal, per badge geteld (treden van één badge tellen samen als één). */
+    fun summary(badges: List<Badge>): Pair<Int, Int> {
+        val groups = badges.groupBy { it.group ?: it.id }.values
+        return groups.count { level -> level.any { it.achieved } } to groups.size
+    }
+
+    /** De badges per genre als tegels, meeste boeken eerst. */
+    fun genreTiles(badges: List<Badge>): List<GenreTile> =
+        badges.filter { it.kind == BadgeKind.GENRE }.groupBy { it.group!! }.values.map { levels ->
+            val highest = levels.filter { it.achieved }.maxByOrNull { it.target }
+            val next = levels.filter { !it.achieved }.minByOrNull { it.target }
+            val genre = (highest ?: next)!!.title.substringBefore(" · ")
+            GenreTile(genre, levels.firstNotNullOfOrNull { it.amount } ?: 0, highest, next)
+        }.sortedWith(compareByDescending<GenreTile> { it.amount }.thenBy { it.genre })
 
     /** Laatste [count] behaalde badges, nieuwste eerst; zonder datum achteraan. */
     fun recent(badges: List<Badge>, count: Int = 3): List<Badge> =
@@ -355,6 +375,7 @@ object Achievements {
                     achievedOn = at?.date, yearOnly = at?.yearOnly == true, achievedWith = at?.title,
                     details = listOf("Treden: " + history.joinToString("; ")).takeIf { history.isNotEmpty() }.orEmpty(),
                     group = "genre-$genre",
+                    amount = list.size,
                 )
             }
         }

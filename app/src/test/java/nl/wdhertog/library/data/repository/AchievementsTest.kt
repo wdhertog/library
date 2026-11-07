@@ -195,4 +195,28 @@ class AchievementsTest {
         assertEquals(listOf(5), badges.filter { it.group == "genre-thriller" }.map { it.target })
         assertTrue(badges.none { it.group == "genre-fictie" })
     }
+
+    @Test
+    fun `genre tiles and a count per badge, not per level`() {
+        val books = (1L..12L).associateWith { item(it) }
+        val sessions = (1L..12L).map { read(it, LocalDate.of(2021, 1, 1).plusDays(it)) }
+        val genresOf = (1L..11L).associateWith { listOf("fantasy") } + mapOf(12L to listOf("thriller"))
+        val badges = Achievements.evaluate(sessions, books, emptyList(), emptyList(), genresOf = genresOf)
+        val tiles = Achievements.genreTiles(badges)
+        assertEquals(listOf("Fantasy", "Thriller"), tiles.map { it.genre })
+        tiles.first().let {
+            assertEquals(11, it.amount)
+            assertEquals(10, it.highest?.target)
+            assertEquals(25, it.next?.target)
+        }
+        tiles.last().let {
+            assertEquals(1, it.amount)
+            assertNull(it.highest)
+            assertEquals(5, it.next?.target)
+        }
+        val (got, total) = Achievements.summary(badges)
+        // Fantasy (5 en 10 behaald, 25 open) telt als één behaalde badge; Thriller als één niet behaalde.
+        assertEquals(badges.groupBy { it.group ?: it.id }.size, total)
+        assertEquals(true, got < badges.count { it.achieved })
+    }
 }
