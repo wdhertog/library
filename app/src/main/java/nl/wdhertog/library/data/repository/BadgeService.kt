@@ -15,6 +15,7 @@ class BadgeService(
     private val series: SeriesRepository,
 ) {
     private val loans = db.loanDao()
+    private val authors = db.authorDao()
 
     fun observe(): Flow<List<Badge>> =
         combine(
@@ -22,11 +23,12 @@ class BadgeService(
             combine(reading.observeSessions(), reading.observeLoggedDays(), ::Pair),
             reading.observeGoals(),
             series.observeSummaries(),
-            loans.observeLentDates(),
-        ) { library, (sessions, logged), goals, summaries, lent ->
+            combine(loans.observeLentDates(), authors.observeCountries(), ::Pair),
+        ) { library, (sessions, logged), goals, summaries, (lent, countries) ->
             Achievements.evaluate(
                 sessions, library.associateBy { it.book.id }, goals, summaries,
                 readingDays = Streaks.readingDays(sessions, logged), lentDates = lent,
+                authorCountries = countries.associate { it.name to nl.wdhertog.library.util.CountryNames.normalize(it.country) },
             )
         }.flowOn(Dispatchers.Default)
 

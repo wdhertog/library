@@ -8,7 +8,7 @@ import nl.wdhertog.library.data.db.SeriesSummary
 import java.time.LocalDate
 
 /** Soort badge; bepaalt het pictogram. */
-enum class BadgeKind { BOOKS, PAGES, THICK_BOOK, GOAL, LANGUAGES, SERIES, AUTHOR, REREAD, STREAK, FAST, YEARS, LENDER, COLLECTOR }
+enum class BadgeKind { BOOKS, PAGES, THICK_BOOK, GOAL, LANGUAGES, SERIES, AUTHOR, REREAD, STREAK, FAST, YEARS, LENDER, COLLECTOR, COUNTRIES }
 
 /**
  * Een badge met hoe ver je bent.
@@ -33,6 +33,8 @@ data class Badge(
     val times: Int = if (achieved) 1 else 0,
     val achievedWith: String? = null,
     val progressNote: String? = null,
+    /** Extra regels voor de details, bijv. de landen die je al hebt. */
+    val details: List<String> = emptyList(),
 )
 
 /**
@@ -53,6 +55,7 @@ object Achievements {
     private const val FAST_DAYS = 7
     private const val YEARS = 10
     private const val LOANS = 10
+    private const val COUNTRY_STEP = 5
     /** Verzamelaar (500) en Bibliothecaris (1000). */
     private val collections = listOf(500 to "Verzamelaar", 1000 to "Bibliothecaris")
 
@@ -72,6 +75,8 @@ object Achievements {
         readingDays: Set<LocalDate> = Streaks.readingDays(sessions, emptyList()),
         /** Wanneer je een boek uitleende (leeg = onbekend), één per uitlening. */
         lentDates: List<LocalDate?> = emptyList(),
+        /** Auteursnaam → land (Wikidata), voor de badges per land. */
+        authorCountries: Map<String, String> = emptyMap(),
         today: LocalDate = LocalDate.now(),
     ): List<Badge> {
         val reads = sessions.filter { it.status == ReadingStatus.FINISHED }
@@ -96,6 +101,7 @@ object Achievements {
             add(years(reads))
             add(lender(lentDates))
             collections.forEach { (n, title) -> add(collector(books.values, n, title)) }
+            addAll(countries(reads, authorCountries))
         }
     }
 
@@ -264,6 +270,34 @@ object Achievements {
             achievedOn = at?.book?.addedAt?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate(),
             achievedWith = at?.book?.displayTitle,
         )
+    }
+
+    /**
+     * Landen: boeken uitgelezen van auteurs uit 5, 10, 15, … landen. Elke behaalde trede is een badge, plus
+     * de eerstvolgende om naartoe te werken. Behaald met het boek dat het zoveelste land opleverde.
+     */
+    private fun countries(reads: List<Read>, authorCountries: Map<String, String>): List<Badge> {
+        val firstRead = linkedMapOf<String, Pair<Read, String>>() // land → (boek, auteur), in leesvolgorde
+        for (read in reads) {
+            for (author in read.item?.authors.orEmpty()) {
+                val country = authorCountries[author] ?: continue
+                if (country !in firstRead) firstRead[country] = read to author
+            }
+        }
+        val found = firstRead.entries.toList()
+        val all = found.map { it.key }.sorted()
+        val levels = (COUNTRY_STEP..(found.size / COUNTRY_STEP + 1) * COUNTRY_STEP step COUNTRY_STEP).toList()
+        return levels.map { n ->
+            val at = found.getOrNull(n - 1)
+            val achieved = at != null
+            Badge(
+                "countries-$n", BadgeKind.COUNTRIES, "$n landen", "Boeken uitgelezen van auteurs uit $n verschillende landen",
+                progress = found.size.coerceAtMost(n), target = n, achieved = achieved,
+                achievedOn = at?.value?.first?.date, yearOnly = at?.value?.first?.yearOnly == true,
+                achievedWith = at?.let { (country, pair) -> "$country: ${pair.second}" + (pair.first.title?.let { " ($it)" } ?: "") },
+                details = listOf("Landen tot nu toe (${all.size}): " + all.joinToString(", ")).takeIf { all.isNotEmpty() }.orEmpty(),
+            )
+        }
     }
 
     private fun dayStreak(days: Set<LocalDate>, longest: Int, length: Int): Badge {
