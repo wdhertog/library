@@ -8,6 +8,8 @@ import java.time.Instant
 /** Een auteur in de lijst Auteurs. */
 data class AuthorSummary(val id: Long, val name: String, val books: Int, val works: Int)
 
+data class AuthorCountry(val name: String, val country: String)
+
 /** Welk boek bij welk werk hoort, voor de boeken van een auteur. */
 data class BookWorkLink(val bookId: Long, val workId: Long, val primaryBookUuid: String? = null)
 
@@ -34,6 +36,14 @@ interface AuthorDao {
 
     @Query("SELECT * FROM author")
     suspend fun all(): List<Author>
+
+    /** Auteurs met boeken van wie Wikidata nog niet is nagevraagd (voor land en levensjaren). */
+    @Query("SELECT id FROM author WHERE infoFetchedAt IS NULL AND id IN (SELECT authorId FROM work_author) ORDER BY id LIMIT :limit")
+    suspend fun withoutInfo(limit: Int): List<Long>
+
+    /** Naam → land, voor de badges per land. */
+    @Query("SELECT name, country FROM author WHERE country IS NOT NULL")
+    fun observeCountries(): Flow<List<AuthorCountry>>
 
     @Query("SELECT id FROM author WHERE name = :name COLLATE NOCASE LIMIT 1")
     suspend fun findId(name: String): Long?

@@ -1,6 +1,7 @@
 package nl.wdhertog.library.ui.reading
 
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +89,7 @@ private val BadgeKind.icon: ImageVector
         BadgeKind.YEARS -> Icons.Default.CalendarMonth
         BadgeKind.LENDER -> Icons.Default.VolunteerActivism
         BadgeKind.COLLECTOR -> Icons.Default.Inventory2
+        BadgeKind.COUNTRIES -> Icons.Default.Public
     }
 
 /** "73 van 100", "14 van 16 dit jaar" of "60% van je verste serie". */
@@ -111,6 +113,10 @@ private fun BadgeDialog(badge: Badge, onDismiss: () -> Unit) {
                     Text(badge.whenText()?.let { "Behaald $it" } ?: "Behaald (datum onbekend)", fontWeight = FontWeight.Medium)
                     badge.achievedWith?.let { Text("Met: $it", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     if (badge.times > 1) Text("${badge.times} keer gehaald", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    badge.details.forEach {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 } else if (badge.target > 1) {
                     LinearProgressIndicator(
                         progress = { badge.progress.toFloat() / badge.target },
@@ -120,6 +126,10 @@ private fun BadgeDialog(badge: Badge, onDismiss: () -> Unit) {
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(badge.progressText(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    badge.details.forEach {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 } else {
                     Text("Nog niet behaald", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

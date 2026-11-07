@@ -115,6 +115,10 @@ class LibraryApp : Application() {
         container = AppContainer(this)
         // Pak eventueel onderbroken werk weer op; doet niets als de wachtrij leeg is.
         container.enrichScheduler.schedule()
+        // Land en levensjaren van auteurs (badges per land); alleen als automatisch opzoeken aan staat.
+        if (container.settings.autoLookup.value) {
+            nl.wdhertog.library.lookup.AuthorInfoWorker.schedule(this, wifiOnly = container.settings.wifiOnly.value)
+        }
         if (container.settings.loanReminders.value) LoanReminderWorker.schedule(this)
         if (AutoBackupSettings(this).folder != null) AutoBackupWorker.schedule(this)
         // Widget "Nu aan het lezen" bijwerken als je leessessies veranderen (ook door synchroniseren).

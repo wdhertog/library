@@ -35,6 +35,12 @@ class AuthorRepository(
 
     suspend fun findId(name: String): Long? = dao.findId(name.trim())
 
+    /** Auteurs waarvan Wikidata nog niet is nagevraagd. */
+    suspend fun withoutInfo(limit: Int): List<Long> = dao.withoutInfo(limit)
+
+    /** Kan Wikidata nu worden gevraagd (bron aan)? */
+    fun mayAskWikidata(): Boolean = wikidata != null && wikidataEnabled()
+
     /**
      * Naam wijzigen. Bestaat die naam al (hoofdletters tellen niet), dan worden de twee samengevoegd.
      * Geeft het id van de auteur die overblijft.

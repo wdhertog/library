@@ -145,4 +145,29 @@ class AchievementsTest {
         assertEquals(listOf("a", "goal"), BadgeService.newlyEarned(before, after).map { it.id })
         assertEquals(emptyList<String>(), BadgeService.newlyEarned(after, after).map { it.id })
     }
+
+    @Test
+    fun `countries in steps of five`() {
+        val books = (1L..7L).associateWith { item(it, author = "Auteur $it") }
+        val sessions = (1L..7L).map { read(it, LocalDate.of(2025, 1, it.toInt())) }
+        val countries = mapOf(
+            "Auteur 1" to "Nederland", "Auteur 2" to "België", "Auteur 3" to "Nederland", "Auteur 4" to "Japan",
+            "Auteur 5" to "Chili", "Auteur 6" to "Nigeria", // Auteur 7: land onbekend
+        )
+        val badges = Achievements.evaluate(sessions, books, emptyList(), emptyList(), authorCountries = countries)
+            .filter { it.kind == BadgeKind.COUNTRIES }
+        assertEquals(listOf("countries-5", "countries-10"), badges.map { it.id }) // behaald + de volgende
+        badges.get("countries-5").let {
+            assertTrue(it.achieved)
+            assertEquals(LocalDate.of(2025, 1, 6), it.achievedOn)
+            assertEquals("Nigeria: Auteur 6 (Boek 6)", it.achievedWith)
+            assertEquals("Landen tot nu toe (5): België, Chili, Japan, Nederland, Nigeria", it.details.single())
+        }
+        badges.get("countries-10").let {
+            assertFalse(it.achieved)
+            assertEquals(5, it.progress)
+        }
+        // Zonder bekende landen: alleen het eerste doel.
+        assertEquals(listOf("countries-5"), Achievements.evaluate(sessions, books, emptyList(), emptyList()).filter { it.kind == BadgeKind.COUNTRIES }.map { it.id })
+    }
 }
