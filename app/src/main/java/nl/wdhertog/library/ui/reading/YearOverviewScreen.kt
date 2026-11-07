@@ -77,6 +77,15 @@ class YearOverviewViewModel(
 ) : ViewModel() {
     val year = handle.toRoute<YearOverviewRoute>().year
 
+    /** De meest gelezen genres van dit jaar (zonder fictie/non-fictie), met aantal; hooguit drie. */
+    val topGenres: StateFlow<List<Pair<String, Int>>> =
+        combine(reading.observeSessions(), books.observePrimaryWorks()) { sessions, works ->
+            val genresOf = works.associate { it.bookId to nl.wdhertog.library.util.Genres.decode(it.genres) }
+            sessions.filter { it.status == nl.wdhertog.library.data.db.ReadingStatus.FINISHED && it.finishedAt?.year == year }
+                .flatMap { s -> genresOf[s.bookId].orEmpty().filter { it != "fictie" && it != "non-fictie" } }
+                .groupingBy { it }.eachCount().toList().sortedByDescending { it.second }.take(3)
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Badges die in dit jaar behaald zijn. */
     val badges: StateFlow<List<nl.wdhertog.library.data.repository.Badge>> =
         (badgeService?.observe() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
@@ -101,6 +110,7 @@ fun YearOverviewScreen(
 ) {
     val stats by viewModel.stats.collectAsStateWithLifecycle()
     val badges by viewModel.badges.collectAsStateWithLifecycle()
+    val topGenres by viewModel.topGenres.collectAsStateWithLifecycle()
     val overview = remember(stats) { stats?.let { YearOverview.of(it) } }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -127,7 +137,7 @@ fun YearOverviewScreen(
                                         rendering = true
                                         scope.launch {
                                             try {
-                                                val image = withContext(Dispatchers.Default) { YearImage.render(context, o, stats?.finished.orEmpty(), badges.map { it.title }) } // 1080×1350 tekenen: niet op de main thread
+                                                val image = withContext(Dispatchers.Default) { YearImage.render(context, o, stats?.finished.orEmpty(), badges.map { it.title }, topGenres.map { it.first }) } // 1080×1350 tekenen: niet op de main thread
                                                 withContext(Dispatchers.IO) { Share.image(context, image, "jaar-in-boeken-${o.year}") }
                                             } finally {
                                                 rendering = false
@@ -162,6 +172,9 @@ fun YearOverviewScreen(
             item { Totals(o) }
             o.thickest?.let { item { Highlight("Dikste boek", it, "${it.item.book.pages} pagina's", onOpenBook) } }
             o.topAuthor?.let { (name, n) -> item { Fact("Meest gelezen auteur", name, "$n boeken") } }
+            if (topGenres.isNotEmpty()) {
+                item { Fact("Meest gelezen genres", topGenres.joinToString(" · ") { (g, n) -> "$g $n" }, null) }
+            }
             if (o.bestRated.isNotEmpty()) {
                 item {
                     Section(if (o.bestRated.size == 1) "Favoriet" else "Favorieten") {

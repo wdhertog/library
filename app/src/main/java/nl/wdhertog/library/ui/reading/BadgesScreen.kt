@@ -1,6 +1,8 @@
 package nl.wdhertog.library.ui.reading
 
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -90,6 +92,8 @@ private val BadgeKind.icon: ImageVector
         BadgeKind.LENDER -> Icons.Default.VolunteerActivism
         BadgeKind.COLLECTOR -> Icons.Default.Inventory2
         BadgeKind.COUNTRIES -> Icons.Default.Public
+        BadgeKind.GENRES -> Icons.Default.Explore
+        BadgeKind.GENRE -> Icons.Default.Category
     }
 
 /** "73 van 100", "14 van 16 dit jaar" of "60% van je verste serie". */
@@ -201,9 +205,13 @@ fun BadgesScreen(
             Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Scaffold
         }
+        // Treden van dezelfde badge (per genre, genreverkenner): de hoogste behaalde en de eerstvolgende.
         val achieved = s.badges.filter { it.achieved }
+            .groupBy { it.group ?: it.id }.values.map { level -> level.maxBy { it.target } }
             .sortedWith(compareByDescending<Badge, java.time.LocalDate?>(nullsFirst()) { it.achievedOn })
-        val open = s.badges.filter { !it.achieved }.sortedByDescending { it.progress.toFloat() / it.target }
+        val open = s.badges.filter { !it.achieved }
+            .groupBy { it.group ?: it.id }.values.map { level -> level.minBy { it.target } }
+            .sortedByDescending { it.progress.toFloat() / it.target }
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
             if (achieved.isNotEmpty()) {
                 item { SectionHeader("Behaald · ${achieved.size}") }

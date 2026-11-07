@@ -23,12 +23,13 @@ class BadgeService(
             combine(reading.observeSessions(), reading.observeLoggedDays(), ::Pair),
             reading.observeGoals(),
             series.observeSummaries(),
-            combine(loans.observeLentDates(), authors.observeCountries(), ::Pair),
-        ) { library, (sessions, logged), goals, summaries, (lent, countries) ->
+            combine(loans.observeLentDates(), authors.observeCountries(), books.observePrimaryWorks(), ::Triple),
+        ) { library, (sessions, logged), goals, summaries, (lent, countries, works) ->
             Achievements.evaluate(
                 sessions, library.associateBy { it.book.id }, goals, summaries,
                 readingDays = Streaks.readingDays(sessions, logged), lentDates = lent,
                 authorCountries = countries.associate { it.name to nl.wdhertog.library.util.CountryNames.normalize(it.country) },
+                genresOf = works.associate { it.bookId to nl.wdhertog.library.util.Genres.decode(it.genres) },
             )
         }.flowOn(Dispatchers.Default)
 
