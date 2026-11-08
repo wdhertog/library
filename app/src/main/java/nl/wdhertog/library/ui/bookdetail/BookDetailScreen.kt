@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HideImage
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.MergeType
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -142,6 +143,7 @@ fun BookDetailScreen(
     var editingOwner by rememberSaveable { mutableStateOf(false) }
     var editingGenres by rememberSaveable { mutableStateOf(false) }
     var editionDialog by rememberSaveable { mutableStateOf<String?>(null) }
+    var mergeTarget by remember { mutableStateOf<nl.wdhertog.library.data.repository.BookListItem?>(null) }
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     var sessionDialog by remember { mutableStateOf<Pair<String, ReadingSession>?>(null) }
     var progressFor by remember { mutableStateOf<ReadingSession?>(null) }
@@ -241,6 +243,14 @@ fun BookDetailScreen(
                                         },
                                     )
                                 }
+                                DropdownMenuItem(
+                                    text = { Text("Samenvoegen met…") },
+                                    leadingIcon = { Icon(Icons.Default.MergeType, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        editionDialog = "merge"
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Verwijderen") },
                                     leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
@@ -425,6 +435,17 @@ fun BookDetailScreen(
                 onDismiss = { editionDialog = null },
             )
         }
+        "merge" -> {
+            val otherBooks by viewModel.otherBooks.collectAsStateWithLifecycle()
+            BookPickerDialog(
+                title = "Samenvoegen: welk boek blijft?",
+                books = otherBooks,
+                onPick = { other -> editionDialog = null; mergeTarget = other },
+                onDismiss = { editionDialog = null },
+                initialQuery = loadedDetail?.authors?.firstOrNull().orEmpty(),
+                extra = { item -> listOfNotNull(item.book.format?.label, item.book.publishedYear?.toString(), item.book.ownership.label).joinToString(" · ") },
+            )
+        }
         "split" -> AlertDialog(
             onDismissRequest = { editionDialog = null },
             title = { Text("Loskoppelen?") },
@@ -437,6 +458,27 @@ fun BookDetailScreen(
             },
             confirmButton = { TextButton(onClick = { editionDialog = null; viewModel.splitFromWork() }) { Text("Loskoppelen") } },
             dismissButton = { TextButton(onClick = { editionDialog = null }) { Text("Annuleren") } },
+        )
+    }
+
+    mergeTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { mergeTarget = null },
+            title = { Text("Samenvoegen?") },
+            text = {
+                Text(
+                    "\"${loadedDetail?.book?.displayTitle.orEmpty()}\" gaat op in \"${target.book.displayTitle}\" " +
+                        "(${target.book.ownership.label.lowercase()}). Leessessies, leesdagen en uitleningen gaan mee; " +
+                        "de gegevens van het boek dat blijft, veranderen niet. Daarna wordt dit boek verwijderd.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    mergeTarget = null
+                    viewModel.mergeInto(target.book.id) { intoId -> onBack(); onOpenBook(intoId) }
+                }) { Text("Samenvoegen") }
+            },
+            dismissButton = { TextButton(onClick = { mergeTarget = null }) { Text("Annuleren") } },
         )
     }
 
@@ -575,14 +617,17 @@ private fun DetailContent(
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             banner()
             DetailCard("Lezen") { readingSection() }
-            AppCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                    LocationLine(
-                        label = locationLabel(book.locationId),
-                        onOpen = book.locationId?.let { id -> { onOpenLocation(id) } },
-                        onChange = onPickLocation,
-                    )
-                    OwnerLine(book.owner, onEdit = onEditOwner)
+            // Niet in bezit: geen plek en geen eigenaar. Geleend: wel een plek, de eigenaar staat in de banner.
+            if (book.ownership != Ownership.NOT_OWNED) {
+                AppCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        LocationLine(
+                            label = locationLabel(book.locationId),
+                            onOpen = book.locationId?.let { id -> { onOpenLocation(id) } },
+                            onChange = onPickLocation,
+                        )
+                        if (book.ownership == Ownership.OWNED) OwnerLine(book.owner, onEdit = onEditOwner)
+                    }
                 }
             }
             loanSection?.let { DetailCard("Bezit en uitlenen") { it() } }

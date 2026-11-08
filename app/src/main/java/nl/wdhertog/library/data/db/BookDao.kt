@@ -138,6 +138,17 @@ interface BookDao {
     @Delete
     suspend fun deleteBook(book: Book)
 
+    // --- Samenvoegen van dubbele boeken: wat bij het boek hoort, gaat mee ---
+
+    @Query("UPDATE reading_session SET bookId = :into WHERE bookId = :from")
+    suspend fun moveReadingSessions(from: Long, into: Long)
+
+    @Query("INSERT OR IGNORE INTO reading_log (date, bookId) SELECT date, :into FROM reading_log WHERE bookId = :from")
+    suspend fun copyReadingDays(from: Long, into: Long)
+
+    @Query("UPDATE loan SET bookId = :into, updatedAt = :now WHERE bookId = :from")
+    suspend fun moveLoans(from: Long, into: Long, now: java.time.Instant)
+
     // --- Auteurs en series per boek (voor lijst en detail) ---
 
     /** Auteurs van alle boeken, in de volgorde werk → auteur. */

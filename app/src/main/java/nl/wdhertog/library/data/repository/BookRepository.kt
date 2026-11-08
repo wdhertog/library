@@ -495,6 +495,43 @@ class BookRepository(
     suspend fun delete(ids: Collection<Long>) = ids.forEach { delete(it) }
 
     /**
+     * Een dubbel boek opgaan in [intoId]: leessessies, leesdagen en uitleningen gaan mee, net als
+     * favoriet, leeslijst, de id's van imports (zodat opnieuw importeren hem niet terugzet) en de cover
+     * als [intoId] er geen heeft. Daarna wordt [fromId] verwijderd. Gegevens van [intoId] blijven staan.
+     */
+    suspend fun merge(fromId: Long, intoId: Long) {
+        if (fromId == intoId) return
+        val from = db.withTransaction {
+            val from = dao.getBook(fromId) ?: return@withTransaction null
+            val into = dao.getBook(intoId) ?: return@withTransaction null
+            val now = Instant.now()
+            dao.moveReadingSessions(fromId, intoId)
+            dao.copyReadingDays(fromId, intoId)
+            dao.moveLoans(fromId, intoId, now)
+            val takeCover = into.coverFile == null && into.coverUrl == null
+            dao.updateBook(
+                into.copy(
+                    favorite = into.favorite || from.favorite,
+                    wantToRead = into.wantToRead || from.wantToRead,
+                    hirtId = into.hirtId ?: from.hirtId,
+                    externalIds = mergeIds(into.externalIds, from.externalIds),
+                    coverFile = if (takeCover) from.coverFile else into.coverFile,
+                    coverUrl = if (takeCover) from.coverUrl else into.coverUrl,
+                    updatedAt = now,
+                ),
+            )
+            dao.deleteBook(from)
+            deleteOrphans()
+            from.takeIf { !takeCover }
+        }
+        // Een eigen foto die niet is meegegaan, opruimen.
+        from?.coverFile?.let { deleteCoverIfUnused(it) }
+    }
+
+    private fun mergeIds(a: String?, b: String?): String? =
+        (a.toFieldSet() + b.toFieldSet()).sorted().joinToString(",").ifEmpty { null }
+
+    /**
      * Eenmalig voor de hele bibliotheek: een lege taal invullen uit het ISBN, en boeken waarvan de taal
      * het ISBN tegenspreekt de tag [IsbnLanguage.CHECK_TAG] geven. Geeft (ingevuld, gemarkeerd).
      */
