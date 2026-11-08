@@ -312,8 +312,11 @@ fun BookPickerDialog(
     books: List<BookListItem>,
     onPick: (BookListItem) -> Unit,
     onDismiss: () -> Unit,
+    initialQuery: String = "",
+    /** Extra gegevens achter de auteur, bijv. vorm en bezit om dubbelen uit elkaar te houden. */
+    extra: ((BookListItem) -> String?)? = null,
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialQuery) }
     val words = TextNormalizer.normalize(query).split(' ').filter(String::isNotEmpty)
     val matches = remember(books, query) {
         books.filter { item -> words.all { item.book.searchText.contains(it) } }.take(50)
@@ -344,7 +347,7 @@ fun BookPickerDialog(
                             Column {
                                 Text(item.book.displayTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(
-                                    item.authorLine,
+                                    listOfNotNull(item.authorLine.ifEmpty { null }, extra?.invoke(item)).joinToString(" · "),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,

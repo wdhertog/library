@@ -259,6 +259,14 @@ class BookDetailViewModel(
         viewModelScope.launch { repository.setCoverFile(bookId, null) }
     }
 
+    /** Dit (dubbele) boek opgaan in [intoId]; leesgeschiedenis en uitleningen gaan mee. */
+    fun mergeInto(intoId: Long, onMerged: (Long) -> Unit) {
+        viewModelScope.launch {
+            repository.merge(bookId, intoId)
+            onMerged(intoId)
+        }
+    }
+
     fun delete(onDeleted: () -> Unit) {
         viewModelScope.launch {
             repository.delete(bookId)
