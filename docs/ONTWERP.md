@@ -480,6 +480,10 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.15 (8 november 2026)
+- **Boeken samenvoegen** ("Samenvoegen met…"): leessessies, leesdagen, uitleningen, favoriet, leeslijst en import-id's gaan naar het boek dat blijft; daarna gaat het dubbele boek weg.
+- Boeken **niet in bezit** tonen geen locatie en eigenaar meer; **geleende** boeken alleen de locatie.
+
 ### Gebouwd in 1.14 (7 november 2026)
 - **Filter "Zonder locatie"**: boeken in bezit die nog geen locatie hebben.
 - **Genre-badges als tegels**: eigen sectie "Genres" met per genre één tegel (aantal, hoogste trede, voortgang naar de volgende). De badgeteller telt per badge, niet per trede.
