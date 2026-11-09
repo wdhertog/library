@@ -47,6 +47,15 @@ class ScanNotOwnedTest {
     }
 
     @Test
+    fun `scanning for the reading list adds a book you do not own, on the reading list`() = runBlocking {
+        val result = books.addScannedIsbn("9789023495635", toWishlist = true)
+        val book = books.getBook(result.bookId)!!
+        assertEquals(Ownership.NOT_OWNED, book.ownership)
+        assertEquals(true, book.wantToRead)
+        assertEquals(ScanAddResult.AlreadyPresent(book.id, notOwned = true, wantToRead = true), books.addScannedIsbn("9789023495635", toWishlist = true))
+    }
+
+    @Test
     fun `a missing part on the reading list becomes a book you do not own, in the series`() = runBlocking {
         books.save(0, BookDraft(title = "Dictator", authors = listOf("Robert Harris"), seriesName = "Cicero", seriesIndex = "3"))
         val series = SeriesRepository(db, books)

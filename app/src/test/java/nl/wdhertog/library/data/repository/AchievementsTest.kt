@@ -128,6 +128,8 @@ class AchievementsTest {
         badges.get("collector-1000").let { assertEquals("Bibliothecaris", it.title); assertEquals(1000, it.target) }
         assertEquals(1000, badges.get("books-1000").target)
         assertEquals(100_000, badges.get("pages-100000").target)
+        badges.get("pages-1000000").let { assertEquals("1.000.000 pagina's", it.title); assertEquals("pages", it.group) }
+        assertEquals(21, badges.count { it.group == "pages" })
         assertEquals("Een jaar lang", badges.get("streak-days-365").title)
         badges.get("author").let { assertEquals("Auteur", it.achievedWith) }
         badges.get("goal").let {
@@ -218,5 +220,28 @@ class AchievementsTest {
         // Fantasy (5 en 10 behaald, 25 open) telt als één behaalde badge; Thriller als één niet behaalde.
         assertEquals(badges.groupBy { it.group ?: it.id }.size, total)
         assertEquals(true, got < badges.count { it.achieved })
+    }
+
+    @Test
+    fun `badges grouped in blocks, one tile per badge with its levels`() {
+        val books = (1L..12L).associateWith { item(it) }
+        val sessions = (1L..12L).map { read(it, LocalDate.of(2021, 1, 1).plusDays(it)) }
+        val badges = Achievements.evaluate(sessions, books, emptyList(), emptyList())
+        val blocks = Achievements.blocks(badges).toMap()
+        assertEquals(listOf(BadgeBlock.READING, BadgeBlock.COLLECTING, BadgeBlock.PERSEVERING, BadgeBlock.DISCOVERING), blocks.keys.toList())
+        val reading = blocks.getValue(BadgeBlock.READING)
+        reading.first { it.key == "books" }.let {
+            assertEquals("Boeken gelezen", it.title)
+            assertEquals(10, it.highest?.target)
+            assertEquals(50, it.next?.target)
+        }
+        assertEquals(21, reading.first { it.key == "pages" }.levels.size)
+        blocks.getValue(BadgeBlock.COLLECTING).first { it.key == "collector" }.let {
+            assertEquals(listOf(100, 250, 500, 1000), it.levels.map { level -> level.target })
+            assertEquals(12, it.next?.progress)
+        }
+        assertEquals(setOf("streak-days", "streak-months"), blocks.getValue(BadgeBlock.PERSEVERING).map { it.key }.filter { it.startsWith("streak") }.toSet())
+        // Elke badge zit in precies één tegel.
+        assertEquals(badges.size, blocks.values.flatten().sumOf { it.levels.size })
     }
 }

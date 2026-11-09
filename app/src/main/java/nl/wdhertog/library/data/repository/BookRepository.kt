@@ -34,7 +34,7 @@ sealed interface ScanAddResult {
 
     data class Added(override val bookId: Long) : ScanAddResult
     /** [notOwned]: het boek staat als niet (meer) in bezit, bijv. gelezen en teruggebracht of weggegeven. */
-    data class AlreadyPresent(override val bookId: Long, val notOwned: Boolean = false) : ScanAddResult
+    data class AlreadyPresent(override val bookId: Long, val notOwned: Boolean = false, val wantToRead: Boolean = false) : ScanAddResult
 }
 
 class BookRepository(
@@ -137,11 +137,17 @@ class BookRepository(
         return dao.findBookIdByIsbn(isbn13, excludeBookId)
     }
 
-    /** Legt een gescand ISBN direct vast; gegevens worden daarna los opgezocht. */
-    suspend fun addScannedIsbn(isbn13: String): ScanAddResult = db.withTransaction {
-        dao.findBookByIsbn(isbn13)?.let { return@withTransaction ScanAddResult.AlreadyPresent(it.id, it.ownership == Ownership.NOT_OWNED) }
+    /**
+     * Legt een gescand ISBN direct vast; gegevens worden daarna los opgezocht. [toWishlist]: niet in bezit,
+     * wel op de leeslijst (scannen in een winkel of bij iemand thuis).
+     */
+    suspend fun addScannedIsbn(isbn13: String, toWishlist: Boolean = false): ScanAddResult = db.withTransaction {
+        dao.findBookByIsbn(isbn13)?.let { return@withTransaction ScanAddResult.AlreadyPresent(it.id, it.ownership == Ownership.NOT_OWNED, it.wantToRead) }
         val bookId = dao.insertBook(
-            Book(isbn13 = isbn13, isbn10 = Isbn.toIsbn10(isbn13), title = "", searchText = isbn13),
+            Book(
+                isbn13 = isbn13, isbn10 = Isbn.toIsbn10(isbn13), title = "", searchText = isbn13,
+                ownership = if (toWishlist) Ownership.NOT_OWNED else Ownership.OWNED, wantToRead = toWishlist,
+            ),
         )
         val workId = dao.insertWork(Work(title = ""))
         dao.insertBookWork(BookWork(bookId, workId, position = 0))
@@ -478,6 +484,12 @@ class BookRepository(
     suspend fun setFavorite(ids: Collection<Long>, favorite: Boolean) = dao.setFavoriteFor(ids.toList(), favorite, Instant.now())
 
     suspend fun setWantToRead(ids: Collection<Long>, wantToRead: Boolean) = dao.setWantToReadFor(ids.toList(), wantToRead, Instant.now())
+
+    /** Een net (zonder ISBN) toegevoegd boek als leeslijstboek: niet in bezit, wel op de leeslijst. */
+    suspend fun markWishlist(bookId: Long) = db.withTransaction {
+        val book = dao.getBook(bookId) ?: return@withTransaction
+        dao.updateBook(book.copy(ownership = Ownership.NOT_OWNED, wantToRead = true, locationId = null, shelfPosition = null, updatedAt = Instant.now()))
+    }
 
     /** Tags toevoegen; bestaande tags van elk boek blijven staan. */
     suspend fun addTags(ids: Collection<Long>, tags: List<String>) = db.withTransaction {

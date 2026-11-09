@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMade
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,7 +35,7 @@ import nl.wdhertog.library.ui.theme.Gold
 import nl.wdhertog.library.ui.theme.Literata
 
 /**
- * Eén boek in de rasterweergave: cover 2:3 met badges (gelezen, uitgeleend) en een voortgangsbalkje,
+ * Eén boek in de rasterweergave: cover 2:3 met badges (gelezen, uitgeleend, heeft een plek) en een voortgangsbalkje,
  * daaronder titel en auteur.
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -45,6 +46,8 @@ fun BookGridItem(
     onClick: () -> Unit,
     selected: Boolean = false,
     onLongClick: (() -> Unit)? = null,
+    /** Heeft een plek: klein 📍-rondje op de cover. */
+    hasLocation: Boolean = false,
 ) {
     Column(
         Modifier
@@ -76,6 +79,11 @@ fun BookGridItem(
                     }
                 }
                 null -> Unit
+            }
+            if (hasLocation) {
+                Badge(Modifier.align(Alignment.TopStart)) {
+                    Icon(Icons.Default.Place, contentDescription = "Heeft een plek", tint = Color(0xFF2E4A3F), modifier = Modifier.padding(2.dp).size(14.dp))
+                }
             }
             if (selected) {
                 Icon(

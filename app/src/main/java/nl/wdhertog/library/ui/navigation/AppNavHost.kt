@@ -82,7 +82,8 @@ data class BookDetailRoute(val bookId: Long)
 
 /** locationId 0 = plank-modus uit. */
 @Serializable
-data class ScanRoute(val locationId: Long = 0)
+/** [wishlist]: meteen in leeslijst-modus (bijv. vanaf de leeslijst). */
+data class ScanRoute(val locationId: Long = 0, val wishlist: Boolean = false)
 
 /** bookId 0 = nieuw boek; titel en auteur kunnen alvast ingevuld worden (bijv. na cover-herkenning). */
 @Serializable

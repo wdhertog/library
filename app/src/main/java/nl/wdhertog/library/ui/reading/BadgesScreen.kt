@@ -2,6 +2,10 @@ package nl.wdhertog.library.ui.reading
 
 import androidx.compose.foundation.background
 import nl.wdhertog.library.data.repository.GenreTile
+import nl.wdhertog.library.data.repository.BadgeTile
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Public
@@ -193,7 +197,10 @@ fun BadgesScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var opened by rememberSaveable { mutableStateOf<String?>(null) }
+    var openedTile by rememberSaveable { mutableStateOf<String?>(null) }
     state?.badges?.firstOrNull { it.id == opened }?.let { BadgeDialog(it, onDismiss = { opened = null }) }
+    state?.badges?.let { badges -> Achievements.blocks(badges).flatMap { it.second }.firstOrNull { it.key == openedTile } }
+        ?.let { TileDialog(it, onDismiss = { openedTile = null }) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -207,24 +214,39 @@ fun BadgesScreen(
             Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Scaffold
         }
-        // Treden van dezelfde badge (per genre, genreverkenner): de hoogste behaalde en de eerstvolgende.
-        // De badges per genre staan apart als tegels (zie hieronder), anders wordt de lijst te lang.
-        val main = s.badges.filter { it.kind != BadgeKind.GENRE }
+        // Per blok tegels: één per badge, met de hoogste trede en een balk naar de volgende.
+        // De badges per genre staan apart als tegels (zie hieronder).
+        val blocks = Achievements.blocks(s.badges)
         val tiles = Achievements.genreTiles(s.badges)
-        val achieved = main.filter { it.achieved }
-            .groupBy { it.group ?: it.id }.values.map { level -> level.maxBy { it.target } }
-            .sortedWith(compareByDescending<Badge, java.time.LocalDate?>(nullsFirst()) { it.achievedOn })
-        val open = main.filter { !it.achieved }
-            .groupBy { it.group ?: it.id }.values.map { level -> level.minBy { it.target } }
-            .sortedByDescending { it.progress.toFloat() / it.target }
+        val recent = Achievements.recent(s.badges)
         LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-            if (achieved.isNotEmpty()) {
-                item { SectionHeader("Behaald · ${achieved.size}") }
-                items(achieved, key = { it.id }) { BadgeRow(it, onClick = { opened = it.id }) }
+            if (recent.isNotEmpty()) {
+                item { SectionHeader("Laatst behaald") }
+                item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        recent.forEach { badge ->
+                            Column(Modifier.width(88.dp).clickable { opened = badge.id }, horizontalAlignment = Alignment.CenterHorizontally) {
+                                BadgeIcon(badge, 44.dp)
+                                Text(badge.title, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                badge.whenText()?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center) }
+                            }
+                        }
+                    }
+                }
             }
-            if (open.isNotEmpty()) {
-                item { SectionHeader("Nog te halen") }
-                items(open, key = { it.id }) { BadgeRow(it, onClick = { opened = it.id }) }
+            blocks.forEach { (block, blockTiles) ->
+                item(key = "block-" + block.name) { SectionHeader("${block.title} · ${blockTiles.count { it.achieved }} van ${blockTiles.size}") }
+                items(blockTiles.chunked(2), key = { row -> "tiles-" + row.first().key }) { row ->
+                    // Even hoge tegels naast elkaar.
+                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { tile ->
+                            BadgeTileCard(tile, Modifier.weight(1f), onClick = {
+                                if (tile.levels.size > 1) openedTile = tile.key else opened = tile.levels.first().id
+                            })
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
             }
             if (tiles.isNotEmpty()) {
                 item { SectionHeader("Genres · ${tiles.size}") }
@@ -248,6 +270,88 @@ fun BadgesScreen(
             }
         }
     }
+}
+
+/** Eén badge als tegel: de hoogste trede (of behaald/voortgang) en een balk naar de volgende trede. */
+@Composable
+private fun BadgeTileCard(tile: BadgeTile, modifier: Modifier, onClick: () -> Unit) {
+    val highest = tile.highest
+    val next = tile.next
+    val single = tile.levels.size == 1
+    AppCard(modifier.fillMaxHeight(), onClick = onClick) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            BadgeIcon(highest ?: next ?: tile.levels.first(), 36.dp)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tile.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val status = when {
+                    single && highest != null -> if (highest.times > 1) "Behaald ×${highest.times}" else "Behaald"
+                    highest != null -> "★ ${highest.title}"
+                    else -> "Nog niet behaald"
+                }
+                Text(status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (next != null && next.target > 1) {
+                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { next.progress.toFloat() / next.target },
+                        Modifier.fillMaxWidth().height(4.dp),
+                        trackColor = MaterialTheme.colorScheme.outlineVariant,
+                        drawStopIndicator = {},
+                    )
+                    Text(
+                        if (single) next.progressText() else "volgende: ${next.title}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Alle behaalde treden van een badge (wanneer en waarmee), en de volgende met de voortgang. */
+@Composable
+private fun TileDialog(tile: BadgeTile, onDismiss: () -> Unit) {
+    val shown = tile.levels.filter { it.achieved } + listOfNotNull(tile.next)
+    val later = tile.levels.count { !it.achieved } - (if (tile.next != null) 1 else 0)
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { BadgeIcon(tile.highest ?: tile.next ?: tile.levels.first(), 56.dp) },
+        title = { Text(tile.title, textAlign = TextAlign.Center) },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                items(shown, key = { it.id }) { level ->
+                    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                        Text((if (level.achieved) "★ " else "○ ") + level.title, fontWeight = FontWeight.Medium)
+                        if (level.achieved) {
+                            Text(
+                                listOfNotNull(level.whenText()?.let { "Behaald $it" } ?: "Behaald (datum onbekend)", level.achievedWith?.let { "met $it" }).joinToString(", "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            Spacer(Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { level.progress.toFloat() / level.target },
+                                Modifier.fillMaxWidth().height(4.dp),
+                                trackColor = MaterialTheme.colorScheme.outlineVariant,
+                                drawStopIndicator = {},
+                            )
+                            Text(level.progressText(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (later > 0) {
+                    item { Text("Nog $later ${if (later == 1) "trede" else "treden"} daarna", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                val details = (tile.highest ?: tile.next)?.details.orEmpty()
+                items(details) { Text(it, Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Sluiten") } },
+    )
 }
 
 /** Eén genre: hoeveel boeken, de hoogste trede en een balk naar de volgende. */
@@ -287,34 +391,4 @@ private fun SectionHeader(text: String) {
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 8.dp),
     )
-}
-
-@Composable
-private fun BadgeRow(badge: Badge, onClick: () -> Unit) {
-    Column {
-        Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            BadgeIcon(badge)
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                val title = if (badge.times > 1) "${badge.title} ×${badge.times}" else badge.title
-                Text(title, style = MaterialTheme.typography.bodyLarge)
-                Text(badge.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (badge.achieved) {
-                    badge.whenText()?.let {
-                        Text("Behaald $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                } else if (badge.target > 1) {
-                    Spacer(Modifier.height(6.dp))
-                    LinearProgressIndicator(
-                        progress = { badge.progress.toFloat() / badge.target },
-                        Modifier.fillMaxWidth().height(4.dp),
-                        trackColor = MaterialTheme.colorScheme.outlineVariant,
-                        drawStopIndicator = {},
-                    )
-                    Text(badge.progressText(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        HorizontalDivider(Modifier.padding(start = 80.dp))
-    }
 }
