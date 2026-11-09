@@ -72,6 +72,7 @@ import nl.wdhertog.library.ui.locations.LocationPickerDialog
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Surface
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material3.TextButton
 import nl.wdhertog.library.ui.components.CoverImage
 import nl.wdhertog.library.ui.cover.CoverCamera
@@ -136,6 +137,7 @@ fun ScanScreen(
     val session by viewModel.session.collectAsStateWithLifecycle()
     val torchOn by viewModel.torchOn.collectAsStateWithLifecycle()
     val shelfId by viewModel.shelfId.collectAsStateWithLifecycle()
+    val wishlist by viewModel.wishlist.collectAsStateWithLifecycle()
     val tree by viewModel.locationTree.collectAsStateWithLifecycle()
     val shelfLabel = shelfId?.let { LocationTree.index(tree)[it]?.pathLabel }
     var pickingShelf by remember { mutableStateOf(false) }
@@ -223,7 +225,8 @@ fun ScanScreen(
         val list: @Composable (Modifier) -> Unit = { modifier ->
             Column(modifier) {
                 ModeSwitch(mode, onSelect = { viewModel.mode.value = it })
-                ShelfBar(shelfLabel, onClick = { pickingShelf = true }, onClear = { viewModel.setShelf(null) })
+                WishlistBar(wishlist, onToggle = { viewModel.setWishlist(!wishlist) })
+                if (!wishlist) ShelfBar(shelfLabel, onClick = { pickingShelf = true }, onClear = { viewModel.setShelf(null) })
                 SessionList(
                     session,
                     onOpenBook,
@@ -493,7 +496,7 @@ private fun SessionRowItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            val highlight = row.entry.outcome != ScanOutcome.ADDED
+            val highlight = row.entry.outcome != ScanOutcome.ADDED && row.entry.outcome != ScanOutcome.WISHLIST_ADDED
             val status = when (row.entry.outcome) {
                 ScanOutcome.ALREADY_PRESENT -> "Staat al in je collectie"
                 ScanOutcome.ALREADY_HERE -> "Stond al op deze plek"
@@ -502,11 +505,15 @@ private fun SessionRowItem(
                 ScanOutcome.KEPT -> row.previousLocation?.let { "Staat in $it — niet verplaatst" } ?: "Niet verplaatst"
                 ScanOutcome.NOT_OWNED -> "Niet in bezit" + (book?.let { disposalNote(it) }?.let { " · $it" } ?: "")
                 ScanOutcome.RECLAIMED -> "Weer in bezit"
-                ScanOutcome.ADDED -> when {
+                ScanOutcome.ON_WISHLIST -> "Staat al in je bibliotheek · nu op je leeslijst"
+                ScanOutcome.ALREADY_ON_WISHLIST -> "Stond al op je leeslijst"
+                ScanOutcome.ADDED, ScanOutcome.WISHLIST_ADDED -> when {
                     book == null -> ""
                     book.enrichStatus == EnrichStatus.NEW && !autoLookup -> "Nog niet opgezocht"
                     book.enrichStatus == EnrichStatus.NEW -> "Zoeken…"
                     book.enrichStatus == EnrichStatus.FAILED -> "Niet gevonden — later aanvullen"
+                    row.entry.outcome == ScanOutcome.WISHLIST_ADDED ->
+                        listOf("Op je leeslijst", row.item.authorLine).filter(String::isNotEmpty).joinToString(" · ")
                     else -> row.item.authorLine.orEmpty()
                 }
             }
@@ -526,13 +533,37 @@ private fun SessionRowItem(
             TextButton(onClick = onMoveHere) { Text("Hierheen") }
         } else if (row.entry.outcome == ScanOutcome.NOT_OWNED) {
             TextButton(onClick = onReclaim) { Text("In bezit") }
-        } else if (book?.enrichStatus == EnrichStatus.NEW && row.entry.outcome == ScanOutcome.ADDED && autoLookup) {
+        } else if (book?.enrichStatus == EnrichStatus.NEW && (row.entry.outcome == ScanOutcome.ADDED || row.entry.outcome == ScanOutcome.WISHLIST_ADDED) && autoLookup) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         } else if (book != null && book.cover == null) {
             // Geen open bron met een cover: meteen zelf fotograferen nu het boek in je hand ligt.
             IconButton(onClick = onPhotoCover) {
                 Icon(Icons.Default.AddAPhoto, contentDescription = "Cover fotograferen", tint = MaterialTheme.colorScheme.primary)
             }
+        }
+    }
+}
+
+/** Leeslijst-modus aan/uit: wat je scant, komt op je leeslijst en niet in je bezit. */
+@Composable
+private fun WishlistBar(on: Boolean, onToggle: () -> Unit) {
+    Surface(
+        color = if (on) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle),
+    ) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.BookmarkAdd, contentDescription = null, Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                Text(if (on) "Leeslijst-modus" else "Leeslijst-modus uit", style = MaterialTheme.typography.labelMedium)
+                Text(
+                    if (on) "Op je leeslijst, niet in je bezit" else "Tik om boeken voor je leeslijst te scannen",
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            androidx.compose.material3.Switch(checked = on, onCheckedChange = { onToggle() })
         }
     }
 }

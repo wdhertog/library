@@ -243,6 +243,7 @@ fun LibraryScreen(
                             },
                             selected = id in selection,
                             onLongClick = { selection = selection + id },
+                            hasLocation = item.book.locationId != null,
                         )
                     }
                 }

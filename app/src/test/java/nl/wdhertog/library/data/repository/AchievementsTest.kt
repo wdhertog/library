@@ -128,6 +128,8 @@ class AchievementsTest {
         badges.get("collector-1000").let { assertEquals("Bibliothecaris", it.title); assertEquals(1000, it.target) }
         assertEquals(1000, badges.get("books-1000").target)
         assertEquals(100_000, badges.get("pages-100000").target)
+        badges.get("pages-1000000").let { assertEquals("1.000.000 pagina's", it.title); assertEquals("pages", it.group) }
+        assertEquals(21, badges.count { it.group == "pages" })
         assertEquals("Een jaar lang", badges.get("streak-days-365").title)
         badges.get("author").let { assertEquals("Auteur", it.achievedWith) }
         badges.get("goal").let {

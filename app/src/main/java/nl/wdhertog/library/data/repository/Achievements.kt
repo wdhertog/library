@@ -51,7 +51,8 @@ data class GenreTile(val genre: String, val amount: Int, val highest: Badge?, va
 object Achievements {
 
     private val bookCounts = listOf(10, 50, 100, 250, 500, 1000)
-    private val pageCounts = listOf(10_000, 50_000, 100_000)
+    /** 10.000, dan per 50.000 tot een miljoen; als treden van één badge. */
+    private val pageCounts = listOf(10_000) + (50_000..1_000_000 step 50_000)
     private const val THICK = 1000
     private val languageCounts = listOf(3, 5)
     private const val AUTHOR_BOOKS = 10
@@ -163,6 +164,7 @@ object Achievements {
         }
         val label = "%,d".format(target).replace(',', '.')
         return threshold("pages-$target", BadgeKind.PAGES, "$label pagina's", "Samen $label pagina's uitgelezen", total, target, at)
+            .copy(group = "pages", amount = total)
     }
 
     private fun thickBook(reads: List<Read>): Badge {

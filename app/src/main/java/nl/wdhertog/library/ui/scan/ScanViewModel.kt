@@ -59,6 +59,12 @@ enum class ScanOutcome {
     NOT_OWNED,
     /** Was niet in bezit, nu weer wel (in plank-modus ook op deze plank gezet). */
     RECLAIMED,
+    /** Leeslijst-modus: nieuw, niet in bezit en op de leeslijst. */
+    WISHLIST_ADDED,
+    /** Leeslijst-modus: stond al in de bibliotheek, nu (ook) op de leeslijst. */
+    ON_WISHLIST,
+    /** Leeslijst-modus: stond al op de leeslijst. */
+    ALREADY_ON_WISHLIST,
 }
 
 /**
@@ -131,6 +137,14 @@ class ScanViewModel(
     /** Plank-modus: gescande boeken komen op deze locatie. null = uit. */
     val shelfId = MutableStateFlow(savedStateHandle.toRoute<ScanRoute>().locationId.takeIf { it != 0L })
 
+    /** Leeslijst-modus: gescande boeken komen niet in je bezit, wel op je leeslijst. Gaat niet samen met plank-modus. */
+    val wishlist = MutableStateFlow(savedStateHandle.toRoute<ScanRoute>().wishlist && shelfId.value == null)
+
+    fun setWishlist(on: Boolean) {
+        wishlist.value = on
+        if (on) shelfId.value = null
+    }
+
     val locationTree: StateFlow<List<LocationNode>> = locations.observeTree()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -147,6 +161,7 @@ class ScanViewModel(
 
     fun setShelf(locationId: Long?) {
         shelfId.value = locationId
+        if (locationId != null) wishlist.value = false
     }
 
     suspend fun createLocation(name: String, type: LocationType, parentId: Long?): Long =
@@ -188,7 +203,8 @@ class ScanViewModel(
     /** Toevoegen (of in plank-modus verplaatsen) en in de sessielijst zetten; voor barcode én cover. */
     private suspend fun addIsbn(isbn13: String): ScannedEntry {
         val shelf = shelfId.value
-        val entry = when (val result = repository.addScannedIsbn(isbn13)) {
+        val toWishlist = wishlist.value
+        val entry = when (val result = repository.addScannedIsbn(isbn13, toWishlist)) {
             is ScanAddResult.Added -> {
                 shelf?.let { locations.moveBook(result.bookId, it) }
                 appScope.launch {
@@ -198,10 +214,18 @@ class ScanViewModel(
                         scheduler.schedule()
                     }
                 }
-                ScannedEntry(isbn13, result.bookId, ScanOutcome.ADDED)
+                ScannedEntry(isbn13, result.bookId, if (toWishlist) ScanOutcome.WISHLIST_ADDED else ScanOutcome.ADDED)
             }
             is ScanAddResult.AlreadyPresent -> {
-                if (result.notOwned) {
+                if (toWishlist) {
+                    // Al in de bibliotheek (in bezit of niet): alleen op de leeslijst zetten, verder niets veranderen.
+                    if (result.wantToRead) {
+                        ScannedEntry(isbn13, result.bookId, ScanOutcome.ALREADY_ON_WISHLIST)
+                    } else {
+                        repository.setWantToRead(listOf(result.bookId), true)
+                        ScannedEntry(isbn13, result.bookId, ScanOutcome.ON_WISHLIST)
+                    }
+                } else if (result.notOwned) {
                     // Niet (meer) in bezit: niets vanzelf veranderen; in de lijst (of in plank-modus via de vraag) kiezen.
                     ScannedEntry(isbn13, result.bookId, ScanOutcome.NOT_OWNED, previous = locations.placementOf(result.bookId))
                 } else if (shelf == null) {
@@ -266,7 +290,7 @@ class ScanViewModel(
         entries.update { list -> list.filterNot { it.isbn13 == entry.isbn13 } + entry }
         _signals.trySend(
             when (entry.outcome) {
-                ScanOutcome.ADDED, ScanOutcome.MOVED -> ScanSignal.ADDED
+                ScanOutcome.ADDED, ScanOutcome.MOVED, ScanOutcome.WISHLIST_ADDED, ScanOutcome.ON_WISHLIST -> ScanSignal.ADDED
                 else -> ScanSignal.ALREADY_PRESENT
             },
         )
@@ -313,10 +337,15 @@ class ScanViewModel(
                 addIsbn(isbn)
             } else {
                 val bookId = repository.save(0, BookDraft(title = candidate.title, subtitle = candidate.subtitle.orEmpty(), authors = candidate.authors.ifEmpty { listOf("") }, publishedYear = candidate.year?.toString().orEmpty()))
-                shelfId.value?.let { locations.moveBook(bookId, it) }
-                ScannedEntry("boek-$bookId", bookId, ScanOutcome.ADDED).also(::record)
+                if (wishlist.value) {
+                    repository.markWishlist(bookId)
+                    ScannedEntry("boek-$bookId", bookId, ScanOutcome.WISHLIST_ADDED).also(::record)
+                } else {
+                    shelfId.value?.let { locations.moveBook(bookId, it) }
+                    ScannedEntry("boek-$bookId", bookId, ScanOutcome.ADDED).also(::record)
+                }
             }
-            if (entry.outcome == ScanOutcome.ADDED) repository.setCoverFile(entry.bookId, coverStore.save(photo))
+            if (entry.outcome == ScanOutcome.ADDED || entry.outcome == ScanOutcome.WISHLIST_ADDED) repository.setCoverFile(entry.bookId, coverStore.save(photo))
         }
     }
 
