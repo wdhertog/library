@@ -41,6 +41,16 @@ data class Badge(
     val amount: Int? = null,
 )
 
+/** Blokken op het badgesscherm. */
+enum class BadgeBlock(val title: String) { READING("Lezen"), COLLECTING("Verzamelen"), PERSEVERING("Volhouden"), DISCOVERING("Ontdekken") }
+
+/** Eén tegel: een badge met zijn treden (oplopend); de hoogste behaalde en de volgende. */
+data class BadgeTile(val key: String, val title: String, val kind: BadgeKind, val levels: List<Badge>) {
+    val highest: Badge? get() = levels.filter { it.achieved }.maxByOrNull { it.target }
+    val next: Badge? get() = levels.filter { !it.achieved }.minByOrNull { it.target }
+    val achieved: Boolean get() = levels.any { it.achieved }
+}
+
 /** Eén genre op het badgesscherm: het aantal boeken, de hoogste behaalde trede en de volgende. */
 data class GenreTile(val genre: String, val amount: Int, val highest: Badge?, val next: Badge?)
 
@@ -70,8 +80,8 @@ object Achievements {
 
     /** Te breed om als genre mee te tellen. */
     private val broadGenres = setOf("fictie", "non-fictie")
-    /** Verzamelaar (500) en Bibliothecaris (1000). */
-    private val collections = listOf(500 to "Verzamelaar", 1000 to "Bibliothecaris")
+    /** Boeken in bezit: 100, 250, Verzamelaar (500) en Bibliothecaris (1000). */
+    private val collections = listOf(100 to "100 in bezit", 250 to "250 in bezit", 500 to "Verzamelaar", 1000 to "Bibliothecaris")
 
     /** Een uitgelezen sessie met het moment waarop, gesorteerd: oudste eerst, zonder datum achteraan. */
     private data class Read(val session: ReadingSession, val item: BookListItem?) {
@@ -101,7 +111,7 @@ object Achievements {
 
         return buildList {
             bookCounts.forEach { n ->
-                add(threshold("books-$n", BadgeKind.BOOKS, "$n boeken", "$n boeken uitgelezen", reads.size, n, reads.getOrNull(n - 1)))
+                add(threshold("books-$n", BadgeKind.BOOKS, "$n boeken", "$n boeken uitgelezen", reads.size, n, reads.getOrNull(n - 1)).copy(group = "books", amount = reads.size))
             }
             pageCounts.forEach { n -> add(pages(reads, n)) }
             add(thickBook(reads))
@@ -110,9 +120,9 @@ object Achievements {
             add(series(reads, series))
             add(author(reads))
             add(reread(reads))
-            streakMonths.forEach { n -> add(streak(sessions, n)) }
+            streakMonths.forEach { n -> add(streak(sessions, n).copy(group = "streak-months")) }
             val longestDays = if (readingDays.isEmpty()) 0 else Streaks.of(emptyList(), days = readingDays).days.longest
-            streakDays.forEach { n -> add(dayStreak(readingDays, longestDays, n)) }
+            streakDays.forEach { n -> add(dayStreak(readingDays, longestDays, n).copy(group = "streak-days", amount = longestDays)) }
             add(fast(reads))
             add(years(reads))
             add(lender(lentDates))
@@ -127,6 +137,27 @@ object Achievements {
     fun summary(badges: List<Badge>): Pair<Int, Int> {
         val groups = badges.groupBy { it.group ?: it.id }.values
         return groups.count { level -> level.any { it.achieved } } to groups.size
+    }
+
+    /** Tegels per blok (zonder de genres, die hebben eigen tegels): elke badge met zijn treden één tegel. */
+    fun blocks(badges: List<Badge>): List<Pair<BadgeBlock, List<BadgeTile>>> {
+        val tiles = badges.filter { it.kind != BadgeKind.GENRE }.groupBy { it.group ?: it.id }.map { (key, levels) ->
+            BadgeTile(key, tileTitles[key] ?: levels.first().title, levels.first().kind, levels.sortedBy { it.target })
+        }
+        return BadgeBlock.entries.map { block -> block to tiles.filter { blockOf(it.kind) == block } }.filter { it.second.isNotEmpty() }
+    }
+
+    private val tileTitles = mapOf(
+        "books" to "Boeken gelezen", "pages" to "Pagina's", "collector" to "Boeken in bezit",
+        "streak-days" to "Dagen op rij", "streak-months" to "Maanden op rij",
+        "languages" to "Talen", "countries" to "Landen", "genres" to "Genres verkend",
+    )
+
+    private fun blockOf(kind: BadgeKind): BadgeBlock = when (kind) {
+        BadgeKind.BOOKS, BadgeKind.PAGES, BadgeKind.THICK_BOOK, BadgeKind.FAST -> BadgeBlock.READING
+        BadgeKind.COLLECTOR, BadgeKind.LENDER -> BadgeBlock.COLLECTING
+        BadgeKind.STREAK, BadgeKind.GOAL, BadgeKind.YEARS -> BadgeBlock.PERSEVERING
+        BadgeKind.LANGUAGES, BadgeKind.COUNTRIES, BadgeKind.GENRES, BadgeKind.SERIES, BadgeKind.AUTHOR, BadgeKind.REREAD, BadgeKind.GENRE -> BadgeBlock.DISCOVERING
     }
 
     /** De badges per genre als tegels, meeste boeken eerst. */
@@ -206,6 +237,7 @@ object Achievements {
         }
         val with = at?.let { read -> listOfNotNull(read.title, read.item?.book?.language?.uppercase()).joinToString(" · ") }
         return threshold("languages-$target", BadgeKind.LANGUAGES, "$target talen", "Boeken in $target verschillende talen uitgelezen", seen.size, target, at, with)
+            .copy(group = "languages", amount = seen.size)
     }
 
     /** Een serie van minstens [MIN_SERIES] delen helemaal uitgelezen. */
@@ -303,6 +335,7 @@ object Achievements {
             progress = owned.size.coerceAtMost(target), target = target, achieved = at != null,
             achievedOn = at?.book?.addedAt?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate(),
             achievedWith = at?.book?.displayTitle,
+            group = "collector", amount = owned.size,
         )
     }
 
@@ -330,6 +363,7 @@ object Achievements {
                 achievedOn = at?.value?.first?.date, yearOnly = at?.value?.first?.yearOnly == true,
                 achievedWith = at?.let { (country, pair) -> "$country: ${pair.second}" + (pair.first.title?.let { " ($it)" } ?: "") },
                 details = listOf("Landen tot nu toe (${all.size}): " + all.joinToString(", ")).takeIf { all.isNotEmpty() }.orEmpty(),
+                group = "countries", amount = found.size,
             )
         }
     }
@@ -349,7 +383,7 @@ object Achievements {
                 achievedOn = at?.value?.date, yearOnly = at?.value?.yearOnly == true,
                 achievedWith = at?.let { (genre, read) -> genre + (read.title?.let { " ($it)" } ?: "") },
                 details = listOf("Genres tot nu toe (${found.size}): " + found.map { it.key }.sorted().joinToString(", ")).takeIf { found.isNotEmpty() }.orEmpty(),
-                group = "genres",
+                group = "genres", amount = found.size,
             )
         }
     }
