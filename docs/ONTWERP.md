@@ -480,6 +480,12 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.16 (9 november 2026)
+- **Badges in blokken**: laatst behaald, dan Lezen, Verzamelen, Volhouden en Ontdekken met één tegel per badge (hoogste trede, voortgang naar de volgende), en de genres. Boeken in bezit ook 100 en 250.
+- **Pagina-badges** 10.000 en daarna per 50.000 tot 1.000.000.
+- **Scannen naar leeslijst**: leeslijst-modus in het scanscherm (niet in bezit, wel op de leeslijst).
+- **Rasterweergave**: 📍 op de cover als het boek een plek heeft.
+
 ### Gebouwd in 1.15 (8 november 2026)
 - **Boeken samenvoegen** ("Samenvoegen met…"): leessessies, leesdagen, uitleningen, favoriet, leeslijst en import-id's gaan naar het boek dat blijft; daarna gaat het dubbele boek weg.
 - Boeken **niet in bezit** tonen geen locatie en eigenaar meer; **geleende** boeken alleen de locatie.
