@@ -286,7 +286,8 @@ private fun BadgeTileCard(tile: BadgeTile, modifier: Modifier, onClick: () -> Un
                 Text(tile.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 val status = when {
                     single && highest != null -> if (highest.times > 1) "Behaald ×${highest.times}" else "Behaald"
-                    highest != null -> "★ ${highest.title}"
+                    // Badges met een naam (Verzamelaar) krijgen het aantal erbij.
+                    highest != null -> "★ ${highest.title}" + (if (highest.title.any(Char::isDigit)) "" else " · ${highest.target}")
                     else -> "Nog niet behaald"
                 }
                 Text(status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -299,10 +300,10 @@ private fun BadgeTileCard(tile: BadgeTile, modifier: Modifier, onClick: () -> Un
                         drawStopIndicator = {},
                     )
                     Text(
-                        if (single) next.progressText() else "volgende: ${next.title}",
+                        if (single) next.progressText() else "volgende: ${next.title}" + (if (next.title.any(Char::isDigit)) "" else " (${next.target})"),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -324,7 +325,7 @@ private fun TileDialog(tile: BadgeTile, onDismiss: () -> Unit) {
             LazyColumn(Modifier.heightIn(max = 420.dp)) {
                 items(shown, key = { it.id }) { level ->
                     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                        Text((if (level.achieved) "★ " else "○ ") + level.title, fontWeight = FontWeight.Medium)
+                        Text((if (level.achieved) "★ " else "○ ") + level.title + (if (level.title.any(Char::isDigit)) "" else " · ${level.target}"), fontWeight = FontWeight.Medium)
                         if (level.achieved) {
                             Text(
                                 listOfNotNull(level.whenText()?.let { "Behaald $it" } ?: "Behaald (datum onbekend)", level.achievedWith?.let { "met $it" }).joinToString(", "),

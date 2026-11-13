@@ -127,6 +127,11 @@ class AchievementsTest {
         assertEquals(12, badges.get("collector").progress)
         badges.get("collector-1000").let { assertEquals("Bibliothecaris", it.title); assertEquals(1000, it.target) }
         assertEquals(1000, badges.get("books-1000").target)
+        assertEquals(listOf(10, 50, 100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000), badges.filter { it.group == "books" }.map { it.target })
+        assertEquals(20, badges.count { it.group == "streak-months" })
+        assertEquals("10 jaar op rij", badges.get("streak-120").title)
+        assertEquals("18 maanden op rij", badges.get("streak-18").title)
+        assertEquals(listOf(2, 3, 5, 7, 10, 15), badges.filter { it.group == "languages" }.map { it.target })
         assertEquals(100_000, badges.get("pages-100000").target)
         badges.get("pages-1000000").let { assertEquals("1.000.000 pagina's", it.title); assertEquals("pages", it.group) }
         assertEquals(21, badges.count { it.group == "pages" })
@@ -237,7 +242,8 @@ class AchievementsTest {
         }
         assertEquals(21, reading.first { it.key == "pages" }.levels.size)
         blocks.getValue(BadgeBlock.COLLECTING).first { it.key == "collector" }.let {
-            assertEquals(listOf(100, 250, 500, 1000), it.levels.map { level -> level.target })
+            assertEquals(listOf(100) + (250..2000 step 250), it.levels.map { level -> level.target })
+            assertEquals(listOf("Boekenplank", "Boekenkast", "Verzamelaar", "Boekenwurm", "Bibliothecaris"), it.levels.take(5).map { level -> level.title })
             assertEquals(12, it.next?.progress)
         }
         assertEquals(setOf("streak-days", "streak-months"), blocks.getValue(BadgeBlock.PERSEVERING).map { it.key }.filter { it.startsWith("streak") }.toSet())
