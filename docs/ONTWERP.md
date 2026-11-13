@@ -480,6 +480,10 @@ Geen open vragen meer. ~~Wacht nog op: voorbeeld van het Excel/CSV-bestand met d
 
 Stand 3 november 2026. Fase 1–7 en de meervoudige selectie zijn af; laatste release v1.2.
 
+### Gebouwd in 1.17 (13 november 2026)
+- **Meer badgetreden**: maanden op rij per half jaar tot tien jaar; boeken gelezen 10, 50, 100, 250 en daarna per 250 tot 2000; talen 2, 3, 5, 7, 10 en daarna per 5.
+- **Boeken in bezit** met namen: Boekenplank (100), Boekenkast (250), Verzamelaar (500), Boekenwurm (750), Bibliothecaris (1000), Antiquaar (1250), Archivaris (1500), Conservator (1750), Alexandrië (2000); daarna per 250.
+
 ### Gebouwd in 1.16 (9 november 2026)
 - **Badges in blokken**: laatst behaald, dan Lezen, Verzamelen, Volhouden en Ontdekken met één tegel per badge (hoogste trede, voortgang naar de volgende), en de genres. Boeken in bezit ook 100 en 250.
 - **Pagina-badges** 10.000 en daarna per 50.000 tot 1.000.000.
