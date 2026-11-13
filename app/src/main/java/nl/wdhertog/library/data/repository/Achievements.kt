@@ -60,15 +60,19 @@ data class GenreTile(val genre: String, val amount: Int, val highest: Badge?, va
  */
 object Achievements {
 
-    private val bookCounts = listOf(10, 50, 100, 250, 500, 1000)
+    /** 10, 50, 100, 250, daarna per 250 tot 2000. */
+    private val bookCounts = listOf(10, 50, 100) + (250..2000 step 250)
     /** 10.000, dan per 50.000 tot een miljoen; als treden van één badge. */
     private val pageCounts = listOf(10_000) + (50_000..1_000_000 step 50_000)
     private const val THICK = 1000
-    private val languageCounts = listOf(3, 5)
+    /** 2, 3, 5, 7, 10, daarna per 5 (zie [languageLevels]). */
+    private val languageCounts = listOf(2, 3, 5, 7, 10)
+    private const val LANGUAGE_STEP = 5
     private const val AUTHOR_BOOKS = 10
     private const val REREADS = 3
     private const val MIN_SERIES = 3
-    private val streakMonths = listOf(6, 12)
+    /** Per half jaar tot tien jaar. */
+    private val streakMonths = (6..120 step 6).toList()
     private val streakDays = listOf(7, 30, 100, 365)
     private const val FAST_DAYS = 7
     private const val YEARS = 10
@@ -80,8 +84,20 @@ object Achievements {
 
     /** Te breed om als genre mee te tellen. */
     private val broadGenres = setOf("fictie", "non-fictie")
-    /** Boeken in bezit: 100, 250, Verzamelaar (500) en Bibliothecaris (1000). */
-    private val collections = listOf(100 to "100 in bezit", 250 to "250 in bezit", 500 to "Verzamelaar", 1000 to "Bibliothecaris")
+    /** Boeken in bezit: 100, daarna per 250 (tot 2000 met een naam, daarna doorlopend). */
+    private val collectionNames = mapOf(
+        100 to "Boekenplank", 250 to "Boekenkast", 500 to "Verzamelaar", 750 to "Boekenwurm", 1000 to "Bibliothecaris",
+        1250 to "Antiquaar", 1500 to "Archivaris", 1750 to "Conservator", 2000 to "Alexandrië",
+    )
+    private const val COLLECTION_STEP = 250
+
+    /** Treden voor boeken in bezit: tot 2000 vast, daarna tot net boven wat je hebt. */
+    private fun collectionLevels(owned: Int): List<Int> =
+        listOf(100) + (COLLECTION_STEP..maxOf(2000, (owned / COLLECTION_STEP + 1) * COLLECTION_STEP) step COLLECTION_STEP)
+
+    /** Treden voor talen: vast tot 10, daarna per 5 tot net boven wat je hebt. */
+    private fun languageLevels(seen: Int): List<Int> =
+        languageCounts + (15..maxOf(15, (seen / LANGUAGE_STEP + 1) * LANGUAGE_STEP) step LANGUAGE_STEP)
 
     /** Een uitgelezen sessie met het moment waarop, gesorteerd: oudste eerst, zonder datum achteraan. */
     private data class Read(val session: ReadingSession, val item: BookListItem?) {
@@ -116,7 +132,8 @@ object Achievements {
             pageCounts.forEach { n -> add(pages(reads, n)) }
             add(thickBook(reads))
             add(goals(reads, goals, today))
-            languageCounts.forEach { n -> add(languages(reads, n)) }
+            val languageCount = reads.mapNotNull { it.item?.book?.language?.lowercase() }.toSet().size
+            languageLevels(languageCount).forEach { n -> add(languages(reads, n)) }
             add(series(reads, series))
             add(author(reads))
             add(reread(reads))
@@ -126,7 +143,8 @@ object Achievements {
             add(fast(reads))
             add(years(reads))
             add(lender(lentDates))
-            collections.forEach { (n, title) -> add(collector(books.values, n, title)) }
+            val owned = books.values.count { it.book.ownership == nl.wdhertog.library.data.db.Ownership.OWNED }
+            collectionLevels(owned).forEach { n -> add(collector(books.values, n, collectionNames[n] ?: "$n in bezit")) }
             addAll(countries(reads, authorCountries))
             addAll(genreExplorer(reads, genresOf))
             addAll(perGenre(reads, genresOf))
@@ -430,7 +448,7 @@ object Achievements {
         val on = Streaks.monthsReachedOn(sessions, months)
         val longest = Streaks.of(sessions).months.longest
         return Badge(
-            "streak-$months", BadgeKind.STREAK, "$months maanden op rij",
+            "streak-$months", BadgeKind.STREAK, if (months % 12 == 0) "${months / 12} jaar op rij" else "$months maanden op rij",
             "$months maanden achter elkaar elke maand een boek uitgelezen",
             progress = longest.coerceAtMost(months), target = months, achieved = on != null, achievedOn = on,
         )
